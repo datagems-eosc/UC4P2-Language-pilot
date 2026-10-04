@@ -1,0 +1,1126 @@
+[
+  {
+    "Subquestion_IDs": [
+      1,
+      2,
+      3
+    ],
+    "Question_ID": "0",
+    "Question": "How do historical descriptions of the Dresden's cultural nicknames and the reasons given for them vary across time?",
+    "Concept": "Dresden",
+    "Ground_Truth": "Across the sources the city is variously nicknamed \"the Athens of the north,\" \"the German Florence,\" \"Elbflorenz,\" \"the Jewel Box,\" and \"Silicon Saxony\"; 1830 ties fame to \"the various collections of the fine arts and of antiquities,\" 1875 to its \"delightful situation\" plus \"many objects of interest\" including major churches and galleries, and 2025 to its Baroque/Rococo city centre, museum landscape, as well as economic standing — a shift from emphasizing collections in the city's possession to emphasizing architectural ensemble and urban image."
+  },
+  {
+    "Question_ID": "1",
+    "Question": "How is Dresden defined?",
+    "Concept": "Dresden",
+    "Ground_Truth": "A larger city in Germany, capital of Saxony.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0708-019802-5709-v2.xml",
+        "content": "a city of Germany, the capital of the former  electorate, now the kingdom of Saxony.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0907-046801-0487-v1.xml",
+        "content": "the capital of the kingdom of Saxony",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Dresden",
+        "content": "the capital city of the German state of Saxony",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "2",
+    "Question": "What terms, nicknames, or descriptive phrases are used for Dresden?",
+    "Concept": "Dresden",
+    "Ground_Truth": "Athens of the North, German Florence, Florence of the Elbe, Jewel Box, Silicon Saxony",
+    "source_metadata": [
+      {
+        "id": "kp-eb0708-019802-5709-v2.xml",
+        "content": "Dresden has obtained the name of the Athens of the north",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0907-046801-0487-v1.xml",
+        "content": "Dresden is often called “the German Florence,”",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Dresden",
+        "content": "Dresden has been called \"Elbflorenz\" (Florence on the Elbe)",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Dresden",
+        "content": "The city was known as the Jewel Box",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+      {
+        "id": "article_Dresden",
+        "content": "It is dominated by high-tech branches, often called \"Silicon Saxony\".",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "3",
+    "Question": "What reasons, attributes, or comparisons are provided in the entries to explain Dresden's cultural reputation?",
+    "Concept": "Dresden",
+    "Ground_Truth": "The 1830 source stresses art collections (\"fine arts and of antiquities\"), 1875 blends situation plus institutional collections and monuments, while 2025 foregrounds architectural ensemble and urban image (\"Baroque and Rococo city centre\" / museums), showing a shift from collection-centered fame to architecture-and-image-centered fame.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0708-019802-5709-v2.xml",
+        "content": "It is a beautiful spot, both as regards  the position and the buildings.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0708-019802-5709-v2.xml",
+        "content": "There are seven market-places or squares, and about sixty  broad streets, with others connecting them together; and the public buildings,  which are numerous and beautiful, give to the whole a most magnificent  appearance, but especially in the new town, which is of more recent  erection.   There are seventeen Lutheran, two Catholic, and a small Calvinist church; the  most remarkable are the Frauen-kirk of the Protestants, and the elegant Catholic  church connected with the royal palace. Over the altar of the latter is a  painting of the ascension by Mengs, highly valued.   Dresden has obtained the name of the Athens of the north, from the various  collections of the fine arts and of antiquities that are to be seen there. The  palace is spacious and noble, and in the repository in the GGinen Gewölbe is arranged a collection of  antiquities connected with the ancient history of the country, of very great  value. The zwenger or barbican is a beautiful circular building. The garden  serves the purposes of a promenade, and the apartments are used as the  repository of a valuable cabinet of natural history. The picture gallery  occupying the four sides of a square building is peculiarly rich in specimens of  art of the best and oldest masters, and is said to be the best in Europe at the  present time. The Japan palace, in a garden looking on the Elbe, contains the  royal library, amounting to more than 150,000 volumes, a collection of  porcelain, and many of the finest specimens both of ancient and modern statuary.  The chancery house is a fine building, and, besides several paintings, contains  some most valuable records of the historical kind.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0907-046801-0487-v1.xml",
+        "content": "Dresden owes a large part of its fame to its extensive artistic, literary, and  scientific collections. Of these the most valuable is its splendid picture  gallery, founded by Augustus I. and increased by his successors at great cost.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Dresden",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Dresden",
+        "content": "Dresden has a long history as the capital and royal residence for the Electors and Kings of Saxony, who for centuries furnished the city with cultural and artistic splendor, and was once by personal union the family seat of Polish monarchs. The city was known as the Jewel Box, because of its Baroque and Rococo city centre.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Dresden",
+        "content": "Since German reunification in 1990, Dresden has once again become a cultural, educational and political centre of Germany. The Dresden University of Technology (TU Dresden) is one of the 10 largest universities in Germany and part of the German Universities Excellence Initiative. The economy of Dresden and its agglomeration is one of the most dynamic in Germany and ranks first in Saxony. It is dominated by high-tech branches, often called \"Silicon Saxony\".",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Dresden",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "Question_ID": "4",
+    "Question": "How do historical accounts differ in reporting Galileo’s origin and family?",
+    "Concept": "Galileo",
+    "Ground_Truth": "The entries disagree both on the exact day of birth (15 February in [1830] and [2025] vs. 18 February in [1875]) and on immediate family naming: [1830] names three sons and three daughters, [1875] records two sons and two daughters, and [2025] summarizes him as \"the first of six children.\" All entries agree on the number of children Galileo himself had, one son and two daughters."
+  },
+  {
+    "Question_ID": "5",
+    "Question": "Who is Galileo?",
+    "Concept": "Galileo",
+    "Ground_Truth": "Italian astronomer, physicist, mathematician, engineer, and philosopher",
+    "source_metadata": [
+      {
+        "id": "kp-eb0710-028803-7711-v2.xml",
+        "content": "the founder of experimental science,  was born at Pisa on the 15th of February 1564, being descended of a noble and  ancient Florentine family",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0910-003001-0039-v1.xml",
+        "content": "one of the  earliest and greatest of experimental philosophers, was bom at Pisa, February  18, 1564. His father, Vincenzo, was an impoverished descendant of a noble  Florentine house",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Galileo Galilei",
+        "content": "an Italian astronomer, physicist and engineer, sometimes described as a polymath. He was born in the city of Pisa, then part of the Duchy of Florence. Galileo has been called the father of observational astronomy, modern-era classical physics, the scientific method, and modern science",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Galileo",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "6",
+    "Question": "Which records of his birthdate exist?",
+    "Concept": "Galileo",
+    "Ground_Truth": "The sources mention either 15th or 18th of Febuary 1564",
+    "source_metadata": [
+      {
+        "id": "kp-eb0710-028803-7711-v2.xml",
+        "content": "15th of February 1564",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0910-003001-0039-v1.xml",
+        "content": "February  18, 1564",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Galileo Galilei",
+        "content": "15 February 1564",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Galileo",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "7",
+    "Question": "How do the records describe the number and names of Galileo’s siblings?",
+    "Concept": "Galileo",
+    "Ground_Truth": "The 1875 entry only mentions 3 of Galileo's siblings, while the 1830 and 2025 mention 5 siblings (Michelangiolo, Benedetto, Livia, Virginia, Guilia). This is because two of his siblings (Benedetto, Giulia) did not survive infancy.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0710-028803-7711-v2.xml",
+        "content": "Vincenzo had three sons, Galileo, Michel Angelo, and Benedetto, and the same  number of daughters, Giulia, Virginia, and Livia",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0910-003001-0039-v1.xml",
+        "content": "By his wife, Giulia de’ Ammannati of Pistoja, he had  two sons, Galileo and Michelangiolo, and two daughters, Virginia and Livia.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Galileo Galilei",
+        "content": "Galileo was born in Pisa (then part of the Duchy of Florence) on 15 February 1564, the first of six children of Vincenzo Galilei, a leading lutenist, composer, and music theorist, and Giulia Ammannati, the daughter of a prominent merchant, who had married two years earlier in 1562, when he was 42, and she was 24. Galileo became an accomplished lutenist himself and would have learned early from his father a skepticism for established authority. Three of Galileo's five siblings survived infancy.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Galileo",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "8",
+    "Question": "How do the records describe Galileo's children?",
+    "Concept": "Galileo",
+    "Ground_Truth": "Galilio had three children. Only the latest entry from 2025 mentions their names: Virginia, Livia, and Vincenzo.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0710-028803-7711-v2.xml",
+        "content": "He was never married; but he left three natural children, a son,  and two daughters, who, after his death, entered a convent, and took the  veil.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0910-003001-0039-v1.xml",
+        "content": "Galileo  was never married; but by a Venetian woman named Marina Gamba he had three  children—a son who married and left descendants, and two daughters who took the  veil at an early age.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Galileo",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Galileo Galilei",
+        "content": "Galileo fathered three children out of wedlock with Marina Gamba. They had two daughters, Virginia (born 1600) and Livia (born 1601), and a son, Vincenzo (born 1606).",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Galileo",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "Question_ID": "9",
+    "Question": "How does the definition of a valid marriage shift over time in the Western hemisphere?",
+    "Concept": "Marriage",
+    "Ground_Truth": "In the 1830 Britannica entry, a valid marriage in Western (primarily British) contexts is a sacred, lifelong contract between opposite sexes, divinely instituted, requiring consent, no disabilities (e.g., incapacity, kinship, force), and completion often via religious ceremony. By 1875, it shifts to a legal contract or process emphasizing mutual assent, strict statutory formalities (banns/licenses), and distinctions between void/voidable based on civil/canonical disabilities. The 2025 Wikipedia view reflects modern Western evolution toward a secular, inclusive cultural/legal union establishing rights/obligations, with lifted restrictions on gender (same-sex widely recognized), race, and greater flexibility in formalities, prioritizing consent and state recognition over religious/divine origins."
+  },
+  {
+    "Question_ID": "10",
+    "Question": "How is marriage defined?",
+    "Concept": "Marriage",
+    "Ground_Truth": "In the 1830 Britannica entry, marriage is defined as a lifelong contract between two persons of different sexes, viewed as a divine institution originating from human nature and holy scripture. By 1875, the Britannica shifts to describing it as a legal process or contract constituting the relationship of husband and wife, emphasizing mutual assent over divine origins. The 2025 Wikipedia definition broadens it to a culturally and legally recognized union between spouses, establishing rights and obligations without specifying gender, reflecting a secular and inclusive evolution.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "MARRIAGE is a contract entered into between two  persons of different sexes, with a view to one undivided state or society for  life. It has its origin in the constitution, and is nearly coeval with the  history, of man; and the first occasion of its occurrence is represented to us  in holy writ as having taken place under the immediate direction of the All-wise  Creator. It is, therefore, in a peculiar sense, an institution of divine  providence; and all the positive laws of man for the regulation of marriage  should intend and operate its maintenance and protection.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0915-056505-0592-v1.xml",
+        "content": "Marriage may be defined here as the act, ceremony, or process by which the legal  relation ship of husband and wife is constituted. In most if not all legal  systems it takes the form of a contract—the mutual assent of the parties being  the prominent and indispensable feature of the ceremony.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Ehe",
+        "content": "Marriage, also called matrimony or wedlock, is a culturally and often legally recognised union between people called spouses. It establishes rights and obligations between them, as well as between them and their children (if any), and between them and their in-laws.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "11",
+    "Question": "What is the legal age to marry in different sources?",
+    "Concept": "Marriage",
+    "Ground_Truth": "Britannica 1830 and 1875 state 14 as the legal age for boys and 12 as the legal age for girls to be able to marry. The 2025 entries excplicitly mention that men and women need to be of full age (late puberty, usually 18 and over for both men and women), but that it can vary across cultures still.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "Eighteen and twenty were the usual ages of marriage for  males with those northern nations amongst whom the Roman laws had not been  introduced; but amongst the Lombards the age of marriage was fourteen for males  and twelve for females, as in the Roman law; and such is also the law of this  country.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0915-056505-0592-v1.xml",
+        "content": "want of full age, which  for this purpose is fixed at the age of puberty as defined in the Roman law,  viz., fourteen for males and twelve for females; A marriage in which either of the parties is  below the age of consent is, however, said to be not absolutely void; if the  parties agree to continue together at the age of consent no new marriage is  necessary, but either of them may disagree and avoid the marriage.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Ehe",
+        "content": "Most jurisdictions set a minimum age for marriage; that is, a person must attain a certain age to be legally allowed to marry. This age may depend on circumstances, for instance exceptions from the general rule may be permitted if the parents of a young person express their consent and/or if a court decides that said marriage is in the best interest of the young person (often this applies in cases where a girl is pregnant). Although most age restrictions are in place in order to prevent children from being forced into marriages, especially to much older partners – marriages which can have negative education and health related consequences, and lead to child sexual abuse and other forms of violence – such child marriages remain common in parts of the world.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Eherecht",
+        "content": "The minimum age at which a person is able to lawfully marry, and whether parental or other consents are required, vary from country to country. In the U.S. the minimum age for marriage without parental and/or judicial approval is 18 except for Nebraska (19) and Mississippi (21); but most states allow exceptions to the general minimum age in some circumstances (see Marriage age in the United States). In England and Wales the general age at which a person may marry is 18, but 16- or 17-year-olds may get married with their parents' or guardians' consent. If they are unable to obtain this, they can gain consent from the courts, which may be granted by the Magistrates' Courts, or the county or High Court family divisions. In Nigeria, because most marriages are religious ones, there is no strict minimum age for marriage. The issues of age is in most cases determined by respective religious bodies coordinating the marriage as well as the parent's consent. In Sierra Leone, the president has banned marriages for children ages 18 and under and imposed steep fines on adult spouses. In the Philippines, the minimum legal age for marriage is 18, but individuals who are 16 or 17 can marry with parental consent. However, the country has specific provisions for Muslim marriages, which may differ from civil marriage regulations.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage law",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "12",
+    "Question": "Which requirements need to be in place for a marriage to happen?",
+    "Concept": "Marriage",
+    "Ground_Truth": "For a valid marriage, the sources require: no disabilities (e.g., mental incapacity, underage immaturity, prior marriage, prohibited kinship, force, physical incapacity), free mutual consent, and completion of the contract—often via formal ceremony (1830/1875 emphasize religious/statutory procedures like banns/licenses). By 2025, requirements focus on minimum age, absence of restrictions (e.g., incest, formerly race/gender), free consent, and legal/cultural recognition, with greater global variation and inclusivity.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "To constitute a valid marriage with us, it is necessary that the parties should  lie under no disability preventing them from entering into the contract; that  they should be willing to contract; and that the contract should actually be  completed.   Consent is obviously essential to marriage. Those, therefore, who are incapable  of consent are of course incapable of marriage; and so idiots are incapable of  marriage, and lunatics, except during a lucid interval. With regard to the  employment of force to effectuate a union, it is utterly subversive of society,  and must be everywhere regarded as a high crime. The language itself bears  testimony to the same fact, license and desire being pre-eminently sexual  license and sexual desire, as if licentiousness and lust were the parents of all  moral and social disorder.   Incapacity to consent may be conceived to include under it another disability,  namely, want of age and immaturity of judgment, the usual attendant on early  years. But this has another foundation, namely, physical immaturity; and upon  these two grounds it has been the policy of most nations to disallow the  marriage of infants.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "Another disability is a prior marriage subsisting, or the having another husband  or wife living at the same time: polygamy, though practised by many nations,  both ancient and modern, being expressly condemned by Scripture, and contrary to  all sound policy.   A further disability is relationship by birth or by affinity.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "There is a still further disability, the disability i   before alluded to, namely, physical incapacity; but this is only a ground on  which a marriage may be declared void at the instance of either of the parties,  and not itself a nullity pleadable by others.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "The last requisite on this head is, that the parties do actually contract, or  that effect be given to their declared intentions.   To give a distinct origin to the important relation of husband and wife, and also  solemnity to the engagement, it has been the practice of most countries to enter  on marriage with a ceremony in which the ministers of religion have commonly  assisted.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0915-056505-0592-v1.xml",
+        "content": "Any man and woman are capable of marrying, subject to certain disabilities, some  of which are said to be canonical as having been formerly under the cognizance  of the ecclesiastical courts, others civil. The effect of a canonical disability  as such was to make the marriage not void but voidable. The marriage must be set  aside by regular process, and sentence pronounced during the lifetime of the  parties. Natural inability at the time of the marriage to procreate children is  a canonical disability. So was proximity of relationship within the prohibited  degrees, which has been made an absolute avoidance of marriage by 5 & 6  Will. IV. c. 54. A pre-engagement to another person was at one time recognized  as a canonical disability. Civil disabilities are (1) the fact that either party  is already married and has a spouse still living; A divorce nisi does  not enable the parties to marry until it is made absolute. (2) the  fact that either party is a person of unsound mind; (3) want of full age, which  for this purpose is fixed at the age of puberty as defined in the Roman law,  viz., fourteen for males and twelve for females; A marriage in which either of the parties is  below the age of consent is, however, said to be not absolutely void; if the  parties agree to continue together at the age of consent no new marriage is  necessary, but either of them may disagree and avoid the marriage.   (4) proximity of relationship within the prohibited degrees, already alluded to.  The statute which lawyers regard as establishing the rule on this last point is  the 32 Henry VIII. c. 38 (repealed in part by 2 & 3 Edw. VI. c. 23, in whole  by 1 & 2 P. and Μ. c. 8, but revived by 1 Eliz. c. 1, and so left as under  the Act of Edward), which enacts that “no prohibition, God’s law except, shall  trouble or impeach any marriage without the Levitical degrees.” The forbidden  marriages, as more particularly specified in previous statutes, are those  between persons in the ascending and descending line in  infinitum, and those between collaterals to the third degree inclusive,  according to the computation of the civil law, which reckons from one of the  persons related to the common stock and so down to the other person. The  prohibitions extend not only to consanguinei (related by  blood) but to affines (related by marriage). A man may  neither marry his sister nor his deceased wife’s sister, for both are related to  him in the second degree; nor his sister’s daughter, nor his deceased wife’s  sister’s'daughter, for both are in the third degree; but he may marry his first  cousin, for she is in the fourth degree. Consanguinei of  either spouse are related by affinity to the other; but the consanguinei of the one are not necessarily related to the consanguinei of the other. Hence two brothers may marry two  sisters, or a father and son a mother and daughter. A husband is not related to  the affines of his wife, and so a man may marry the widow  Of his deceased wife’s brother. The. rule as to collaterals includes those  related by the half blood and bastards (see Stephen’s Commentaries, book iii. c. 2). Other disabilities previously admitted were  abolished by the statute of Henry. The Act of 5 & 6 Will. IV. c. 54 enacted  that “all marriages which shall hereafter be celebrated between persons within  the prohibited degrees of consanguinity or affinity shall be absolutely null and  void to all intents and purposes whatsoever.” They had previously, as already  stated, been only voidable. The Act at the same time legalized marriages within  the prohibited degrees of affinity (but not consanguinity)actually celebrated  before the 31st August 1835.   The celebration of marriages is now regulated wholly by statutory legislation.  The most important Acts now in force are the 4 Geo. IV. c. 76 and the 6 & 7  William IV. c. 85. A  complete list of the acts regulating the solemnization of marriage or confirming  marriages which through some defect might be void will be found in Phillimore’s  Ecclesiastical Law, vol. i. The former  regulates marriages within the Church of England, but was intended to be of  universal application, Jews and Quakers only being excepted by section 31. It  requires either the previous publication of banns, or a licence from the proper  ecclesiastical authority. As to banns, the rule of the rubric, so far as not  altered by the statute, is required to be observed. They must be published on  three successive Sundays at morning service after the second lesson, in the  church of the parish in which the parties dwell; the bishop may, however,  authorize the publication of banns in a public chapel. Seven days’ notice must  be given to the clergyman of the names of the parties, their place of abode, and  the time during which they have lived there. If either party is under age, the  dissent of the parents or guardians expressed at the time of publication of  banns renders such publication null and void. Licence in lieu of banns may only  be granted by the archbishop, bishop, or other authority, for the solemnization  of a maιτiage within the church of the parish in which one of the parties shall  have resided for fifteen days before. Before a licence can be granted an oath  must be taken as to the fact of residence and that the necessary consent has  been obtained in the case of persons under age. The father, or lawful guardian,  or mother if unmarried, or guardian appointed by the court, is each in order of  substitution the proper person to consent to the marriage of a minor, and the  place of any such person incapacitated mental ly is taken by the lord  chancellor. The absence of such consent does not, however, avoid a marriage once  solemnized. But if persons wilfully intermarry (unless by special licence) in a  place not being a church or public chàpel, or without due publication· of banns  or proper licence, or before a person not in holy orders, the marriage is null  and void tα all purposes. Marriage must be celebrated within three months after  banns or licence, and between the hours of eight and twelve in the morning.   For the relief of the great body of dissenters the Act 6 & 7 Will. IV. c. 85  was passed. It permits marriage to be solemnized in two additional ways,—viz.  (1) by certificate of the superintendent registrar of a district without  licence, and (2) by such certificate with licence. In the first case, notice  must be given to the registrar of the district or districts within which the  parties have resided for seven days previous, which notice is inscribed in a  marriage notice book, open to public inspection at all reasonable times, and  thereafter suspended for twenty-one days in some conspicuous place in the  registrar’s office. The notice must be accompanied by a declaration as to the  absence of impediments, necessary consent, &c. Any person whose consent is  necessary to an ecclesiastical licence may forbid the issue of a certificate,  but in default of such prohibition the certificate will issue at the end of the  twenty-one days. The marriage may then take place on any day within three months  of the entry of notice, and in one of the following ways :—(1) in a certified  place of religious worship, registered for the solemnization of marriage; in  that case a registrar of the district with two witnesses must be present, and  the ceremony must include a mutual declaration of assent by the parties and a  disavowal of any impediment; (2) at the superintendent registrar’s office, with  the same declaration, but with no religious service; (3)  in a church according to the usual form, the consent of the minister thereof  having been previously obtained; (4) according to the usages of Jews and  Quakers. The place of marriage in all cases must have been specified in the  notice and certificate.   In the second case, when it is desired to proceed by licence, notice must be  given to the registrar of the district in which one of the persons resides,  together with a declaration that he or she has resided for fifteen days therein,  that there is no impediment, and that the necessary consents if any have been  obtained. The notice is not exhibited in the registrar’s office, and the  certificate may be obtained at the expiration of one whole day after entry,  together with the licence.",
+        "date": "1875",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Ehe",
+        "content": "Marriage is an institution that is historically filled with restrictions. From age, to race, to social status, to consanguinity, to gender, restrictions are placed on marriage by society for reasons of benefiting the children, passing on healthy genes, maintaining cultural values, or because of prejudice and fear. Almost all cultures that recognize marriage also recognize adultery as a violation of the terms of marriage. ==== Age ==== Most jurisdictions set a minimum age for marriage; that is, a person must attain a certain age to be legally allowed to marry. This age may depend on circumstances, for instance exceptions from the general rule may be permitted if the parents of a young person express their consent and/or if a court decides that said marriage is in the best interest of the young person (often this applies in cases where a girl is pregnant). Although most age restrictions are in place in order to prevent children from being forced into marriages, especially to much older partners – marriages which can have negative education and health related consequences, and lead to child sexual abuse and other forms of violence – such child marriages remain common in parts of the world. According to the UN, child marriages are most common in rural sub-Saharan Africa and South Asia. The ten countries with the highest rates of child marriage are: Niger (75%), Chad, Central African Republic, Bangladesh, Guinea, Mozambique, Mali, Burkina Faso, South Sudan, and Malawi. ==== Kinship ==== To prohibit incest and eugenic reasons, marriage laws have set restrictions for relatives to marry. Direct blood relatives are usually prohibited to marry, while for branch line relatives, laws are wary. Kinship relations through marriage is also called \"affinity\", relationships that arise in one's group of origin, can also be called one's descent group. Some cultures in kinship relationships may be considered to extend out to those who they have economic or political relationships with; or other forms of social connections. Within some cultures they may lead you back to gods or animal ancestors (totems). This can be conceived of on a more or less literal basis. ==== Race ==== Laws banning \"race-mixing\" were enforced in certain North American jurisdictions from 1691 until 1967, in Nazi Germany (the Nuremberg Laws) from 1935 until 1945, and in South Africa during most part of the apartheid era (1949–1985). All these laws primarily banned marriage between persons of different racially or ethnically defined groups, which was termed \"amalgamation\" or \"miscegenation\" in the U.S. The laws in Nazi Germany and many of the U.S. states, as well as South Africa, also banned sexual relations between such individuals. In the United States, laws in some but not all of the states prohibited the marriage of whites and blacks, and in many states also the intermarriage of whites with Native Americans or Asians. In the U.S., such laws were known as anti-miscegenation laws. From 1913 until 1948, 30 out of the then 48 states enforced such laws. Although an \"Anti-Miscegenation Amendment\" to the United States Constitution was proposed in 1871, in 1912–1913, and in 1928, no nationwide law against racially mixed marriages was ever enacted. In 1967, the Supreme Court of the United States unanimously ruled in Loving v. Virginia that anti-miscegenation laws are unconstitutional. With this ruling, these laws were no longer in effect in the remaining 16 states that still had them. The Nazi ban on interracial marriage and interracial sex was enacted in September 1935 as part of the Nuremberg Laws, the Gesetz zum Schutze des deutschen Blutes und der deutschen Ehre (The Law for the Protection of German Blood and German Honour). The Nuremberg Laws classified Jews as a race and forbade marriage and extramarital sexual relations at first with people of Jewish descent, but was later ended to the \"Gypsies, Negroes or their bastard offspring\" and people of \"German or related blood\". Such relations were marked as Rassenschande (lit. \"race-disgrace\") and could be punished by imprisonment (usually followed by deportation to a concentration camp) and even by death. In South Africa, the Prohibition of Mixed Marriages Act, 1949 prohibited marriage between persons of different races, and the Immorality Act of 1950 made sexual relations with a person of a different race a crime. ==== Sex ==== Same-sex marriage is legally performed and recognized in countries such as Andorra, Argentina, Australia, Austria, Belgium, Brazil, Canada, Chile, Colombia, Costa Rica, Cuba, Denmark, Ecuador, Estonia, Finland, France, Germany, Greece, Iceland, Ireland, Luxembourg, Malta, Mexico, the Netherlands, New Zealand, Norway, Portugal, Slovenia, South Africa, Spain, Sweden, Switzerland, Taiwan, the United Kingdom, the United States, and Uruguay. Israel recognizes same-sex marriages entered into abroad as full marriages. The introduction of same-sex marriage has varied by jurisdiction, being variously accomplished through legislative change to marriage law, a court ruling based on constitutional guarantees of equality, or by direct popular vote (via ballot initiative or referendum). The recognition of same-sex marriage is considered to be a human right and a civil right as well as a political, social, and religious issue. The most prominent supporters of same-sex marriage are human rights and civil rights organizations as well as the medical and scientific communities, while the most prominent opponents are religious groups. Various faith communities around the world support same-sex marriage, while many religious groups oppose it. Polls consistently show continually rising support for the recognition of same-sex marriage in all developed democracies and in some developing democracies. The establishment of recognition in law for the marriages of same-sex couples is one of the most prominent objectives of the LGBT rights movement. ==== Number of spouses ==== Polygyny is widely practiced in mostly Muslim and African countries. In the Middle Eastern region, Israel, Turkey and Tunisia are notable exceptions. In most other jurisdictions, polygamy is illegal. For example, In the United States, polygamy is illegal in all 50 states. In the late-19th century, citizens of the self-governing territory of what is present-day Utah were forced by the United States federal government to abandon the practice of polygamy through the vigorous enforcement of several Acts of Congress, and eventually complied. The Church of Jesus Christ of Latter-day Saints formally abolished the practice in 1890, in a document labeled 'The Manifesto' (see Latter Day Saint polygamy in the late-19th century). Among American Muslims, a small minority of around 50,000 to 100,000 people are estimated to live in families with a husband maintaining an illegal polygamous relationship. Several countries such as India and Sri Lanka, permit only their Islamic citizens to practice polygamy. Some Indians have converted to Islam in order to bypass such legal restrictions. Predominantly Christian nations usually do not allow polygamous unions, with a handful of exceptions being the Republic of the Congo, Uganda, and Zambia. === State recognition === When a marriage is performed and carried out by a government institution in accordance with the marriage laws of the jurisdiction, without religious content, it is a civil marriage. Civil marriage recognizes and creates the rights and obligations intrinsic to matrimony in the eyes of the state. Some countries do not recognize locally performed religious marriage on its own, and require a separate civil marriage for official purposes. Conversely, civil marriage does not exist in some countries governed by a religious legal system, such as Saudi Arabia, where marriages contracted abroad might not be recognized if they were contracted contrary to Saudi interpretations of Islamic religious law. In countries governed by a mixed secular-religious legal system, such as Lebanon and Israel, locally performed civil marriage does not exist within the country, which prevents interfaith and various other marriages that contradict religious laws from being entered into in the country; however, civil marriages performed abroad may be recognized by the state even if they conflict with religious laws.  For example, in the case of recognition of marriage in Israel, this includes recognition of not only interfaith civil marriages performed abroad, but also overseas same-sex civil marriages. In various jurisdictions, a civil marriage may take place as part of the religious marriage ceremony, although they are theoretically distinct. Some jurisdictions allow civil marriages in circumstances which are notably not allowed by particular religions, such as same-sex marriages or civil unions. Churches may have less strict limits than the civil jurisdictions. It is possible for two people to be recognized as married by a religious or other institution, but not by the state, and hence without the legal rights and obligations of marriage; or to have a civil marriage deemed invalid and sinful by a religion. Similarly, a couple may remain married in religious eyes after a civil divorce. Most sovereign states and other jurisdictions limit legally recognized marriage to opposite-sex couples and a diminishing number of these permit polygyny marriage, polyandry marriage, group marriage, coverture marriage, arranged marriages, forced marriages, child marriages, cousin marriages, sibling marriages, teenage marriages, avunculate marriages, incestuous marriages, and bestiality marriages. In modern times, a growing number of countries, primarily developed democracies, have lifted bans on, and have established legal recognition for, equal rights for women and the marriages of interethnic, interracial, interfaith, interdenominational, interclass, intercommunity, transnational, and same-sex couples as well as immigrant couples, couples with an immigrant spouse, and other minority couples. In some areas, child marriages and polygamy may occur in spite of national laws against the practice. ==== Marriage license, civil ceremony and registration ==== A marriage is usually formalized at a wedding or marriage ceremony. The ceremony may be officiated either by a religious official, by a government official or by a state approved celebrant. In various European and Latin American countries, any religious ceremony must be held separately from the required civil ceremony. Some countries – such as Belgium, Bulgaria, France, the Netherlands, Romania and Turkey – require that a civil ceremony take place before any religious one. In some countries – notably the United States, Canada, the United Kingdom, Ireland, Norway, and Spain – both ceremonies can be held together; the officiant at the religious and civil ceremony also serving as agent of the state to perform the civil ceremony. To avoid any implication that the state is \"recognizing\" a religious marriage (which is prohibited in some countries) – the \"civil\" ceremony is said to be taking place at the same time as the religious ceremony. Often this involves simply signing a register during the religious ceremony. If the civil element of the religious ceremony is omitted, the marriage ceremony is not recognized as a marriage by government under the law. Some countries, such as Australia, permit marriages to be held in private and at any location; others, including England and Wales, require that the civil ceremony be conducted in a place open to the public and specially sanctioned by law for the purpose. In England, the place of marriage formerly had to be a church or register office, but this was extended to any public venue with the necessary licence. An exception can be made in the case of marriage by special emergency license (UK: licence), which is normally granted only when one of the parties is terminally ill. Rules about where and when persons can marry vary from place to place. Some regulations require one of the parties to reside within the jurisdiction of the register office (formerly parish). Each religious authority has rules for the manner in which marriages are to be conducted by their officials and members. Where religious marriages are recognised by the state, the officiator must also conform with the law of the jurisdiction.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "13",
+    "Question": "How can a marriage be dissolved correctly?",
+    "Concept": "Marriage",
+    "Ground_Truth": "In the 1830 Britannica entry, marriage is primarily dissolved naturally by death, with divorce rare in England (only via parliamentary act for wife's adultery, following ecclesiastical sentence and common law verdict). The 1875 entry notes ongoing debate on divorce as penalty or right, typically fault-based (e.g., matrimonial offence like adultery), with inconsistency in legislation influenced by canon law and parliament. By the 2025 Wikipedia entry, dissolution occurs via death, fault-based divorce (proving grounds like adultery or refusal of obligations), or no-fault divorce (purely by mutual will, no proof required, as in Sweden or Australia), varying widely by jurisdiction with options for both approaches.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "We have already alluded to the dissolution of marriage by death. This is its  natural termination; and in England it is the only way in which a valid marriage  can end, except by the power of an act of parliament.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0907-030002-0317-v1.xml",
+        "content": "The opinion of society visibly fluctuates between the belief that  marriage is a civil contract only and the belief that it is a contract of a  peculiarly sacred character, the dissolution of which must not be lightly, if at  all, permitted by human legislation. Again, divorce appears to be regarded  sometimes as a penalty against the offending spouse, sometimes as a right to  which the innocent spouse is entitled. It will be granted only if a matrimonial  offence is proved to have been committed, but it will not be granted if such au  offence has been committed on both sides. Hence a certain amount of  inconsistency in legislation about divorce, which is in no system more  remarkable than in our own, founded as it is on the doctrines of the canon law,  modified by the opinions of secular judges, and altered by Acts of  Parliament.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Divorce",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0708-007102-4058-v2.xml",
+        "content": "The law of this country, in conformity  to our Saviour’s injunction, confines the dissolution of the marriage contract  to the single case of adultery in the wife; and a divorce even in that case can  only be brought about by the operation of an act of parliament, founded upon a  previous sentence in the spiritual court, and a verdict against the adulterer at  common law; which proceedings taken together compose as complete an  investigation of the complaint as a cause can receive. It has lately been  proposed to the legislature to annex a clause to these acts, restraining the  offending party from marrying with the companion of her crime, who by the course  of proceeding is always known and convicted; for there is reason to fear that  adulterous connections arc often formed with the prospect of bringing them to  this conclusion; at least, when the seducer has once captivated the affection of  a married woman, he may avail himself of this tempting argument to subdue her  scruples and complete his victory; and the legislature, as the business is  managed at present, assists by its interposition the criminal design of the  offenders, and confers a privilege where it ought to inflict a punishment.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Divorce",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Scheidung",
+        "content": "Grounds for divorce vary widely from country to country. Marriage may be seen as a contract, a status, or a combination of these. Where it is seen as a contract, the refusal or inability of one spouse to perform the obligations stipulated in the contract may constitute a ground for divorce for the other spouse. In contrast, in some countries (such as Sweden, Finland, Australia, New Zealand), divorce is purely no fault. This means it does not matter what the reasons are that a party or parties want to separate. They can separate of their own free will without having to prove someone is at fault for the divorce. Many jurisdictions offer both the option of a no fault divorce as well as an at fault divorce. This is the case, for example, in many states of the US, France and the Czech Republic. Though divorce laws vary between jurisdictions, there are two basic approaches to divorce: fault based and no-fault based. However, even in some jurisdictions that do not require a party to claim fault of their partner, a court may still take into account the behavior of the parties when dividing property, debts, evaluating custody, shared care arrangements and support.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Divorce",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "14",
+    "Question": "What are definitions of failed marriages?",
+    "Concept": "Marriage",
+    "Ground_Truth": "In the 1830 Britannica entry, a \"failed\" marriage occurs if it has not lasted a year and a day or produced a living child, causing rights like property claims to revert as if no marriage existed. The 1875 entry defines null/void marriages ab initio if requisites were missing at celebration (e.g., non-compliance with formalities known to both parties, bigamy, prohibited degrees of kinship/affinity post-1835, lack of consent due to fraud/force/duress/insanity, or incurable bodily incapacity), with some previously voidable now absolutely void. By 2025 Wikipedia, failed marriages include those annulled (declared never to have happened), void (invalid from the start), voidable (presumed valid until set aside), or sham/convenience marriages (for ulterior motives like immigration, potentially punishable).",
+    "source_metadata": [
+      {
+        "id": "kp-eb0714-025803-3176-v2.xml",
+        "content": "According to the law as it now stands, if a marriage have not subsisted  for year and day, or produced a living child, all rights granted in  consideration of the marriage become void, and things return to the same  condition in which they stood before the marriage, unless special stipulation be  made to the contrary.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Marriage",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0907-030002-0317-v1.xml",
+        "content": "A marriage will be declared null ab initio when the requisites of a legal marriage have not been  complied with. The alleged defect must have existed at the time of the  celebration of the marriage. The formal requisites are (1) that the marriage  should be celebrated in pursuance of a special licence, ordinary licence,  publication of banns, superintendent-registrar’s licence or certificate, in the  presence of a person in holy orders, or a registrar; and (2) in a parish church  or public chapel, or superintendent-registrar’s office, or in some building  registered for the solemnization of marriages, except when solemnized by special  licence (see Marriage.) These rules only apply to  marriages in England, and a marriage is void only when the requisites are  deficient, and known to both parties to be deficient, at the time of the  ceremony. The two other requisites apply to all marriages, and if they are  wanting the marriage is absolutely void :—(1), The marriage must be between  single persons, not being within the prohibited degrees of consanguinity and  affinity, and who are (2) consenting and of a sound mind, and able to perform  the duties of matrimony. The “prohibited degrees” are those set forth in the  common prayer book, and extend to illegitimate as well as legitimate relations.  The ecclesiastical courts had been in the habit of annulling such marriages  previous to the 5 and 6 Will. IV. c. 54, and until so  annulled, in the lifetime of the parties, they were regarded as voidable only,  and not void. That enactment, however, while ordering that marriages already  celebrated “between persons within the prohibited degrees of affinity” shall not  be annulled for that cause only by the ecclesiastical courts, goes on to declare  that all marriages which shall thereafter “be celebrated between persons within  the prohibited degrees of consanguinity and affinity shall be absolutely null  and void to all intents and purposes whatever.” As to the second requisite,  fraud, force, or duress, showing the absence of consent, will make void the  marriage. Insanity at the time of the marriage has the same effect. A marriage  may also be annulled for bodily incapacity existing at the time of the marriage,  and proved to be incurable.   In a petition for restitution of conjugal rights, the marriage must be proved,  and it must be shown that the respondent has withdrawn without reasonable cause  from cohabitation with the other spouse. The court can only order husband and  wife to live under the same roof. The petitioner will be refused a decree for  restitution if he has himself committed any matrimonial offence which would be a  ground for judicial separation.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Divorce",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Ehe",
+        "content": "In some societies, a marriage can be annulled, when an authority declares that a marriage never happened. Jurisdictions often have provisions for void marriages or voidable marriages.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Ehe",
+        "content": "Sometimes people marry to take advantage of a certain situation, sometimes called a marriage of convenience or a sham marriage. In 2003, over 180,000 immigrants were admitted to the U.S. as spouses of U.S. citizens; more were admitted as fiancés of US citizens for the purpose of being married within 90 days. These marriages had a diverse range of motives, including obtaining permanent residency, securing an inheritance that has a marriage clause, or to enroll in health insurance, among many others. While all marriages have a complex combination of conveniences motivating the parties to marry, a marriage of convenience is one that is devoid of normal reasons to marry. In certain countries like Singapore sham marriages are punishable criminal offences.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Marriage",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      16,
+      17,
+      18
+    ],
+    "Question_ID": "15",
+    "Question": "How do accounts differ about whether philosophy historically included the natural sciences and how they describe the process by which those sciences became separated from \"philosophy\"?",
+    "Concept": "Philosophy",
+    "Ground_Truth": "All three accounts concur that philosophy once embraced what we now call the natural sciences—one says many individual sciences “formed part of philosophy” and that “natural philosophy… encompassed a wide range of fields” [2025], while another explains that “the name ‘philosophy’ ceased to be applied to inquiries concerned with the particulars” as knowledge accumulated and specialists emerged [1875]. They differ in why and how: an 1830 source foregrounds a methodological break led by Bacon’s Novum Organum and the rise of “experimental philosophy” (induction superseding syllogism) [1830], whereas the 1875 account stresses the gradual “sifting out of the special sciences” and institutional differentiation as the decisive process [1875]; the modern entry summarizes the net result—the sciences are now separate academic disciplines [2025]."
+  },
+  {
+    "Question_ID": "16",
+    "Question": "How is philosophy defined broadly?",
+    "Concept": "Philosophy",
+    "Ground_Truth": "In the 1830 and 1875 Britannica entries, philosophy is broadly defined as the love of wisdom encompassing a wide range of sciences (theology, physics/metaphysics, logic/ethics) focused on the universe, causes, and human knowledge. The 2025 Wikipedia entry narrows it to a systematic, rational study of fundamental questions (existence, knowledge, values, mind, language).",
+    "source_metadata": [
+      {
+        "id": "kp-eb0717-042601-6625-v2.xml",
+        "content": "Philosophy is a word derived from the Greek, and literally  signifies the love of wisdom. In its usual acceptation,  however, it denotes a science, or collection of sciences, of which the universe  is the object; and of the term thus employed many definitions have been given,  differing from one another according to the different views of their several  authors.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Philosophy ('love of wisdom' in Ancient Greek) is a systematic study of general and fundamental questions concerning topics like existence, reason, knowledge, value, mind, and language. It is a rational and critical inquiry that reflects on its methods and assumptions.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Attempts to provide more precise definitions of philosophy are controversial and are studied in metaphilosophy. Some approaches argue that there is a set of essential features shared by all parts of philosophy. Others see only weaker family resemblances or contend that it is merely an empty blanket term. Precise definitions are often only accepted by theorists belonging to a certain philosophical movement and are revisionistic according to Søren Overgaard et al. in that many presumed parts of philosophy would not deserve the title \"philosophy\" if they were true. Some definitions characterize philosophy in relation to its method, like pure reasoning. Others focus on its topic, for example, as the study of the biggest patterns of the world as a whole or as the attempt to answer the big questions. Such an approach is pursued by Immanuel Kant, who holds that the task of philosophy is united by four questions: \"What can I know?\"; \"What should I do?\"; \"What may I hope?\"; and \"What is the human being?\" Both approaches have the problem that they are usually either too wide, by including non-philosophical disciplines, or too narrow, by excluding some philosophical sub-disciplines. Many definitions of philosophy emphasize its intimate relation to science. In this sense, philosophy is sometimes understood as a proper science in its own right. According to some naturalistic philosophers, such as W. V. O. Quine, philosophy is an empirical yet abstract science that is concerned with wide-ranging empirical patterns instead of particular observations. Science-based definitions usually face the problem of explaining why philosophy in its long history has not progressed to the same extent or in the same way as the sciences. This problem is avoided by seeing philosophy as an immature or provisional science whose subdisciplines cease to be philosophy once they have fully developed. In this sense, philosophy is sometimes described as \"the midwife of the sciences\". Other definitions focus on the contrast between science and philosophy. A common theme among many such conceptions is that philosophy is concerned with meaning, understanding, or the clarification of language. According to one view, philosophy is conceptual analysis, which involves finding the necessary and sufficient conditions for the application of concepts. Another definition characterizes philosophy as thinking about thinking to emphasize its self-critical, reflective nature. A further approach presents philosophy as a linguistic therapy. According to Ludwig Wittgenstein, for instance, philosophy aims at dispelling misunderstandings to which humans are susceptible due to the confusing structure of ordinary language. Phenomenologists, such as Edmund Husserl, characterize philosophy as a \"rigorous science\" investigating essences. They practice a radical suspension of theoretical assumptions about reality to get back to the \"things themselves\", that is, as originally given in experience. They contend that this base-level of experience provides the foundation for higher-order theoretical knowledge, and that one needs to understand the former to understand the latter. An early approach found in ancient Greek and Roman philosophy is that philosophy is the spiritual practice of developing one's rational capacities. This practice is an expression of the philosopher's love of wisdom and has the aim of improving one's well-being by leading a reflective life. For example, the Stoics saw philosophy as an exercise to train the mind and thereby achieve eudaimonia and flourish in life.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "kp-eb0918-079101-0826-v1.xml",
+        "content": "It is in this connexion that the meaning of the definition of philosophy as “the  science of principles” can best be seen. This is perhaps the most usual  definition, and, though vague, one of the least misleading. The first  statement may frequently turn out to have been merely provisionally or  relatively true; it is then superseded by, or rather inevitably merges itself  in, a less abstract account. In this the same “facts” appear differently,  because no longer separated from other aspects that belong to the full reality  of the known world. There is no such thing, we have said, as an individual fact;  and the nature of any fact is not fully known unless we know it in all its  relations to the system of the universe, or, in Spinoza’s phrase, “sub specie  aeternitatis.” In strictness, there is but one res completa or concrete fact, and it is the business of  philosophy, as science of the whole, to expound the chief relations that  constitute its complex nature.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "17",
+    "Question": "Which key figures shaped the definition of philosophy?",
+    "Concept": "Philosophy",
+    "Ground_Truth": "Pythagoras, Plato, Cicero, Aristotle, Bacon, Kant",
+    "source_metadata": [
+      {
+        "id": "kp-eb0717-042601-6625-v2.xml",
+        "content": "Of these the most eminent beyond all comparison  was Francis Bacon, Lord Verulam.     This illustrious man having read with attention the writings of the most  celebrated ancients, and made himself master of the sciences which were then  cultivated, soon discovered the absurdity of pretending to account for the  phenomena of nature by syllogistic reasoning from hypothetical principles; and,  with a boldness becoming a genius of the first order, he undertook to give a new  chart of human knowledge. This he did in his two admirable works, entitled De Dignitate et Augmentis Scientiarum;   and Novum Organum Scientiarum, sive Judicia vera de  Interpretatione Naturae. In the former of these works, he takes a very  minute survey of the whole circle of human science, which he divides into three  great branches; history, poetry, and philosophy, corresponding to the three  faculties of the mind, memory, imagination, and reason. Each of these general  heads is subdivided into minuter branches, and reflections are made upon the  whole, which, though we can neither copy nor abridge them, will amply reward the  perusal of the attentive reader. The purpose of the Novum Organum is to point out the proper method of  interpreting nature, which the author shows could never be done by the logic  which was then in fashion, but only by a painful and fair induction.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0717-042601-6625-v2.xml",
+        "content": "By Pythagoras, philosophy is defined εitiστημη των  οντων, the knowledge of things existing; by Cicero, after Plato, “scientia  rerum divinarum et humanarum cum causis and by the  illustrious Bacon, interpretatio naturae.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0918-079101-0826-v1.xml",
+        "content": "A specific sense of the  word first meets us in Plato, who defines the philosopher as one who apprehends  the essence or reality of things in opposition to the man who dwells in  appearances and the shows of sense. The philosophers, he says, “are those who  are able to grasp the eternal and immutable”; they are “those who set their affections on that which in each case really  exists” (Rep., 480).",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0918-079101-0826-v1.xml",
+        "content": "It is  not till we come to Aristotle—the encyclopaedist of the ancient world— that we  find a demarcation of the different philosophic disciplines corresponding, in  the main, to that still current. The earliest philosophers, or “physiologers,”  had occupied themselves chiefly with what we may call cosmology; the one  question which covers everything for them is that of the underlying substance of  the world around them, and they essay to answer this question, so to speak, by  simple inspection. In Socrates and Plato, on the other hand, the start is made  from a consideration of man’s moral and intellectual activity; but knowledge and  action are confused with one another, as in the Socratic doctrine that virtue is  knowledge. To this correspond the Platonic confusion of logic and ethics and the  attempt to substitute a theory of concepts for a metaphysic of reality.  Aristotle’s methodic intellect led him to separate the different aspects of  reality here confounded. He became the founder of logic, psychology, ethics, and  aesthetics as separate sciences; while he prefixed to all such (comparatively) £  )ecial inquiries the investigation of the ultimate nature of existence as such,  or of those first principles which are common to, and presupposed in, every  narrower field of knowledge. For this investigation Aristotle’s most usual name  is “first philosophy”; but there has since been appropriated to it, apparently  by accident, the title “metaphysics.” “Philosophy,” as a term of general  application, was not, indeed, restricted by Aristotle or his successors to the  disciplines just enumerated. Aristotle himself includes under the title, besides  mathematics, all his physical inquiries. It was only in the Alexandrian period,  as Zeller points out, that the special sciences attained to independent  cultivation. Nevertheless, as the mass of knowledge accumulated, it naturally  came about that the name “philosophy” ceased to be applied to inquiries  concerned with the particulars as such. The details of physics, for example,  were abandoned to the scientific specialist, and philosophy restricted itself in  this department to the question of the relation of the physical universe to the  ultimate ground or author of things. This inquiry, which was long called  “rational cosmology,” may be said to form part of the general science of  metaphysics, or at all events a pendant to it. By the gradual sifting out of the  special sciences philosophy thus came to embrace primarily the inquiries grouped  as “metaphysics” or “first philosophy.” These would embrace, according to the  scheme long current, ontology proper, or the science of being as such, with its  branch sciences of (rational) psychology, cosmology, and (rational or natural)  theology.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Western philosophy originated in Ancient Greece in the 6th century BCE with the pre-Socratics. They attempted to provide rational explanations of the cosmos as a whole. The philosophy following them was shaped by Socrates (469–399 BCE), Plato (427–347 BCE), and Aristotle (384–322 BCE). They expanded the range of topics to questions like how people should act, how to arrive at knowledge, and what the nature of reality and mind is. The later part of the ancient period was marked by the emergence of philosophical movements, for example, Epicureanism, Stoicism, Skepticism, and Neoplatonism. The medieval period started in the 5th century CE. Its focus was on religious topics and many thinkers used ancient philosophy to explain and further elaborate Christian doctrines. The Renaissance period started in the 14th century and saw a renewed interest in schools of ancient philosophy, in particular Platonism. Humanism also emerged in this period. The modern period started in the 17th century. One of its central concerns was how philosophical and scientific knowledge are created. Specific importance was given to the role of reason and sensory experience. Many of these innovations were used in the Enlightenment movement to challenge traditional authorities. Several attempts to develop comprehensive systems of philosophy were made in the 19th century, for instance, by German idealism and Marxism. Influential developments in 20th-century philosophy were the emergence and application of formal logic, the focus on the role of language as well as pragmatism, and movements in continental philosophy like phenomenology, existentialism, and post-structuralism. The 20th century saw a rapid expansion of academic philosophy in terms of the number of philosophical publications and philosophers working at academic institutions. There was also a noticeable growth in the number of female philosophers, but they still remained underrepresented.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "18",
+    "Question": "How is the relationship between philosophy and the sciences described?",
+    "Concept": "Philosophy",
+    "Ground_Truth": "The relationship between philosophy and the sciences is historically intertwined, with philosophy originally encompassing most forms of rational inquiry, including what we now consider the individual sciences like physics, chemistry, and biology. Over time, as empirical methods and experimental knowledge advanced, these disciplines became independent, while philosophy narrowed its focus to fundamental questions about reality, knowledge, and values, serving as a meta-discipline that clarifies concepts, assumptions, and methods across fields. In this sense, philosophy is often described as “the midwife of the sciences,” giving rise to them while retaining a distinct role in analyzing meaning, guiding inquiry, and addressing ethical and conceptual questions that empirical science alone cannot resolve.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0918-079101-0826-v1.xml",
+        "content": "“Philosophy,” as a term of general  application, was not, indeed, restricted by Aristotle or his successors to the  disciplines just enumerated. Aristotle himself includes under the title, besides  mathematics, all his physical inquiries. It was only in the Alexandrian period,  as Zeller points out, that the special sciences attained to independent  cultivation. Nevertheless, as the mass of knowledge accumulated, it naturally  came about that the name “philosophy” ceased to be applied to inquiries  concerned with the particulars as such. The details of physics, for example,  were abandoned to the scientific specialist, and philosophy restricted itself in  this department to the question of the relation of the physical universe to the  ultimate ground or author of things. This inquiry, which was long called  “rational cosmology,” may be said to form part of the general science of  metaphysics, or at all events a pendant to it. By the gradual sifting out of the  special sciences philosophy thus came to embrace primarily the inquiries grouped  as “metaphysics” or “first philosophy.” These would embrace, according to the  scheme long current, ontology proper, or the science of being as such, with its  branch sciences of (rational) psychology, cosmology, and (rational or natural)  theology. Subsidiary to metaphysics, as the central inquiry, stand the sciences  of logic and ethics, to which may be added aesthetics, constituting three  normative sciences, —sciences, that is, which do not, primarily, describe facts,  but rather prescribe ends.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0717-042601-6625-v2.xml",
+        "content": "We have seen, however, that the very reverse of all this is the case; that  philosophy has but very lately emerged from worse than total darkness and  ignorance; that what passed under the name of philosophy was nothing but systems  of errors, if systems they could be called, which were termed doctrines,  delivered with the most imposing apparatus of logical demonstration, but belied  in almost every instance by experience, and affording us no assistance in the  application of the powers of nature to the purposes of life. Nor will this  excite much wonder in the mind of the enlightened reader of the present day, who  reflects on the use that in this dialectic process was made of the categories,  and the method in which those categories were formed. From first principles so  vague in themselves, and so gratuitously assumed, ingenious men might deduce  many different conclusions, all equally erroneous; and that this was actually  done, no surer evidence can be given, than that hardly a lifetime elapsed when  the whole system of doctrines which had captivated the minds of the most  penetrating was oftener than once exploded and overturned by another system, which  flourished for a while, and then was supplanted by a third, which shared the  same fate. Here was an infallible proof of their error, for instability is  incompatible with truth.   It is allowed by all that this has been the case in those branches of study at  least which contemplate the philosophical relations of the material world; in  astronomy, in mechanical philosophy, in chemistry, in physiology, in medicine,  in agriculture. It is also acknowledged, that in the course of less than two  centuries we have acquired much knowledge respecting these very subjects, call  it philosophy, or by what name you will; so much more conformable to the natural  course of things, that the deductions made from it by the same rules of the  synthetic method are more conformable to fact, and therefore better fitted to  direct our conduct and improve our powers.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0717-042601-6625-v2.xml",
+        "content": "The Novum Organum of Bacon, which  points out the true method of forming a body of real and useful knowledge,  namely, the study of nature in the way of description, observation, and  experiment, is undoubtedly the noblest present that science ever received. It  may be considered as the grammar of nature’s language, and is a counterpart to  the logic of Aristotle; not exploding it, but making it effectual.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Philosophy",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Philosophy is closely related to many other fields. It is sometimes understood as a meta-discipline that clarifies their nature and limits. It does this by critically examining their basic concepts, background assumptions, and methods. In this regard, it plays a key role in providing an interdisciplinary perspective. It bridges the gap between different disciplines by analyzing which concepts and problems they have in common. It shows how they overlap while also delimiting their scope. Historically, most of the individual sciences originated from philosophy. The influence of philosophy is felt in several fields that require difficult practical decisions. In medicine, philosophical considerations related to bioethics affect issues like whether an embryo is already a person and under what conditions abortion is morally permissible. A closely related philosophical problem is how humans should treat other animals, for instance, whether it is acceptable to use non-human animals as food or for research experiments. In relation to business and professional life, philosophy has contributed by providing ethical frameworks. They contain guidelines on which business practices are morally acceptable and cover the issue of corporate social responsibility. Philosophical inquiry is relevant to many fields that are concerned with what to believe and how to arrive at evidence for one's beliefs. This is a key issue for the sciences, which have as one of their prime objectives the creation of scientific knowledge.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Before the modern age, the term philosophy was used in a wide sense. It included most forms of rational inquiry, such as the individual sciences, as its subdisciplines. For instance, natural philosophy was a major branch of philosophy. This branch of philosophy encompassed a wide range of fields, including disciplines like physics, chemistry, and biology. An example of this usage is the 1687 book Philosophiæ Naturalis Principia Mathematica by Isaac Newton. This book referred to natural philosophy in its title, but it is today considered a book of physics. The meaning of philosophy changed toward the end of the modern period when it acquired the more narrow meaning common today. In this new sense, the term is mainly associated with philosophical disciplines like metaphysics, epistemology, and ethics. Among other topics, it covers the rational study of reality, knowledge, and values. It is distinguished from other disciplines of rational inquiry such as the empirical sciences and mathematics.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "The modern period started in the 17th century. One of its central concerns was how philosophical and scientific knowledge are created. Specific importance was given to the role of reason and sensory experience. Many of these innovations were used in the Enlightenment movement to challenge traditional authorities. Several attempts to develop comprehensive systems of philosophy were made in the 19th century, for instance, by German idealism and Marxism. Influential developments in 20th-century philosophy were the emergence and application of formal logic, the focus on the role of language as well as pragmatism, and movements in continental philosophy like phenomenology, existentialism, and post-structuralism. The 20th century saw a rapid expansion of academic philosophy in terms of the number of philosophical publications and philosophers working at academic institutions.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Philosophie",
+        "content": "Science-based definitions usually face the problem of explaining why philosophy in its long history has not progressed to the same extent or in the same way as the sciences. This problem is avoided by seeing philosophy as an immature or provisional science whose subdisciplines cease to be philosophy once they have fully developed. In this sense, philosophy is sometimes described as \"the midwife of the sciences\". Other definitions focus on the contrast between science and philosophy. A common theme among many such conceptions is that philosophy is concerned with meaning, understanding, or the clarification of language.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Philosophy",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      20,
+      21,
+      22
+    ],
+    "Question_ID": "19",
+    "Question": "How do historical accounts vary in tracing the origin of \"socialism\"?",
+    "Concept": "Socialism",
+    "Ground_Truth": "The two entries diverge: the 19th‑century article asserts \"the word 'socialism' ... [was] coined in England in 1835\" and links it to Robert Owen and Reybaud's continental adoption, while the modern entry credits Pierre Leroux's alleged 1832 usage in Le Globe; both, however, acknowledge links to Saint‑Simon, Owen and broader pre‑modern communal practices and modern revolutions, so the contrast is one of specific first‑use attribution and emphasis rather than a contradiction about socialism's broader 19th‑century emergence."
+  },
+  {
+    "Question_ID": "20",
+    "Question": "Who used the term \"socialism\" for the first time?",
+    "Concept": "Socialism",
+    "Ground_Truth": "In the 1875 Britannica entry, it is said that socialism was coined in 1835 in Robert Owen. In the 2025 Wikipedia entry, it is said that the term was claimed first by Pierre Leroux 1832.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0922-020501-0220-v1.xml",
+        "content": "The word “socialism” is of comparatively recent  origin, having been coined in England in 1835. In that year a society which  received the grandiloquent name of the “Association of all Classes of all  Nations” was founded under the auspices of Robert Owen; and the words  “socialist” and “socialism” were first used during the discussions which arose  in connexion with it.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Socialism",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Sozialismus",
+        "content": "Initial use of socialism was claimed by Pierre Leroux, who alleged he first used the term in the Parisian journal Le Globe in 1832.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Socialism",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "21",
+    "Question": "What contrast do the accounts draw about whether socialism is essentially a 19th‑century innovation or has older roots?",
+    "Concept": "Socialism",
+    "Ground_Truth": "The 1875 text acknowledges both: it treats socialism \"as properly a phenomenon of the 19th century\" yet also notes earlier communal forms (\"common property... as old as human society itself\") and the French Revolution as inspiring ideas, whereas the 2025 summary locates socialism's origins in Enlightenment and the 1789 French Revolution but acknowledges \"precedents in earlier movements and ideas.\"",
+    "source_metadata": [
+      {
+        "id": "kp-eb0922-020501-0220-v1.xml",
+        "content": "As we have seen,  however, there are definitions of the word which would give it a wider range of  meaning and a more ancient beginning, compared with which capitalism is but of  yesterday,—which would, in fact, make it as old as human society itself. In the  early stages of human development, when the tribe or the village community was  the social unit, the subordination of the individual to the society in which he  dwelt was the rule, and common property was the prevalent form. In the  development of the idea of property, especially as regards land, three  successive historical stages are broadly recognized,—common property and common  enjoyment of it, common property and private enjoyment, private property and  private enjoyment. The last form did not attain to full expression till the end  of the 18th century, when the principle of individual freedom, which was really  a reaction against privileged restriction, was proclaimed as a positive axiom of  government and of economics. The free individual struggle for wealth and for the  social advantages dependent on wealth is a comparatively recent thing. In all  periods of history the state reserved to itself the right to interpose in the  arrangements of property,—sometimes in favour of the poor, as in the case of the  English poor law, which may thus be regarded as a socialistic measure. Moreover,  all through history revolts in favour of a rearrangement of property have been  very frequent. And in the societies of the Catholic Church we have a permanent  example of common property and a common enjoyment of it.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Socialism",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Sozialismus",
+        "content": "The history of socialism has its origins in the Age of Enlightenment and the 1789 French Revolution, along with the changes that brought, although it has precedents in earlier movements and ideas.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Socialism",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "kp-eb0922-020501-0220-v1.xml",
+        "content": "We have seen, then, that the rise of socialism as a new and reasoned theory of  society was relative to the industrial revolution and to the ideas proclaimed in  the French Revolution, prominent among which, besides the much emphasized idea  of freedom and the less easily realized ideals of equality and fraternity, was  the conception of the worth and dignity of labour. Though Owen was most largely  influenced by the former and Saint-Simon and Fourier by the latter, it is  certain that all three were greatly affected by both the new movements.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Socialism",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "22",
+    "Question": "In which country was the word \"socialism\" first used in today's meaning?",
+    "Concept": "Socialism",
+    "Ground_Truth": "The 1875 mentions England with Owen being the first to use it in 1835 and being borrowed by the French (Reybaud) in 1839. The 2025 entry mentions France as the origin in 1832 with Pierre Leroux.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0922-020501-0220-v1.xml",
+        "content": "The word “socialism” is of comparatively recent  origin, having been coined in England in 1835. In that year a society which  received the grandiloquent name of the “Association of all Classes of all  Nations” was founded under the auspices of Robert Owen; and the words  “socialist” and “socialism” were first used during the discussions which arose  in connexion with it.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Socialism",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0922-020501-0220-v1.xml",
+        "content": "The term was borrowed from England by a distinguished French  writer, Reybaud, in his well-known work the Reformateurs  modernes (1839), in which he discussed the theories of Saint-Simon,  Fourier, and Owen. Through Reybaud it soon gained wide currency on the  Continent, and is now the accepted world-historic name for one of the most  remarkable movements of the 19th century.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Socialism",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Sozialismus",
+        "content": "Initial use of socialism was claimed by Pierre Leroux, who alleged he first used the term in the Parisian journal Le Globe in 1832. Leroux was a follower of Henri de Saint-Simon, one of the founders of what would later be labelled utopian socialism.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Socialism",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Sozialismus",
+        "content": "Socialism is also attributed in France to Marie Roch Louis Reybaud while in Britain it is attributed to Owen, who became one of the fathers of the cooperative movement.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Socialism",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      24,
+      25,
+      26
+    ],
+    "Question_ID": "23",
+    "Question": "How was Odin portrayed in earlier records compared to today?",
+    "Concept": "Odin",
+    "Ground_Truth": "The earlier record portrays Odin a a presumed real person, while the modern record simply portrays him as a Germanic god in norse mythology. The older entry foregrounds prodigious supernatural feats—he \"could run over the world...transform himself...raise the dead\"—portraying Odin as a miraculous enchanter, whereas the modern entry foregrounds a consistent iconography (one‑eyed, spear Gungnir, ravens Huginn and Muninn, wolves Geri and Freki, and Sleipnir) supported by textual tradition and archaeological finds. The difference is between an emphasis on extraordinary powers and an emphasis on stable physical attributes and material evidence."
+  },
+  {
+    "Question_ID": "24",
+    "Question": "Who is Odin?",
+    "Concept": "Odin",
+    "Ground_Truth": "The older source frames Odin as a euhemerized Scythian conqueror \"assumed... by Sigge\" whose priestly persona possibly was later \"confounded\" with a god, while the modern source treats Óðinn as a Proto‑Germanic theonym.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0716-032303-1064-v2.xml",
+        "content": "ODIN , in Mythology, called  also, in the dialect of the Anglo-Saxons, Woden or Wodan, a name given by the ancient Scythians to their supreme  god, and assumed, about seventy years before the Christian era, by Sigge, a  Scythian prince, who conquered the northern nations, made great changes in their  government, manners, religion, and had even divine honours paid him.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Odin",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Odin",
+        "content": "Odin (; from Old Norse: Óðinn) is a widely revered god in Germanic paganism.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "kp-eb0716-032303-1064-v2.xml",
+        "content": "There is nothing  certain in this account; but it is probable that the god whose prophet or priest  this Scythian pretended to be, was named Odin, and that the ignorance of  succeeding ages confounded the deity with his priest, composing out of the  attributes of the one and the history of the other the character of the northern  conqueror.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Odin",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "25",
+    "Question": "How is Odin described visually?",
+    "Concept": "Odin",
+    "Ground_Truth": "The 2025 entry describes Odin as a disguised, one-eyed, long-bearded, spear wielding man. The older account does not mention his appearance.",
+    "source_metadata": [
+      {
+        "id": "article_Odin",
+        "content": "Odin is frequently portrayed as one-eyed and long-bearded, wielding a spear named Gungnir or appearing in disguise wearing a cloak and a broad hat. He is often accompanied by his animal familiars—the wolves Geri and Freki and the ravens Huginn and Muninn, who bring him information from all over Midgard—and he rides the flying, eight-legged steed Sleipnir across the sky and into the underworld.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Odin",
+        "content": "References to or depictions of Odin appear on numerous objects. Migration Period (5th and 6th century CE) gold bracteates (types A, B, and C) feature a depiction of a human figure above a horse, holding a spear and flanked by one or two birds. The presence of the birds has led to the iconographic identification of the human figure as the god Odin, flanked by Huginn and Muninn. Like the Prose Edda description of the ravens, a bird is sometimes depicted at the ear of the human, or at the ear of the horse. Bracteates have been found in Denmark, Sweden, Norway and, in smaller numbers, England and areas south of Denmark. Austrian Germanist Rudolf Simek states that these bracteates may depict Odin and his ravens healing a horse and may indicate that the birds were originally not simply his battlefield companions but also \"Odin's helpers in his veterinary function.\" Vendel Period helmet plates (from the 6th or 7th century) found in a grave in Sweden depict a helmeted figure holding a spear and a shield while riding a horse, flanked by two birds.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Odin",
+        "content": "Excavations in Ribe, Denmark have recovered a Viking Age lead metal-caster's mould and 11 identical casting-moulds. These objects depict a moustached man wearing a helmet that features two head-ornaments. Archaeologist Stig Jensen proposes these head-ornaments should be interpreted as Huginn and Muninn, and the wearer as Odin. He notes that \"similar depictions occur everywhere the Vikings went—from eastern England to Russia and naturally also in the rest of Scandinavia.\" A portion of Thorwald's Cross (a partly surviving runestone erected at Kirk Andreas on the Isle of Man) depicts a bearded human holding a spear downward at a wolf, his right foot in its mouth, and a large bird on his shoulder.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "26",
+    "Question": "What supernatural powers are ascribed to Odin?",
+    "Concept": "Odin",
+    "Ground_Truth": "The older source desribes Odin as a magician, being able to enachant, shapeshift, raise the dead, forsee the future, and cause great devastation using tempestuous winds. The newer accounts mostly describe Odin as a powerful leader or warrior, commanding the valkyries, his animal familiars and the Wild Hunt.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0716-032303-1064-v2.xml",
+        "content": "He had also the address to persuade his  followers that he could run over the world in the twinkling of an eye; that he  had the direction of the air and the tempests; that he could transform himself  into all sorts of shapes, raise the dead, foretell things to come, deprive his  enemies by enchantment of health and vigour, and discover all the treasures  which were concealed in the earth. They add, that by his tender and melodious  airs he could make the plains and mountains open and expand with delight; and  that the ghosts, thus attracted, would leave their infernal caverns, and stand  motionless about him. Nor was he less dreadful and furious in battle; changing  himself into the shape of a bear, a wild bull, or a lion, and amidst ranks of  enemies committing the most horrid devastation, without receiving any wound in  return.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Odin",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Odin",
+        "content": "Odin is also associated with the divine battlefield maidens, the valkyries, and he oversees Valhalla, where he receives half of those who die in battle, the einherjar, sending the other half to the goddess Freyja's Fólkvangr. Odin consults the disembodied, herb-embalmed head of the wise Mímir, who foretells the doom of Ragnarök and urges Odin to lead the einherjar into battle before being consumed by the monstrous wolf Fenrir. In later folklore, Odin sometimes appears as a leader of the Wild Hunt, a ghostly procession of the dead through the winter sky. He is associated with charms and other forms of magic, particularly in Old English and Old Norse texts.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Odin",
+        "content": "In these texts he frequently seeks greater knowledge, most famously by obtaining the Mead of Poetry, and makes wagers with his wife Frigg over his endeavors. He takes part both in the creation of the world by slaying the primordial being Ymir and in giving life to the first two humans Ask and Embla. He also provides mankind knowledge of runic writing and poetry, showing aspects of a culture hero.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Odin",
+        "content": "Norse mythology, the source of most surviving information about him, associates him with wisdom, healing, death, royalty, the gallows, knowledge, war, battle, victory, sorcery, poetry, frenzy, and the runic alphabet, and depicts him as the husband of the goddess Frigg.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Odin",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      28,
+      29,
+      30
+    ],
+    "Question_ID": "27",
+    "Question": "What are conceptual differences between love in the early 19th century and today?",
+    "Concept": "Love",
+    "Ground_Truth": "Early 19th-century conceptions of love frame it as a broad, often quasi-physiological passion arising from pleasure, desire, and esteem, sometimes even treated as a disease with bodily symptoms and strongly tied to social roles, morality, and physical attraction. Contemporary views instead conceptualize love as a multidimensional psychological and relational construct, involving components like intimacy, attachment, and commitment, and emphasizing emotional processes, personal well-being, and behavioral practices over time. Overall, the shift is from a more externally observed, moralized, and bodily-driven phenomenon to an internally analyzed, psychologically nuanced, and dynamic experience."
+  },
+  {
+    "Question_ID": "28",
+    "Question": "How is love defined?",
+    "Concept": "Love",
+    "Ground_Truth": "The 1830 Britannica treats love broadly as any pleasurable affection toward desirable objects, whether people, pleasures, or status, without much moral judgment. In contrast, the 2025 Wikipedia definition frames love as a complex emotional and ethical phenomenon, distinguishing types of love and emphasizing both its positive virtues (like compassion) and potential moral flaws.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "LOVE , in the enlarged sense of the word, denotes all  those affections of the pleasing kind which objects and incidents excite in our  minds. Thus we are said to love not only intelligent  agents of morally good dispositions, but also sensual pleasures, riches, and  honours",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "Love encompasses a range of strong and positive emotional and mental states, from the most sublime virtue or good habit, or the deepest interpersonal affection, to the simplest pleasure. An example of this range of meanings is that the love of a mother differs from the love of a spouse, which differs from the love of food. Most commonly, love refers to a feeling of strong attraction and emotional attachment. Love is considered to be both positive and negative, with its virtue representing human kindness, compassion, and affection—\"the unselfish, loyal, and benevolent concern for the good of another\"—and its vice representing a human moral flaw akin to vanity, selfishness, amour-propre, and egotism. It may also describe compassionate and affectionate actions towards other humans, oneself, or animals.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      }
+    ]
+  },
+  {
+    "Question_ID": "29",
+    "Question": "Which qualities or conditions are necessary for love to develop?",
+    "Concept": "Love",
+    "Ground_Truth": "Across these sources, love develops from a combination of emotional closeness, desire, and sustained commitment: models like Sternberg’s and Rubin’s emphasize intimacy, attachment, caring, and passion as core conditions. Other perspectives add that love requires ongoing actions and concern for another’s well-being, not just feelings (as in Fromm and Peck). The older Britannica view similarly stresses that love arises when esteem and moral qualities are combined with physical attraction, suggesting both psychological and physical factors must align.",
+    "source_metadata": [
+      {
+        "id": "article_Liebe",
+        "content": "Psychologist Robert Sternberg formulated a triangular theory of love in which love has three components: intimacy, commitment, and passion. Intimacy is when two people share confidences and various details of their personal lives, and is usually shown in friendships and romantic love affairs. Commitment is the expectation that the relationship is permanent. Passionate love is shown in infatuation as well as romantic love. All forms of love are viewed as varying combinations of these three components.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "American psychologist Zick Rubin sought to define love by psychometrics in the 1970s. His work identifies a different set of three factors that constitute love: attachment, caring, and intimacy.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "Some Western authorities disaggregate into two main components, the altruistic and the narcissistic. This view is represented in the works of Scott Peck, whose work in the field of applied psychology explored the definitions of love and evil. Peck maintains that love is a combination of the \"concern for the spiritual growth of another\" and simple narcissism. In combination, love is an activity, not simply a feeling. Psychologist Erich Fromm maintained in his book The Art of Loving that love is not merely a feeling but is also actions, and that in fact the \"feeling\" of love is superficial in comparison to one's commitment to love via a series of loving actions over time. Fromm held that love is ultimately not a feeling at all, but rather is a commitment to, and adherence to, loving actions towards another, oneself, or many others, over a sustained duration.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "Helen Fisher, an anthropologist and human behavior researcher, divides the experience of love into three partly overlapping stages: lust, attraction, and attachment. Lust is the feeling of sexual desire; romantic attraction determines what partners find attractive and pursue, conserving time and energy by choosing; and attachment involves sharing a home, parental duties, mutual defense, and in humans involves feelings of safety and security.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "But love, in its usual and more appropriate signification,  may be defined, “that affection which, being compounded of animal desire,  esteem, and benevolence, becomes the bond of attachment and union between  individuals of the different sexes, and makes them enjoy in the society of each  other a species of happiness which they experience nowhere else.”",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "The great moral virtues which may be comprehended under the general  term integrity, are all absolutely necessary to make either men or women  estimable; but to procure esteem to the female character, the modesty peculiar  to their sex is a very essential circumstance. Nature hath provided  them with it as a defence against the artful solicitations of the other sex  before marriage, and’also as a support of conju-   A woman, therefore, whose dispositions are gentle, delicate, and rather timid  than bold, who is possessed of a large share of sensibility and modesty, and  whose manners are soft and insinuating, must, upon moral principles, command the  esteem and benevolence of every individual of the other sex who is possessed of  sound understanding; but if her person be deformed, or not such as to excite  some degree of animal desire, she will attract no man’s love. In like manner, a  man whose moral character is good, whose understanding is acute, and whose  conversation is instructive, must command the esteem of every sensible and  virtuous woman; but if his figure be disagreeable, his manner unpolished, his  habits slovenly, and, above all, if he be deficient in personal courage, he will  hardly excite desire in the female breast. It is only when the qualities which  command esteem are, in the same person, united with those which excite desire,  that the individual so accomplished can be an object of love to one of the other  sex; but when these qualities are thus united, each of them increases the other  in the imagination of the lover.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "We have said that the perception of beauty, combined vith animal desire, is the  first inducement which a man :an have to prefer one woman to another. It may be  ιdded, that elegance of figure, a placid masculine counte-ιance, with a person  which indicates strength and agility, .re the qualities which first tend to  attach any woman to I particular man. Beauty has been defined by Buffier, í that  particular form which is the most common of all articular forms to be met with  in the same species of seings.” Let us apply this definition to our own species,  1 nd try, by means of it, to ascertain what  constitutes the ⅛cauty of the human face. It is evident, that of countenances we  find a number almost infinite of different forms; ∣f which, however, one only  constitutes beauty, whilst the est, however numerous, constitute what is not  beauty, ut deformity or ugliness.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "30",
+    "Question": "What are common problems associated with love?",
+    "Concept": "Love",
+    "Ground_Truth": "Common problems associated with love include both psychological distress and physical or behavioral disturbances. The 1830 Britannica portrays love almost as a disease, producing symptoms like anxiety, insomnia, loss of appetite, and even madness, while modern accounts emphasize emotional fallout from relationships, such as heartbreak, anxiety, obsession, and social withdrawal after breakups. Additionally, both sources note that love can become distorted by selfishness or ego, turning it from a virtuous bond into a source of harm.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "The symptoms  produced by this passion as a disease, according to medical writers, are  various. The eyelids often twinkle; the eyes are hollow, and yet appear as if  full with pleasure; the pulse is not peculiar to the passion, but the same with  that which attends solicitude and care. When the object of this affection is  thought of, particularly if the id¾a be sudden, the spirits are confused, the  pulse changes, and its force and time are very variable. In some instances, the  person is sad and watchful; in others, the person, not being conscious of his  state, pines away, is slothful, and regardless of food; though the wiser, when  they find themselves in love, seek pleasant company and active entertainments.  As the force of love prevails, sighs grow deeper; a tremor affects the heart and  pulse; the countenance is alternately pale and red; the voice is suppressed in  the fauces; the eyes grow dim; cold sweats break out; sleep absents itself, at  least until the morning; the secretions become disturbed; and a loss of  appetite, a hectic fever, melancholy, or perhaps madness, if not death,  constitutes the catastrophe.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "Breakups can evoke a range of emotional states, including distrust, rejection, and anger, leading to trauma and various psychological challenges such as anxiety, social withdrawal, and even love addiction. Individuals may become fixated on past relationships, perpetuating emotional distress akin to addiction.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "article_Liebe",
+        "content": "Love is considered to be both positive and negative, with its virtue representing human kindness, compassion, and affection—\"the unselfish, loyal, and benevolent concern for the good of another\"—and its vice representing a human moral flaw akin to vanity, selfishness, amour-propre, and egotism.",
+        "date": "2025",
+        "source": "Wikipedia",
+        "topic": "Love",
+        "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c"
+      },
+      {
+        "id": "kp-eb0713-057603-8911-v2.xml",
+        "content": "It is not indeed to be denied that there is something  irresistible in female beauty. The most severe will not pretend that they do not  feel an immediate prepossession in favour of a handsome woman; but this  prepossession, even when combined with animal desire, does not constitute the  whole of that affection which is called love. Savages  feel the influence of the sensual appetite, and it is extremely probable that  they have some ideas of beauty; but amongst savages the affection of love is  seldom known. Even amongst the lower orders of society it seems to be a very  gross passion, and to have in it more of the selfishness of appetite than of the  generosity of esteem.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Love",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Subquestion_IDs": [
+      32,
+      33,
+      34,
+      35
+    ],
+    "Question_ID": "31",
+    "Question": "Out of Paris, Berlin, Vienna, and Moscow, what would have been the best city to live in in the 19th century when it comes to their weather?",
+    "Concept": "multiple",
+    "Ground_Truth": "Paris would have been the best city to live in, as it had a comparatively mild, stable, and “healthy and agreeable” climate, unlike the harsher cold of Moscow and Berlin or the unhealthy, highly variable conditions of Vienna."
+  },
+  {
+    "Question_ID": "32",
+    "Question": "How can the climate of Moscow in the 19th century be described?",
+    "Concept": "Moscow",
+    "Ground_Truth": "Moscow has a healthy but strongly continental climate, characterized by long, severely cold winters lasting nearly half the year with heavy snow and a frozen river, contrasted by warm summers and a generally pleasant spring.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0916-085601-0887-v1.xml",
+        "content": "The climate of Moscow is cold and continental, but healthy. The average annual  temperature is 40 o- l Fahr. (January, 14 s ; July, 66° ∙5). The summer is warm (64 o- 2), and the winter cold and dry (15° *8), great  masses of snow covering the streets. The spring, as is usually the case in cold  continental climates, is beautiful. The prevailing winds are south-west and  south. The river Moskva is frozen, on the average, for 153 days (from 12th  November to 13th April).",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Moscow",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0715-056803-6593-v2.xml",
+        "content": "The  climate is severely cold in winter, which extends through nearly half the year.  It is, however, not unhealthy.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Moscow",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "33",
+    "Question": "How can the climate of Paris in the 19th century be described?",
+    "Concept": "Paris",
+    "Ground_Truth": "Paris has a generally mild and fairly uniform climate with moderate temperatures, frequent but slight seasonal changes, regular rainfall throughout the year, and only occasional extremes of heat, cold, or snow.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0918-027401-0291-v1.xml",
+        "content": "Paris enjoys a fairly uniform climate, subject,  however, to frequent changes at all seasons of the year. The mean temperature,  calculated by Μ. Flammarion from observations extending over seventy-two years  (1804-76), is 51 0, 4 Fahr. The highest reading  observed (in July 1874, and again in July 1881) is 101° Fahr., the lowest (in  December 1879) is - 14°. The monthly means for the sixty-four years 1806-1870  are—January 36 o, 3, February 40 o, l, March 43 o, 5, April  50° ∙2,, May 57 0, 6, June 63°O, July 66° O, August  65° '3, September 60 o- 3, October 52° ∙3, November  43° ∙7, December 38 o, 7. The river freezes when  the temperature falls below 18°. It was frozen in nearly its whole extent from  Bercy to Auteuil in the winters of 1819-20, 1829-30, 1879-80; and partially in  the winters of 1840-41,1853-54,1857-58, and 1870-71. Rain falls, on an average,  on 143 days, of which 38 are in winter, 35 in spring, 34 in summer, and 36 in  autumn,—the average quantity in a year being 19’68 inches. The driest month is  February, the rainiest July,—the rainfall for these months being respectively  0’87 inch and 2Ί5 inches. There are 12 days on which snow falls, 184 on which  the sky is covered, 40 with fogs, and 9 with hail. The following figures show  the directions of the winds N. 38 days, N.E. 41, E. 24, S.E. 26, S. 53, S.W. 70,  W. 67, and N.W. 36, with 10 calm days. Thunderstorms average 13 per  annum,—ranging from 6 (in 1823) to 25 τ(J,811). There is comparatively little  variation in the barometer. Its mean height is 29’763 inches at a height of 216  feet above sea-level. On the whole the climate is healthy and agreeable, its  variations, though frequent, being comparatively slight.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Paris",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "34",
+    "Question": "How can the climate of Berlin in the 19th century be described?",
+    "Concept": "Berlin",
+    "Ground_Truth": "Berlin has a moderately cool climate with an average temperature around 48°F, marked by significant seasonal extremes—including very cold winters that can drop below zero—along with moderate rainfall and a substantial number of rainy, snowy, and foggy days each year.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0903-059301-0610-v1.xml",
+        "content": "Its  average annual temperature is 48 ’ 2° Fahr., the maximum recorded heat being  99*5° in 1819, and the maximum cold - 16 ’ l 0   Fahr, in 1823. The average rainfall is 21 \"74 Prussian inches, and Berlin has on  the average 120 rainy, 29 snowy, and 17 foggy days in a year.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Berlin",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0903-059301-0610-v1.xml",
+        "content": "we have 13,695 persons who pass  the winter in unheated dwellings, in a climate where the cold not unfrequently  sinks below the zero of Fahrenheit.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Berlin",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  },
+  {
+    "Question_ID": "35",
+    "Question": "How can the climate of Vienna in the 19th century be described?",
+    "Concept": "Vienna",
+    "Ground_Truth": "Vienna has a highly changeable and often unhealthy climate, marked by frequent cold and damp winds, rapid temperature fluctuations, storms in transitional seasons, and dusty summers, conditions that were considered particularly harmful to delicate health.",
+    "source_metadata": [
+      {
+        "id": "kp-eb0721-064303-0683-v2.xml",
+        "content": "Yet notwithstanding all this care, Vienna is decidedly unhealthy, and the climate  is generally fatal to delicate constitutions. Colds, catarrhs, and pulmonary  complaints are frequent and most malignant. This insalubrity arises from its  peculiar situation; for it is exposed to the frequent prevalence of easterly  winds, which, blowing over the cold plains of Russia, Poland, and Hungary, the  icy tops of the Carpathians, and the waters and marshes of the Danube, increase  continually in coldness and dampness till they reach Vienna. To the north wind  the city is also equally exposed, while, from the softer influences of the south  and the west. It is excluded by a neighbouring chain of mountains, behind which  rise the everlasting snows of the Tyrolian and the Carnic Alps. Alternations  from heat to cold, and from cold to heat occur two or three times a-day, almost  throughout the year. The narrow streets preclude any benefit from the sun, even  when he shines; and in dry weather the clouds of dust are intolerable. The mean  temperature is from 7° to 9° below zero of Reaumur’s thermometer.",
+        "date": "1830",
+        "source": "Britannica 7th ed.",
+        "topic": "Vienna",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      },
+      {
+        "id": "kp-eb0924-021903-0240-v1.xml",
+        "content": "The climate of Vienna is changeable, and rapid falls of temperature are  not uncommon. The range between January and June is about 40° Fahr. Violent  storms often occur in spring and autumn; and the heat of summer is accompanied  by a plague of dust.",
+        "date": "1875",
+        "source": "Britannica 9th ed.",
+        "topic": "Vienna",
+        "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68"
+      }
+    ]
+  }
+]

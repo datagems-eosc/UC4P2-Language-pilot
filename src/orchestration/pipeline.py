@@ -1,0 +1,274 @@
+"""End-to-end historical comparative question answering.
+
+Disambiguation goes through the query-disambiguation language API.
+Retrieval goes through Cross-Dataset Discovery, one search per slice.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from typing import Any
+
+import dspy
+
+from src.analytics.feature_engine import compute_feature_metrics
+from src.constraints.comparative import (
+    DisambiguationAPIError,
+    QueryDisambiguationClient,
+)
+from src.decomposition.qdmr_generator import decompose_question
+from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
+from src.retrieval.multi_slice_retriever import (
+    CrossDatasetMultiSliceRetriever,
+    MockMultiSliceRetriever,
+    RetrievedPassage,
+)
+from src.schemas.benchmark import BenchmarkOutput, Citation
+from src.schemas.slice import ComparisonSlice, ParsedQueryIntent, parse_query_intent, slices_from_disambiguation
+from src.schemas.state import PipelineState
+
+
+class GroundedSynthesizer(dspy.Signature):
+    """Write a factual comparison that cites passage ids."""
+
+    question: str = dspy.InputField()
+    evidence: str = dspy.InputField(desc="Passages labeled with citation ids")
+    answer: str = dspy.OutputField(desc="Comparison citing [ref_id] markers")
+
+
+def _query_id(question: str) -> str:
+    return "p2-" + hashlib.sha1(question.encode("utf-8")).hexdigest()[:10]
+
+
+def _dimension_name(comparison_type: str | None) -> str:
+    if comparison_type == "cross_lingual":
+        return "cross-lingual"
+    if comparison_type in {"multi-dimensional", "multi_dimensional"}:
+        return "multi-dimensional"
+    return "temporal"
+
+
+def _clarification(errors: list[str]) -> str:
+    return (
+        "This historical comparative query cannot be executed against the indexed archives. "
+        + " ".join(errors)
+        + " Please name the concept and restrict every slice to indexed sources from 1800 onward."
+    )
+
+
+def _variants(expansion: dict[str, Any], slices: list[ComparisonSlice]) -> dict[str, list[str]]:
+    variants: dict[str, list[str]] = {}
+    for slice_ in slices:
+        words = expansion.get(slice_.slice_id) or []
+        variants[slice_.slice_id] = [str(word) for word in words]
+    return variants
+
+
+def _synthesize_text(
+    intent: ParsedQueryIntent,
+    passages: dict[str, list[RetrievedPassage]],
+    citations: list[Citation],
+) -> str:
+    by_slice: dict[str, list[Citation]] = {}
+    for citation in citations:
+        by_slice.setdefault(citation.slice_id, []).append(citation)
+    sentences = [
+        f"Comparing {intent.target_concept} across {len(intent.slices)} slices ({intent.dimension})."
+    ]
+    for slice_ in intent.slices:
+        refs = by_slice.get(slice_.slice_id) or []
+        if not refs:
+            sentences.append(f"{slice_.label}: no indexed passage was returned.")
+            continue
+        marker = " ".join(f"[{item.citation_id}]" for item in refs[:2])
+        sentences.append(f"{slice_.label}: {refs[0].text_snippet} {marker}")
+    return " ".join(sentences)
+
+
+class HistoricalQAOrchestrator(dspy.Module):
+    """Parse, extend, decompose, retrieve, measure, and synthesize an N-way comparison."""
+
+    def __init__(
+        self,
+        disambiguation_client: QueryDisambiguationClient | None = None,
+        retriever: CrossDatasetMultiSliceRetriever | MockMultiSliceRetriever | None = None,
+    ):
+        super().__init__()
+        self.disambiguation_client = disambiguation_client or QueryDisambiguationClient()
+        self.retriever = retriever or CrossDatasetMultiSliceRetriever()
+
+    def resolve(self, question: str, query_id: str | None = None) -> PipelineState:
+        identifier = query_id or _query_id(question)
+        try:
+            remote = self.disambiguation_client.disambiguate_language(question)
+            source = "query-disambiguation-api"
+        except DisambiguationAPIError as exc:
+            intent, errors = parse_query_intent(question)
+            if errors or intent is None:
+                return PipelineState(
+                    question=question,
+                    query_id=identifier,
+                    status="clarification",
+                    disambiguation_source="local-fallback",
+                    clarification=_clarification(errors),
+                    constraint_errors=errors,
+                    disambiguation={"fallback_reason": str(exc), "proceed": False},
+                )
+            return PipelineState(
+                question=question,
+                query_id=identifier,
+                status="disambiguated",
+                intent=intent,
+                disambiguation_source="local-fallback",
+                disambiguation={"proceed": True, "fallback_reason": str(exc)},
+            )
+        if not remote.get("proceed"):
+            errors = list(remote.get("constraint_errors") or [])
+            return PipelineState(
+                question=question,
+                query_id=identifier,
+                status="clarification",
+                disambiguation=remote,
+                disambiguation_source=source,
+                clarification=str(remote.get("clarification") or _clarification(errors)),
+                constraint_errors=errors,
+            )
+        slices = slices_from_disambiguation(remote)
+        if len(slices) < 2:
+            local_intent, errors = parse_query_intent(question)
+            if local_intent is None:
+                return PipelineState(
+                    question=question,
+                    query_id=identifier,
+                    status="clarification",
+                    disambiguation=remote,
+                    disambiguation_source=source,
+                    clarification=_clarification(errors),
+                    constraint_errors=errors,
+                )
+            intent = local_intent
+        else:
+            concepts = list(remote.get("target_concepts") or [])
+            intent = ParsedQueryIntent(
+                original_query=question,
+                target_concept=str(concepts[0] if concepts else ""),
+                dimension=_dimension_name(remote.get("comparison_type")),
+                slices=slices,
+            )
+        return PipelineState(
+            question=question,
+            query_id=identifier,
+            status="disambiguated",
+            intent=intent,
+            disambiguation=remote,
+            disambiguation_source=source,
+        )
+
+    def extend(self, state: PipelineState) -> PipelineState:
+        intent = state.intent
+        assert intent is not None
+        expansion = expand_knowledge(state.question, intent.target_concept, intent.slices)
+        state.knowledge_extension = knowledge_extension_payload(expansion)
+        state.status = "expanded"
+        return state
+
+    def decompose(self, state: PipelineState) -> PipelineState:
+        intent = state.intent
+        assert intent is not None
+        context = intent.target_concept or "the subject"
+        state.sub_tasks = decompose_question(state.question, intent.slices, context)
+        state.status = "decomposed"
+        return state
+
+    def retrieve(self, state: PipelineState) -> PipelineState:
+        intent = state.intent
+        assert intent is not None
+        expansion = dict(state.knowledge_extension)
+        passages, errors, queries = self.retriever.retrieve_all(
+            intent.target_concept,
+            intent.slices,
+            _variants(expansion, intent.slices),
+            state.sub_tasks,
+        )
+        state.passages = {
+            slice_id: [item.model_dump() for item in items] for slice_id, items in passages.items()
+        }
+        state.retrieval_errors = errors
+        state.search_queries = queries
+        state.status = "retrieved"
+        return state
+
+    def measure(self, state: PipelineState) -> PipelineState:
+        texts = {
+            slice_id: [str(item.get("text") or "") for item in items]
+            for slice_id, items in state.passages.items()
+        }
+        state.feature_metrics = compute_feature_metrics(
+            texts,
+            state.knowledge_extension.get("feature_lenses") or [],
+        )
+        state.status = "features_computed"
+        return state
+
+    def synthesize(self, state: PipelineState) -> PipelineState:
+        intent = state.intent
+        assert intent is not None
+        citations: list[Citation] = []
+        number = 1
+        for slice_ in intent.slices:
+            for item in state.passages.get(slice_.slice_id) or []:
+                citations.append(
+                    Citation(
+                        citation_id=f"ref_{number}",
+                        slice_id=slice_.slice_id,
+                        source_document=str(item.get("doc_id") or ""),
+                        text_snippet=str(item.get("text") or ""),
+                    )
+                )
+                number += 1
+        grouped: dict[str, list[RetrievedPassage]] = {
+            slice_id: [RetrievedPassage.model_validate(item) for item in items]
+            for slice_id, items in state.passages.items()
+        }
+        answer = _synthesize_text(intent, grouped, citations)
+        if getattr(dspy.settings, "lm", None) is not None and citations:
+            try:
+                evidence = "\n".join(
+                    f"[{item.citation_id}] ({item.slice_id}) {item.text_snippet}" for item in citations
+                )
+                prediction = dspy.Predict(GroundedSynthesizer)(
+                    question=state.question,
+                    evidence=evidence,
+                )
+                model_answer = str(getattr(prediction, "answer", "") or "").strip()
+                if model_answer and any(item.citation_id in model_answer for item in citations):
+                    answer = model_answer
+            except Exception:
+                pass
+        state.output = BenchmarkOutput(
+            query_id=state.query_id,
+            question=state.question,
+            slices_evaluated=intent.slices,
+            knowledge_extension=state.knowledge_extension,
+            synthesized_answer=answer,
+            feature_metrics=state.feature_metrics,
+            grounded_citations=citations,
+        )
+        state.status = "ok"
+        return state
+
+    def run(self, question: str, query_id: str | None = None) -> PipelineState:
+        state = self.resolve(question, query_id)
+        if state.status == "clarification" or state.intent is None:
+            return state
+        state = self.extend(state)
+        state = self.decompose(state)
+        state = self.retrieve(state)
+        state = self.measure(state)
+        return self.synthesize(state)
+
+    def forward(self, question: str, query_id: str | None = None) -> BenchmarkOutput:
+        state = self.run(question, query_id)
+        if state.output is None:
+            raise ValueError(state.clarification or "The comparison did not proceed.")
+        return state.output
