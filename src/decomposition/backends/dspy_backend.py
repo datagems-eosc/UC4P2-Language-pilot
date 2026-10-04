@@ -12,9 +12,17 @@ from src.decomposition.base import (
     steps_are_valid,
 )
 from src.decomposition.benchmark_fewshots import fewshot_examples, refinement_examples
+from src.decomposition.modes import COT, FEW_SHOT, normalize_decompose_mode
 from src.decomposition.refine_utils import transfer_break_structure
 from src.decomposition.syntax_parser import parse_decomposition, steps_to_break
 from src.schemas.slice import ComparisonSlice
+
+
+def _dspy_module(signature: type[dspy.Signature], mode: str):
+    """Predict, ChainOfThought, or few-shot Predict — the notebook's three styles."""
+    if mode == COT:
+        return dspy.ChainOfThought(signature)
+    return dspy.Predict(signature)
 
 
 class QDMRSignature(dspy.Signature):
@@ -37,15 +45,24 @@ class DSPyQDMRBackend(BaseQDMRDecomposer):
     Pass ``exclude_question_ids`` to hold a question out of the prompt.
     """
 
-    def __init__(self, exclude_question_ids: set[str] | None = None) -> None:
+    def __init__(
+        self,
+        exclude_question_ids: set[str] | None = None,
+        decompose_mode: str = FEW_SHOT,
+    ) -> None:
         self.exclude_question_ids = set(exclude_question_ids or ())
+        self.decompose_mode = normalize_decompose_mode(decompose_mode)
         self.last_raw = ""
         self.last_error = ""
         self.used_fallback = False
-        self._predict = dspy.Predict(QDMRSignature)
+        self._predict = _dspy_module(QDMRSignature, self.decompose_mode)
         self.demo_questions: list[str] = []
 
     def _use_examples(self, query: str) -> None:
+        if self.decompose_mode != FEW_SHOT:
+            self._predict.demos = []
+            self.demo_questions = []
+            return
         demos = fewshot_examples(self.exclude_question_ids, asked_question=query)
         self._predict.demos = demos[:2]
         self.demo_questions = [str(demo.query) for demo in self._predict.demos]
@@ -123,13 +140,15 @@ class DSPyQDMRRefiner:
         self,
         exclude_question_ids: set[str] | None = None,
         max_demos: int = 2,
+        decompose_mode: str = FEW_SHOT,
     ) -> None:
         self.exclude_question_ids = set(exclude_question_ids or ())
         self.max_demos = max_demos
+        self.decompose_mode = normalize_decompose_mode(decompose_mode)
         self.last_raw = ""
         self.last_error = ""
         self.last_score: dict | None = None
-        self._predict = dspy.Predict(RefineQDMRSignature)
+        self._predict = _dspy_module(RefineQDMRSignature, self.decompose_mode)
         self.demo_questions: list[str] = []
 
     def _use_examples(
@@ -139,6 +158,10 @@ class DSPyQDMRRefiner:
         concept: str = "",
         years: list[int] | None = None,
     ) -> None:
+        if self.decompose_mode != FEW_SHOT:
+            self._predict.demos = []
+            self.demo_questions = []
+            return
         demos = refinement_examples(
             self.exclude_question_ids,
             asked_question=query,

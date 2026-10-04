@@ -11,11 +11,12 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.app.auth import require_access_token
 from src.app.runner import PIPELINE_STEPS, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
+from src.app.tree import html_response
 from src.llm import configure_lm_from_env
 
 logging.basicConfig(level=logging.INFO)
@@ -53,7 +54,7 @@ app = FastAPI(
         "node and returns it as result, plus pipeline[] for everything up to there. "
         "POST /compare is kept as an alias."
     ),
-    version="0.1.5",
+    version="0.1.6",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -74,9 +75,10 @@ app.add_middleware(
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.5",
+        "version": "0.1.6",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
+        "tree": "GET /tree",
         "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
     }
@@ -87,6 +89,18 @@ async def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
+@app.get("/tree", summary="HTML pipeline tree", tags=["ThematicExploration"], response_class=HTMLResponse)
+async def tree_view() -> HTMLResponse:
+    """Collapsible HTML tree of a ThematicExploration JSON, first pipeline step to last."""
+    return html_response()
+
+
+@app.post("/tree", summary="Render JSON as an HTML tree", tags=["ThematicExploration"], response_class=HTMLResponse)
+async def tree_from_json(payload: dict[str, Any]) -> HTMLResponse:
+    """POST a saved ThematicExploration JSON and get the same tree as GET /tree."""
+    return html_response(payload)
+
+
 def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
     try:
         payload = run_compare(
@@ -95,6 +109,7 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
             until=until,
             include_trace=body.include_trace,
             k=body.k or 5,
+            decompose_mode=body.decompose_mode,
         )
     except Exception as exc:
         logger.exception("pipeline failed until=%s", until)

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from src.decomposition.modes import FEW_SHOT, normalize_decompose_mode
 
 
 class QueryRequest(BaseModel):
@@ -15,6 +17,24 @@ class QueryRequest(BaseModel):
         description="If true, also return the raw LangGraph node updates as raw_trace.",
     )
     k: Optional[int] = Field(default=None, ge=1, le=20)
+    decompose_mode: str = Field(
+        default=FEW_SHOT,
+        description=(
+            "How the decompose step prompts the LLM: "
+            "`predict` (zero-shot DSPy Predict), "
+            "`cot` (ChainOfThought), "
+            "`few-shot` (Predict with benchmark demonstrations)."
+        ),
+        examples=["few-shot", "predict", "cot"],
+    )
+
+    @field_validator("decompose_mode", mode="before")
+    @classmethod
+    def _decompose_mode(cls, value: Any) -> str:
+        try:
+            return normalize_decompose_mode(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class ThematicExplorationRequest(QueryRequest):
@@ -61,6 +81,7 @@ class ThematicExplorationResponse(BaseModel):
     comparison_type: str = ""
     slices: list[dict[str, Any]] = Field(default_factory=list)
     qdmr: list[dict[str, Any]] = Field(default_factory=list)
+    decompose_mode: str = ""
     search_queries: dict[str, str] = Field(default_factory=dict)
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     retrieval_errors: dict[str, str] = Field(default_factory=dict)

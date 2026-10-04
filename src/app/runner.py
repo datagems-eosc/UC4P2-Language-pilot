@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.decomposition.modes import FEW_SHOT
 from src.orchestration.graph import stream_steps
 
 PIPELINE_STEPS = (
@@ -94,7 +95,8 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
     if name == "decompose":
         qdmr = output.get("qdmr") or []
         numbered = ", ".join(f"#{item.get('step')}" for item in qdmr)
-        return f"Produced {len(qdmr)} sub-questions ({numbered})."
+        mode = output.get("decompose_mode") or FEW_SHOT
+        return f"Produced {len(qdmr)} sub-questions ({numbered}) with {mode} decomposition."
     if name == "retrieve_slices":
         passages = output.get("passages") or {}
         errors = output.get("retrieval_errors") or {}
@@ -178,6 +180,7 @@ def run_compare(
     until: str | None = None,
     include_trace: bool = False,
     k: int = 5,
+    decompose_mode: str = FEW_SHOT,
 ) -> dict[str, Any]:
     events = list(
         stream_steps(
@@ -185,6 +188,7 @@ def run_compare(
             query_id=query_id,
             until=until,
             k=k,
+            decompose_mode=decompose_mode,
         )
     )
     merged: dict[str, Any] = {"question": question}
@@ -209,6 +213,7 @@ def run_compare(
         "comparison_type": merged.get("comparison_type") or "",
         "slices": merged.get("slices") or [],
         "qdmr": merged.get("qdmr") or [],
+        "decompose_mode": merged.get("decompose_mode") or decompose_mode,
         "search_queries": merged.get("search_queries") or {},
         "passages": merged.get("passages") or {},
         "retrieval_errors": merged.get("retrieval_errors") or {},

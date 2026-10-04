@@ -23,6 +23,7 @@ class PipelineState(BaseModel):
     constraint_errors: list[str] = Field(default_factory=list)
     knowledge_extension: dict[str, list[str]] = Field(default_factory=dict)
     sub_tasks: list[str] = Field(default_factory=list)
+    decompose_mode: str = ""
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     retrieval_errors: dict[str, str] = Field(default_factory=dict)
     search_queries: dict[str, str] = Field(default_factory=dict)

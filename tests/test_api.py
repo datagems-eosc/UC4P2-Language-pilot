@@ -105,3 +105,31 @@ def test_compare_endpoint(monkeypatch):
     assert dis_body["last_step"] == "disambiguate"
     assert dis_body["result"]["output"]["slices"]
     assert dis_body["concept"] == "marriage"
+
+
+def test_decompose_mode_on_thematic_exploration(monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.app.main import app
+    from src.orchestration import graph as graph_mod
+
+    original = graph_mod.stream_steps
+
+    def fake_stream(question, **kwargs):
+        kwargs["disambiguation_client"] = ScriptedDisambiguation()
+        kwargs["retrieval_client"] = ScriptedRetrieval()
+        return original(question, **kwargs)
+
+    monkeypatch.setattr("src.app.runner.stream_steps", fake_stream)
+    monkeypatch.setenv("AUTH_DISABLED", "true")
+    client = TestClient(app)
+    response = client.post(
+        "/steps/decompose",
+        json={"query": MARRIAGE, "query_id": "q-cot", "decompose_mode": "CoT"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["decompose_mode"] == "cot"
+    assert body["result"]["output"]["decompose_mode"] == "cot"
+    assert "cot" in body["result"]["summary"]
+    bad = client.post("/ThematicExploration", json={"query": MARRIAGE, "decompose_mode": "mipro"})
+    assert bad.status_code == 422

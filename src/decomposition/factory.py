@@ -9,6 +9,7 @@ from src.decomposition.backends.dspy_backend import DSPyQDMRBackend
 from src.decomposition.backends.finetuned_backend import FineTunedQDMRBackend
 from src.decomposition.backends.refined_backend import RefinedQDMRBackend
 from src.decomposition.base import BaseQDMRDecomposer
+from src.decomposition.modes import FEW_SHOT, normalize_decompose_mode
 
 _DSPY = {"dspy", "prompt"}
 _FINETUNED = {"finetuned", "huggingface", "hf"}
@@ -25,11 +26,13 @@ class QDMRDecomposerFactory:
     def create(
         backend: str | None = None,
         settings: Settings | None = None,
+        decompose_mode: str | None = None,
     ) -> BaseQDMRDecomposer:
         cfg = settings or get_settings()
         name = (backend if backend is not None else cfg.qdmr_backend).strip().lower()
+        mode = normalize_decompose_mode(decompose_mode or FEW_SHOT)
         if name in _DSPY:
-            return DSPyQDMRBackend()
+            return DSPyQDMRBackend(decompose_mode=mode)
         if name in _FINETUNED:
             return FineTunedQDMRBackend(
                 model_name_or_path=cfg.qdmr_model_name_or_path,
@@ -39,6 +42,7 @@ class QDMRDecomposerFactory:
             return RefinedQDMRBackend(
                 model_name_or_path=cfg.qdmr_model_name_or_path,
                 mock=cfg.qdmr_mock or not cfg.qdmr_model_name_or_path.strip(),
+                decompose_mode=mode,
             )
         if name in _ADVANCED:
             return QDMRDecomposerFactory._advanced(cfg)

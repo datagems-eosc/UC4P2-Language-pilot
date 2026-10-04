@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
 from src.constraints.comparative import QueryDisambiguationClient
+from src.decomposition.modes import FEW_SHOT
 from src.orchestration.pipeline import HistoricalQAOrchestrator
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
 from src.retrieval.multi_slice_retriever import CrossDatasetMultiSliceRetriever
@@ -37,6 +38,7 @@ class PilotState(TypedDict, total=False):
     constraint_errors: list[str]
     expansion: dict[str, Any]
     qdmr: list[dict[str, Any]]
+    decompose_mode: str
     search_queries: dict[str, str]
     passages: dict[str, list[dict[str, Any]]]
     retrieval_errors: dict[str, str]
@@ -58,9 +60,12 @@ def build_pilot_graph(
     disambiguation_client: QueryDisambiguationClient | None = None,
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
     k: int = 5,
+    decompose_mode: str = FEW_SHOT,
 ):
     retriever = CrossDatasetMultiSliceRetriever(client=retrieval_client, k=k)
-    orchestrator = HistoricalQAOrchestrator(disambiguation_client, retriever)
+    orchestrator = HistoricalQAOrchestrator(
+        disambiguation_client, retriever, decompose_mode=decompose_mode
+    )
 
     def route(state: PilotState) -> dict[str, Any]:
         decision = route_query(state["question"])
@@ -93,7 +98,12 @@ def build_pilot_graph(
             {"step": index, "instruction": task}
             for index, task in enumerate(updated.sub_tasks, start=1)
         ]
-        return {"pipeline": _dump(updated), "qdmr": qdmr, "status": updated.status}
+        return {
+            "pipeline": _dump(updated),
+            "qdmr": qdmr,
+            "decompose_mode": updated.decompose_mode or decompose_mode,
+            "status": updated.status,
+        }
 
     def retrieve_slices(state: PilotState) -> dict[str, Any]:
         updated = orchestrator.retrieve(_load(state))
@@ -182,9 +192,15 @@ def stream_steps(
     disambiguation_client: QueryDisambiguationClient | None = None,
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
     k: int = 5,
+    decompose_mode: str = FEW_SHOT,
 ) -> Iterator[dict[str, Any]]:
     """Yield ``{"step": name, "output": update}`` after each node."""
-    compiled = build_pilot_graph(disambiguation_client, retrieval_client, k=k)
+    compiled = build_pilot_graph(
+        disambiguation_client,
+        retrieval_client,
+        k=k,
+        decompose_mode=decompose_mode,
+    )
     initial: PilotState = {"question": question}
     if query_id:
         initial["query_id"] = query_id

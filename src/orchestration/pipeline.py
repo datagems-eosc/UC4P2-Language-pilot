@@ -18,6 +18,7 @@ from src.constraints.comparative import (
     QueryDisambiguationClient,
 )
 from src.decomposition.qdmr_generator import decompose_question
+from src.decomposition.modes import FEW_SHOT
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
 from src.orchestration.slice_executor import RetrievalAPIError
 from src.retrieval.corpora import corpus_name_for_id, dataset_ids_for_slice
@@ -148,10 +149,12 @@ class HistoricalQAOrchestrator(dspy.Module):
         self,
         disambiguation_client: QueryDisambiguationClient | None = None,
         retriever: CrossDatasetMultiSliceRetriever | MockMultiSliceRetriever | None = None,
+        decompose_mode: str = FEW_SHOT,
     ):
         super().__init__()
         self.disambiguation_client = disambiguation_client or QueryDisambiguationClient()
         self.retriever = retriever or CrossDatasetMultiSliceRetriever()
+        self.decompose_mode = decompose_mode
 
     def resolve(self, question: str, query_id: str | None = None) -> PipelineState:
         identifier = query_id or _query_id(question)
@@ -232,7 +235,10 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         context = intent.target_concept or "the subject"
-        state.sub_tasks = decompose_question(state.question, intent.slices, context)
+        state.sub_tasks = decompose_question(
+            state.question, intent.slices, context, decompose_mode=self.decompose_mode
+        )
+        state.decompose_mode = self.decompose_mode
         state.status = "decomposed"
         return state
 

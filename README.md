@@ -13,6 +13,7 @@ PYTHONPATH=. python -m uvicorn src.app.main:app --host 0.0.0.0 --port 8080
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger
 - Health: http://localhost:8080/health
+- HTML tree: http://localhost:8080/tree
 
 ```bash
 curl -s -X POST "http://localhost:8080/ThematicExploration" \
@@ -26,6 +27,8 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 
 | Method | Path | Stops after |
 |--------|------|-------------|
+| GET | `/tree` | HTML tree of a run (open JSON, or run a question) |
+| POST | `/tree` | Same tree, from a posted ThematicExploration JSON |
 | GET | `/steps` | Catalog of step APIs |
 | POST | `/steps/route` | `route` |
 | POST | `/steps/disambiguate` | `disambiguate` |
@@ -49,6 +52,7 @@ Optional fields:
 | `query_id` | Stable id in the response / benchmark record |
 | `until` | Stop after a LangGraph node (`disambiguate`, `retrieve_slices`, …) |
 | `k` | Passages per slice (default 5) |
+| `decompose_mode` | Decomposition prompting: `predict`, `cot`, or `few-shot` (default) |
 | `include_trace` | Include every node update |
 
 The response `pipeline` list is the audit trail: one object per step with `step`, `name`, `title`, `outcome`, `summary`, and `output`. Convenience fields (`synthesized_answer`, `passages`, …) still sit at the top level. Set `include_trace` if you also need the raw LangGraph updates as `raw_trace`.
@@ -58,6 +62,7 @@ Dev cluster (after deploy):
 ```text
 https://datagems-dev.scayle.es/language-pilot/health
 https://datagems-dev.scayle.es/language-pilot/swagger
+https://datagems-dev.scayle.es/language-pilot/tree
 ```
 
 ```bash

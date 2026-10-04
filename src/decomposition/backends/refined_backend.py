@@ -5,6 +5,7 @@ from __future__ import annotations
 from src.decomposition.backends.dspy_backend import DSPyQDMRRefiner
 from src.decomposition.backends.finetuned_backend import FineTunedQDMRBackend
 from src.decomposition.base import BaseQDMRDecomposer, QDMRStep
+from src.decomposition.modes import FEW_SHOT, normalize_decompose_mode
 from src.schemas.slice import ComparisonSlice
 
 
@@ -21,13 +22,18 @@ class RefinedQDMRBackend(BaseQDMRDecomposer):
         mock: bool = False,
         exclude_question_ids: set[str] | None = None,
         max_new_tokens: int = 96,
+        decompose_mode: str = FEW_SHOT,
     ) -> None:
+        self.decompose_mode = normalize_decompose_mode(decompose_mode)
         self._break = FineTunedQDMRBackend(
             model_name_or_path=model_name_or_path,
             mock=mock,
             max_new_tokens=max_new_tokens,
         )
-        self._refiner = DSPyQDMRRefiner(exclude_question_ids)
+        self._refiner = DSPyQDMRRefiner(
+            exclude_question_ids,
+            decompose_mode=self.decompose_mode,
+        )
         self.last_draft = ""
         self.last_raw = ""
         self.last_error = ""

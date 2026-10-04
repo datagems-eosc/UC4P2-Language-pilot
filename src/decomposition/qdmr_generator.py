@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from src.decomposition.base import build_comparative_steps
 from src.decomposition.factory import QDMRDecomposerFactory
+from src.decomposition.modes import FEW_SHOT
 from src.schemas.slice import ComparisonSlice
 
 
@@ -23,7 +24,10 @@ def decompose_question(
     query: str,
     slices: list[ComparisonSlice],
     extended_context: str,
+    decompose_mode: str = FEW_SHOT,
 ) -> list[str]:
     """Decompose with the configured backend and return ``#k`` instructions."""
-    steps = QDMRDecomposerFactory.create().decompose(query, slices, extended_context)
+    steps = QDMRDecomposerFactory.create(decompose_mode=decompose_mode).decompose(
+        query, slices, extended_context
+    )
     return [step.instruction for step in steps]

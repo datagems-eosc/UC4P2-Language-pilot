@@ -30,6 +30,13 @@ def test_factory_argument_overrides_environment(monkeypatch):
     assert isinstance(created, DSPyQDMRBackend)
 
 
+def test_factory_passes_decompose_mode_to_dspy():
+    created = QDMRDecomposerFactory.create(backend="dspy", decompose_mode="cot")
+    assert isinstance(created, DSPyQDMRBackend)
+    assert created.decompose_mode == "cot"
+    assert created._predict.__class__.__name__ == "ChainOfThought"
+
+
 def test_factory_uses_settings_object():
     settings = Settings(qdmr_backend="dspy", qdmr_model_name_or_path="", qdmr_mock=False)
     assert isinstance(QDMRDecomposerFactory.create(settings=settings), DSPyQDMRBackend)

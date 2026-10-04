@@ -3,6 +3,7 @@ from src.decomposition.backends.finetuned_backend import FineTunedQDMRBackend
 from src.decomposition.backends.refined_backend import RefinedQDMRBackend
 from src.decomposition.base import QDMRStep
 from src.decomposition.graph_builder import QDMRExecutionRunner, format_tree, schedule
+from src.decomposition.modes import COT, FEW_SHOT, PREDICT
 from src.schemas.slice import ComparisonSlice
 
 SLICES = [
@@ -115,3 +116,27 @@ def test_tree_puts_the_final_step_above_the_steps_it_cites():
     assert text.startswith("#4 ")
     assert "├── #1 " in text
     assert "└── #3 " in text
+
+
+def test_decompose_mode_selects_predict_cot_or_few_shot():
+    predict = DSPyQDMRBackend(decompose_mode=PREDICT)
+    predict._use_examples("How did marriage change?")
+    assert predict.decompose_mode == PREDICT
+    assert predict._predict.__class__.__name__ == "Predict"
+    assert list(predict._predict.demos or []) == []
+
+    few = DSPyQDMRBackend(decompose_mode=FEW_SHOT)
+    few._use_examples("How did marriage change?")
+    assert few.decompose_mode == FEW_SHOT
+    assert few._predict.__class__.__name__ == "Predict"
+    assert len(few._predict.demos) == 2
+
+    cot = DSPyQDMRBackend(decompose_mode="ChainOfThought")
+    cot._use_examples("How did marriage change?")
+    assert cot.decompose_mode == COT
+    assert cot._predict.__class__.__name__ == "ChainOfThought"
+    assert list(cot._predict.demos or []) == []
+
+    refined = RefinedQDMRBackend(mock=True, decompose_mode="cot")
+    assert refined.decompose_mode == COT
+    assert refined._refiner._predict.__class__.__name__ == "ChainOfThought"
