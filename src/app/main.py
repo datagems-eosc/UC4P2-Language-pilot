@@ -14,8 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.app.auth import require_access_token
-from src.app.runner import run_compare
-from src.app.schemas import CompareRequest, CompareResponse
+from src.app.runner import PIPELINE_STEPS, run_compare
+from src.app.schemas import CompareRequest, CompareResponse, QueryRequest
 from src.llm import configure_lm_from_env
 
 logging.basicConfig(level=logging.INFO)
@@ -49,9 +49,10 @@ app = FastAPI(
     description=(
         "Historical comparative QA: disambiguate, decompose, retrieve from "
         "Cross-Dataset Discovery, and synthesize a grounded answer. "
-        "POST /compare returns pipeline[] with the outcome and output of each step."
+        "POST /compare runs the full pipeline. POST /steps/<name> stops after that "
+        "node and returns it as result, plus pipeline[] for everything up to there."
     ),
-    version="0.1.2",
+    version="0.1.3",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -72,15 +73,49 @@ app.add_middleware(
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.2",
+        "version": "0.1.3",
         "docs": "/swagger",
         "compare": "POST /compare",
+        "steps": [item["path"] for item in PIPELINE_STEPS],
     }
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+def _run_pipeline(body: QueryRequest, until: str | None = None) -> CompareResponse:
+    try:
+        payload = run_compare(
+            body.query,
+            query_id=body.query_id,
+            until=until,
+            include_trace=body.include_trace,
+            k=body.k or 5,
+        )
+    except Exception as exc:
+        logger.exception("pipeline failed until=%s", until)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    payload["service"] = "UC4P2 Language Pilot"
+    payload["question"] = body.query
+    return CompareResponse.model_validate(payload)
+
+
+@app.get("/steps", summary="List pipeline step APIs", tags=["Steps"])
+async def list_steps() -> dict[str, Any]:
+    return {
+        "steps": [
+            {
+                "step": index,
+                "name": item["name"],
+                "path": f"POST {item['path']}",
+                "title": item["title"],
+                "summary": item["summary"],
+            }
+            for index, item in enumerate(PIPELINE_STEPS, start=1)
+        ]
+    }
 
 
 @app.post(
@@ -93,21 +128,37 @@ async def compare(
     body: CompareRequest,
     _: dict[str, Any] = Depends(require_access_token),
 ) -> CompareResponse:
-    """Run the full pipeline. Each node is listed in `pipeline` with outcome and output."""
-    try:
-        payload = run_compare(
-            body.query,
-            query_id=body.query_id,
-            until=body.until,
-            include_trace=body.include_trace,
-            k=body.k or 5,
-        )
-    except Exception as exc:
-        logger.exception("compare failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    payload["service"] = "UC4P2 Language Pilot"
-    payload["question"] = body.query
-    return CompareResponse.model_validate(payload)
+    """Run the full pipeline (or stop at `until`). `result` is the last executed step."""
+    return _run_pipeline(body, until=body.until)
+
+
+def _register_step(spec: dict[str, str]) -> None:
+    until = spec["name"]
+
+    async def handler(
+        body: QueryRequest,
+        _: dict[str, Any] = Depends(require_access_token),
+    ) -> CompareResponse:
+        return _run_pipeline(body, until=until)
+
+    handler.__name__ = f"step_{until}"
+    handler.__doc__ = spec["summary"]
+    app.add_api_route(
+        spec["path"],
+        handler,
+        methods=["POST"],
+        response_model=CompareResponse,
+        summary=spec["title"],
+        description=(
+            f"{spec['summary']} Runs every node up to `{until}` and returns that "
+            "node as `result`, with the prefix in `pipeline`."
+        ),
+        tags=["Steps"],
+    )
+
+
+for _spec in PIPELINE_STEPS:
+    _register_step(_spec)
 
 
 if __name__ == "__main__":

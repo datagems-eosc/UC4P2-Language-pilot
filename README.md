@@ -20,6 +20,26 @@ curl -s -X POST "http://localhost:8080/compare" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
 
+Each pipeline node also has its own endpoint. It runs from the start through that node and returns that node as `result`, with the prefix in `pipeline`.
+
+| Method | Path | Stops after |
+|--------|------|-------------|
+| GET | `/steps` | Catalog of step APIs |
+| POST | `/steps/route` | `route` |
+| POST | `/steps/disambiguate` | `disambiguate` |
+| POST | `/steps/extend-knowledge` | `extend_knowledge` |
+| POST | `/steps/decompose` | `decompose` |
+| POST | `/steps/retrieve` | `retrieve_slices` |
+| POST | `/steps/features` | `compute_features` |
+| POST | `/steps/synthesize` | `synthesize` |
+| POST | `/steps/export` | `export_benchmark` (same as `/compare`) |
+
+```bash
+curl -s -X POST "http://localhost:8080/steps/disambiguate" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
+```
+
 Optional fields:
 
 | Field | Meaning |

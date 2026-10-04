@@ -6,15 +6,63 @@ from typing import Any
 
 from src.orchestration.graph import stream_steps
 
-_STEP_TITLES = {
-    "route": "Route the question",
-    "disambiguate": "Disambiguate and check archive constraints",
-    "extend_knowledge": "Extend knowledge (facets and lemmas)",
-    "decompose": "Decompose into sub-questions",
-    "retrieve_slices": "Retrieve passages per slice",
-    "compute_features": "Measure comparative features",
-    "synthesize": "Synthesize a grounded answer",
-    "export_benchmark": "Export the benchmark record",
+PIPELINE_STEPS = (
+    {
+        "name": "route",
+        "path": "/steps/route",
+        "title": "Route the question",
+        "summary": "Classify the question and extract the comparison concept.",
+    },
+    {
+        "name": "disambiguate",
+        "path": "/steps/disambiguate",
+        "title": "Disambiguate and check archive constraints",
+        "summary": "Resolve slices and reject queries the archive cannot answer.",
+    },
+    {
+        "name": "extend_knowledge",
+        "path": "/steps/extend-knowledge",
+        "title": "Extend knowledge (facets and lemmas)",
+        "summary": "Expand thematic facets and lexical variants per slice.",
+    },
+    {
+        "name": "decompose",
+        "path": "/steps/decompose",
+        "title": "Decompose into sub-questions",
+        "summary": "Turn the comparison into QDMR sub-questions.",
+    },
+    {
+        "name": "retrieve_slices",
+        "path": "/steps/retrieve",
+        "title": "Retrieve passages per slice",
+        "summary": "Search Cross-Dataset Discovery once per comparison slice.",
+    },
+    {
+        "name": "compute_features",
+        "path": "/steps/features",
+        "title": "Measure comparative features",
+        "summary": "Compute feature metrics from the retrieved passages.",
+    },
+    {
+        "name": "synthesize",
+        "path": "/steps/synthesize",
+        "title": "Synthesize a grounded answer",
+        "summary": "Write the comparative answer with citations.",
+    },
+    {
+        "name": "export_benchmark",
+        "path": "/steps/export",
+        "title": "Export the benchmark record",
+        "summary": "Package the run as a benchmark record.",
+    },
+)
+
+_STEP_TITLES = {item["name"]: item["title"] for item in PIPELINE_STEPS}
+_OUTCOME_STATUS = {
+    "ok": "ok",
+    "partial": "partial",
+    "halted": "clarification",
+    "failed": "error",
 }
 
 _HIDDEN_OUTPUT_KEYS = {"pipeline"}
@@ -103,6 +151,17 @@ def build_pipeline_trace(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return trace
 
 
+def _overall_status(pipeline: list[dict[str, Any]], merged: dict[str, Any]) -> str:
+    last_outcome = pipeline[-1]["outcome"] if pipeline else ""
+    derived = _OUTCOME_STATUS.get(last_outcome, "")
+    merged_status = str(merged.get("status") or "")
+    if last_outcome in {"halted", "failed", "partial"}:
+        return derived
+    if merged_status in {"ok", "clarification", "partial"}:
+        return merged_status
+    return derived or merged_status or "error"
+
+
 def run_compare(
     question: str,
     *,
@@ -130,8 +189,9 @@ def run_compare(
     result: dict[str, Any] = {
         "question": question,
         "query_id": merged.get("query_id") or query_id or "",
-        "status": merged.get("status") or "error",
+        "status": _overall_status(pipeline, merged),
         "last_step": names[-1] if names else "",
+        "result": pipeline[-1] if pipeline else None,
         "pipeline": pipeline,
         "steps": names,
         "clarification": merged.get("clarification"),

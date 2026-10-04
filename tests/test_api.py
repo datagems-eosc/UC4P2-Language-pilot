@@ -84,3 +84,21 @@ def test_compare_endpoint(monkeypatch):
     assert body["pipeline"][-1]["name"] == "export_benchmark"
     health = client.get("/health")
     assert health.json() == {"status": "healthy"}
+    catalog = client.get("/steps")
+    assert catalog.status_code == 200
+    paths = [item["path"] for item in catalog.json()["steps"]]
+    assert "POST /steps/route" in paths
+    routed = client.post("/steps/route", json={"query": MARRIAGE, "query_id": "q-route"})
+    assert routed.status_code == 200, routed.text
+    route_body = routed.json()
+    assert route_body["status"] == "ok"
+    assert route_body["last_step"] == "route"
+    assert route_body["result"]["name"] == "route"
+    assert route_body["result"]["outcome"] == "ok"
+    assert len(route_body["pipeline"]) == 1
+    sliced = client.post("/steps/disambiguate", json={"query": MARRIAGE, "query_id": "q-dis"})
+    assert sliced.status_code == 200, sliced.text
+    dis_body = sliced.json()
+    assert dis_body["last_step"] == "disambiguate"
+    assert dis_body["result"]["output"]["slices"]
+    assert dis_body["concept"] == "marriage"

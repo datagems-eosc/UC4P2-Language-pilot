@@ -7,9 +7,17 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
-class CompareRequest(BaseModel):
+class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=10000)
     query_id: Optional[str] = None
+    include_trace: bool = Field(
+        default=False,
+        description="If true, also return the raw LangGraph node updates as raw_trace.",
+    )
+    k: Optional[int] = Field(default=None, ge=1, le=20)
+
+
+class CompareRequest(QueryRequest):
     until: Optional[str] = Field(
         default=None,
         description=(
@@ -17,11 +25,6 @@ class CompareRequest(BaseModel):
             "decompose, retrieve_slices, compute_features, synthesize, export_benchmark."
         ),
     )
-    include_trace: bool = Field(
-        default=False,
-        description="If true, also return the raw LangGraph node updates as raw_trace.",
-    )
-    k: Optional[int] = Field(default=None, ge=1, le=20)
 
 
 class PipelineStep(BaseModel):
@@ -41,6 +44,10 @@ class CompareResponse(BaseModel):
     question: str
     status: str
     last_step: str = ""
+    result: Optional[PipelineStep] = Field(
+        default=None,
+        description="The last executed step (the target of a /steps/* call).",
+    )
     pipeline: list[PipelineStep] = Field(
         default_factory=list,
         description="Ordered steps with outcome and output so the answer is traceable.",
