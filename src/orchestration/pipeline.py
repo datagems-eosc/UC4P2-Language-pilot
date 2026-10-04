@@ -7,6 +7,7 @@ Retrieval goes through Cross-Dataset Discovery, one search per slice.
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any
 
 import dspy
@@ -19,7 +20,7 @@ from src.constraints.comparative import (
 from src.decomposition.qdmr_generator import decompose_question
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
 from src.orchestration.slice_executor import RetrievalAPIError
-from src.retrieval.corpora import dataset_ids_for_slice
+from src.retrieval.corpora import corpus_name_for_id, dataset_ids_for_slice
 from src.retrieval.multi_slice_retriever import (
     CrossDatasetMultiSliceRetriever,
     MockMultiSliceRetriever,
@@ -31,11 +32,17 @@ from src.schemas.state import PipelineState
 
 
 class GroundedSynthesizer(dspy.Signature):
-    """Write a factual comparison that cites passage ids."""
+    """Write a comparison using ONLY the retrieved passages below.
+
+    Every factual sentence must include one or more [ref_id] markers from the
+    evidence. Do not use outside knowledge. If a slice has no passages, say that
+    retrieval returned nothing for that slice. Never invent a contrast for a
+    slice with no evidence.
+    """
 
     question: str = dspy.InputField()
-    evidence: str = dspy.InputField(desc="Passages labeled with citation ids")
-    answer: str = dspy.OutputField(desc="Comparison citing [ref_id] markers")
+    evidence: str = dspy.InputField(desc="Retrieved passages, each prefixed with [ref_id], slice, and corpus")
+    answer: str = dspy.OutputField(desc="Grounded comparison; claims marked with [ref_id]")
 
 
 def _query_id(question: str) -> str:
@@ -64,6 +71,53 @@ def _variants(expansion: dict[str, Any], slices: list[ComparisonSlice]) -> dict[
         words = expansion.get(slice_.slice_id) or []
         variants[slice_.slice_id] = [str(word) for word in words]
     return variants
+
+
+_REF = re.compile(r"\[(ref_\d+)\]")
+_SNIPPET = 500
+
+
+def _citation_ids_in(text: str) -> set[str]:
+    return set(_REF.findall(text or ""))
+
+
+def _answer_is_grounded(
+    answer: str,
+    citations: list[Citation],
+    empty_labels: list[str],
+) -> bool:
+    """True when every [ref_N] exists and empty slices are not fabricated."""
+    if not answer.strip():
+        return False
+    allowed = {item.citation_id for item in citations}
+    used = _citation_ids_in(answer)
+    if allowed and not used:
+        return False
+    if used - allowed:
+        return False
+    lowered = answer.lower()
+    for label in empty_labels:
+        if not label:
+            continue
+        if label.lower() in lowered and "no indexed passage" not in lowered and "no retrieved" not in lowered:
+            return False
+    return True
+
+
+def _mark_used(citations: list[Citation], answer: str) -> list[Citation]:
+    used = _citation_ids_in(answer)
+    return [item.model_copy(update={"used_in_answer": item.citation_id in used}) for item in citations]
+
+
+def _evidence_block(citations: list[Citation]) -> str:
+    lines = []
+    for item in citations:
+        corpus = item.corpus_name or item.dataset_id or "retrieved"
+        lines.append(
+            f"[{item.citation_id}] slice={item.slice_id} ({item.slice_label}) "
+            f"corpus={corpus} doc={item.source_document}\n{item.text_snippet}"
+        )
+    return "\n\n".join(lines)
 
 
 def _synthesize_text(
@@ -234,13 +288,20 @@ class HistoricalQAOrchestrator(dspy.Module):
         citations: list[Citation] = []
         number = 1
         for slice_ in intent.slices:
-            for item in state.passages.get(slice_.slice_id) or []:
+            for index, item in enumerate(state.passages.get(slice_.slice_id) or []):
+                dataset_id = str(item.get("dataset_id") or slice_.corpus_id or "")
+                snippet = str(item.get("text") or "")
                 citations.append(
                     Citation(
                         citation_id=f"ref_{number}",
                         slice_id=slice_.slice_id,
+                        slice_label=slice_.label,
                         source_document=str(item.get("doc_id") or ""),
-                        text_snippet=str(item.get("text") or ""),
+                        dataset_id=dataset_id,
+                        corpus_name=corpus_name_for_id(dataset_id),
+                        similarity=float(item["similarity"]) if item.get("similarity") is not None else None,
+                        passage_index=index,
+                        text_snippet=snippet[:_SNIPPET],
                     )
                 )
                 number += 1
@@ -248,21 +309,24 @@ class HistoricalQAOrchestrator(dspy.Module):
             slice_id: [RetrievedPassage.model_validate(item) for item in items]
             for slice_id, items in state.passages.items()
         }
+        empty_labels = [
+            slice_.label
+            for slice_ in intent.slices
+            if not (state.passages.get(slice_.slice_id) or [])
+        ]
         answer = _synthesize_text(intent, grouped, citations)
         if getattr(dspy.settings, "lm", None) is not None and citations:
             try:
-                evidence = "\n".join(
-                    f"[{item.citation_id}] ({item.slice_id}) {item.text_snippet}" for item in citations
-                )
                 prediction = dspy.Predict(GroundedSynthesizer)(
                     question=state.question,
-                    evidence=evidence,
+                    evidence=_evidence_block(citations),
                 )
                 model_answer = str(getattr(prediction, "answer", "") or "").strip()
-                if model_answer and any(item.citation_id in model_answer for item in citations):
+                if _answer_is_grounded(model_answer, citations, empty_labels):
                     answer = model_answer
             except Exception:
                 pass
+        citations = _mark_used(citations, answer)
         state.output = BenchmarkOutput(
             query_id=state.query_id,
             question=state.question,

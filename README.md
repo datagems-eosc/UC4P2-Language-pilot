@@ -83,6 +83,8 @@ The search string is the decomposed sub-question for that slice plus lexical var
 
 `compute_features` then calls `POST /corpus-analysis-search/` on the same service (UC4P1-style features live in the result `metadata`). Local KWIC/collocations stay on the retrieved passages as a fallback if that call fails.
 
+The final answer is synthesized only from `passages`. Each `[ref_N]` in `synthesized_answer` maps to `grounded_citations` (`slice_id`, `dataset_id`, `source_document`, `text_snippet`) so you can open the matching retrieval hit.
+
 ## Tests
 
 ```bash

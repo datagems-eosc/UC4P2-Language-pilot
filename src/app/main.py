@@ -53,7 +53,7 @@ app = FastAPI(
         "node and returns it as result, plus pipeline[] for everything up to there. "
         "POST /compare is kept as an alias."
     ),
-    version="0.1.4",
+    version="0.1.5",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -74,7 +74,7 @@ app.add_middleware(
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.4",
+        "version": "0.1.5",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "compare": "POST /compare (alias)",

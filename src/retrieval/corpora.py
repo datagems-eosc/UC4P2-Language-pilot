@@ -39,6 +39,13 @@ ALL_LANGUAGE_DATASET_IDS: tuple[str, ...] = tuple(
     item["uuid"] for item in LANGUAGE_DATASETS.values()
 )
 
+
+def corpus_name_for_id(dataset_id: str) -> str:
+    for item in LANGUAGE_DATASETS.values():
+        if item["uuid"] == dataset_id:
+            return str(item["name"])
+    return dataset_id or ""
+
 _PRESENT_LABELS = {"now", "today", "nowadays", "currently", "current", "modern", "present"}
 _KNOWN_UUIDS = {item["uuid"] for item in LANGUAGE_DATASETS.values()}
 
