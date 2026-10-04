@@ -45,6 +45,19 @@ def test_run_compare_returns_answer(monkeypatch):
     assert payload["synthesized_answer"]
     assert payload["benchmark"]["query_id"] == "q-api"
     assert "retrieve_slices" in payload["steps"]
+    names = [item["name"] for item in payload["pipeline"]]
+    assert names == [
+        "route",
+        "disambiguate",
+        "extend_knowledge",
+        "decompose",
+        "retrieve_slices",
+        "compute_features",
+        "synthesize",
+        "export_benchmark",
+    ]
+    assert all(item["outcome"] == "ok" for item in payload["pipeline"])
+    assert payload["pipeline"][4]["output"]["passages"]
 
 
 def test_compare_endpoint(monkeypatch):
@@ -67,5 +80,7 @@ def test_compare_endpoint(monkeypatch):
     body = response.json()
     assert body["status"] == "ok"
     assert body["synthesized_answer"]
+    assert body["pipeline"][0]["name"] == "route"
+    assert body["pipeline"][-1]["name"] == "export_benchmark"
     health = client.get("/health")
     assert health.json() == {"status": "healthy"}

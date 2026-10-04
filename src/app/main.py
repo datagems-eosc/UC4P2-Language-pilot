@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -10,6 +11,7 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.app.auth import require_access_token
 from src.app.runner import run_compare
@@ -20,6 +22,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+
+class PrettyJSONResponse(JSONResponse):
+    """Indented JSON so curl, Swagger, and browsers show a readable tree."""
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=2,
+            default=str,
+        ).encode("utf-8")
 
 
 @asynccontextmanager
@@ -33,13 +48,15 @@ app = FastAPI(
     title="UC4P2 Language Pilot",
     description=(
         "Historical comparative QA: disambiguate, decompose, retrieve from "
-        "Cross-Dataset Discovery, and synthesize a grounded answer."
+        "Cross-Dataset Discovery, and synthesize a grounded answer. "
+        "POST /compare returns pipeline[] with the outcome and output of each step."
     ),
-    version="0.1.0",
+    version="0.1.2",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
     lifespan=lifespan,
+    default_response_class=PrettyJSONResponse,
 )
 
 app.add_middleware(
@@ -55,7 +72,7 @@ app.add_middleware(
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.0",
+        "version": "0.1.2",
         "docs": "/swagger",
         "compare": "POST /compare",
     }
@@ -76,7 +93,7 @@ async def compare(
     body: CompareRequest,
     _: dict[str, Any] = Depends(require_access_token),
 ) -> CompareResponse:
-    """Disambiguate, retrieve one Cross-Dataset Discovery search per slice, and answer."""
+    """Run the full pipeline. Each node is listed in `pipeline` with outcome and output."""
     try:
         payload = run_compare(
             body.query,

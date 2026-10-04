@@ -17,8 +17,22 @@ class CompareRequest(BaseModel):
             "decompose, retrieve_slices, compute_features, synthesize, export_benchmark."
         ),
     )
-    include_trace: bool = False
+    include_trace: bool = Field(
+        default=False,
+        description="If true, also return the raw LangGraph node updates as raw_trace.",
+    )
     k: Optional[int] = Field(default=None, ge=1, le=20)
+
+
+class PipelineStep(BaseModel):
+    """One executed pipeline node and what it produced."""
+
+    step: int
+    name: str
+    title: str
+    outcome: str
+    summary: str
+    output: dict[str, Any] = Field(default_factory=dict)
 
 
 class CompareResponse(BaseModel):
@@ -27,6 +41,10 @@ class CompareResponse(BaseModel):
     question: str
     status: str
     last_step: str = ""
+    pipeline: list[PipelineStep] = Field(
+        default_factory=list,
+        description="Ordered steps with outcome and output so the answer is traceable.",
+    )
     clarification: Optional[str] = None
     constraint_errors: list[str] = Field(default_factory=list)
     concept: str = ""
@@ -41,4 +59,4 @@ class CompareResponse(BaseModel):
     grounded_citations: list[dict[str, Any]] = Field(default_factory=list)
     benchmark: Optional[dict[str, Any]] = None
     steps: list[str] = Field(default_factory=list)
-    trace: Optional[list[dict[str, Any]]] = None
+    raw_trace: Optional[list[dict[str, Any]]] = None

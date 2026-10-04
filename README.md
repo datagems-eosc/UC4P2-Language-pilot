@@ -29,7 +29,7 @@ Optional fields:
 | `k` | Passages per slice (default 5) |
 | `include_trace` | Include every node update |
 
-The response includes `search_queries`, per-slice `passages` (from Cross-Dataset Discovery), `retrieval_errors`, `synthesized_answer`, and `grounded_citations`.
+The response `pipeline` list is the audit trail: one object per step with `step`, `name`, `title`, `outcome`, `summary`, and `output`. Convenience fields (`synthesized_answer`, `passages`, …) still sit at the top level. Set `include_trace` if you also need the raw LangGraph updates as `raw_trace`.
 
 Dev cluster (after deploy):
 
