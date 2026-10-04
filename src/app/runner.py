@@ -41,7 +41,7 @@ PIPELINE_STEPS = (
         "name": "compute_features",
         "path": "/steps/features",
         "title": "Measure comparative features",
-        "summary": "Compute feature metrics from the retrieved passages.",
+        "summary": "Measure comparative features via Cross-Dataset Discovery corpus-analysis-search.",
     },
     {
         "name": "synthesize",
@@ -53,7 +53,7 @@ PIPELINE_STEPS = (
         "name": "export_benchmark",
         "path": "/steps/export",
         "title": "Export the benchmark record",
-        "summary": "Package the run as a benchmark record.",
+        "summary": "Package the run as a benchmark record (full ThematicExploration).",
     },
 )
 
@@ -105,7 +105,15 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         return f"Retrieved {counts or 'no passages'}."
     if name == "compute_features":
         metrics = output.get("feature_metrics") or {}
-        return f"Computed feature metrics for {len(metrics)} slices."
+        remote = sum(
+            1
+            for item in metrics.values()
+            if isinstance(item, dict)
+            and (item.get("corpus_analysis") or {}).get("source")
+            == "cross-dataset-discovery/corpus-analysis-search"
+        )
+        extra = f" {remote} slice(s) used corpus-analysis-search." if remote else ""
+        return f"Computed feature metrics for {len(metrics)} slices.{extra}"
     if name == "synthesize":
         citations = output.get("grounded_citations") or []
         answer = str(output.get("synthesized_answer") or "").strip()

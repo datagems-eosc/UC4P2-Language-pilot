@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from src.app.auth import require_access_token
 from src.app.runner import PIPELINE_STEPS, run_compare
-from src.app.schemas import CompareRequest, CompareResponse, QueryRequest
+from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.llm import configure_lm_from_env
 
 logging.basicConfig(level=logging.INFO)
@@ -49,10 +49,11 @@ app = FastAPI(
     description=(
         "Historical comparative QA: disambiguate, decompose, retrieve from "
         "Cross-Dataset Discovery, and synthesize a grounded answer. "
-        "POST /compare runs the full pipeline. POST /steps/<name> stops after that "
-        "node and returns it as result, plus pipeline[] for everything up to there."
+        "POST /ThematicExploration runs the full pipeline. POST /steps/<name> stops after that "
+        "node and returns it as result, plus pipeline[] for everything up to there. "
+        "POST /compare is kept as an alias."
     ),
-    version="0.1.3",
+    version="0.1.4",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -73,9 +74,10 @@ app.add_middleware(
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.3",
+        "version": "0.1.4",
         "docs": "/swagger",
-        "compare": "POST /compare",
+        "thematic_exploration": "POST /ThematicExploration",
+        "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
     }
 
@@ -85,7 +87,7 @@ async def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-def _run_pipeline(body: QueryRequest, until: str | None = None) -> CompareResponse:
+def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
     try:
         payload = run_compare(
             body.query,
@@ -99,7 +101,7 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> CompareRespon
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     payload["service"] = "UC4P2 Language Pilot"
     payload["question"] = body.query
-    return CompareResponse.model_validate(payload)
+    return ThematicExplorationResponse.model_validate(payload)
 
 
 @app.get("/steps", summary="List pipeline step APIs", tags=["Steps"])
@@ -119,16 +121,25 @@ async def list_steps() -> dict[str, Any]:
 
 
 @app.post(
-    "/compare",
-    response_model=CompareResponse,
-    summary="Run the comparative language-pilot pipeline",
-    tags=["Pilot"],
+    "/ThematicExploration",
+    response_model=ThematicExplorationResponse,
+    summary="ThematicExploration",
+    operation_id="ThematicExploration",
+    tags=["ThematicExploration"],
 )
-async def compare(
-    body: CompareRequest,
+@app.post(
+    "/compare",
+    response_model=ThematicExplorationResponse,
+    summary="ThematicExploration (alias)",
+    operation_id="compare",
+    tags=["ThematicExploration"],
+    deprecated=True,
+)
+async def thematic_exploration(
+    body: ThematicExplorationRequest,
     _: dict[str, Any] = Depends(require_access_token),
-) -> CompareResponse:
-    """Run the full pipeline (or stop at `until`). `result` is the last executed step."""
+) -> ThematicExplorationResponse:
+    """Run the full thematic-exploration pipeline (or stop at `until`)."""
     return _run_pipeline(body, until=body.until)
 
 
@@ -138,7 +149,7 @@ def _register_step(spec: dict[str, str]) -> None:
     async def handler(
         body: QueryRequest,
         _: dict[str, Any] = Depends(require_access_token),
-    ) -> CompareResponse:
+    ) -> ThematicExplorationResponse:
         return _run_pipeline(body, until=until)
 
     handler.__name__ = f"step_{until}"
@@ -147,7 +158,7 @@ def _register_step(spec: dict[str, str]) -> None:
         spec["path"],
         handler,
         methods=["POST"],
-        response_model=CompareResponse,
+        response_model=ThematicExplorationResponse,
         summary=spec["title"],
         description=(
             f"{spec['summary']} Runs every node up to `{until}` and returns that "

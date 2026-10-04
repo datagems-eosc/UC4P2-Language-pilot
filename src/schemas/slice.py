@@ -8,6 +8,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from src.retrieval.corpora import dataset_id_for
+
 INDEXED_ARCHIVE_START_YEAR = 1800
 
 _LANGUAGE_ALIASES = {
@@ -188,7 +190,12 @@ def _build_slices(
                 language=language,
                 period_start=period.start or 0,
                 period_end=period.end or period.start or 0,
-                corpus_id=corpus_id,
+                corpus_id=corpus_id
+                or dataset_id_for(
+                    language=language,
+                    period_start=period.start or 0,
+                    label=period.label,
+                ),
             )
             for index, (language, period) in enumerate(pairs)
             if period.start is not None
@@ -205,7 +212,8 @@ def _build_slices(
                 language=language,
                 period_start=start,
                 period_end=end,
-                corpus_id=corpus_id,
+                corpus_id=corpus_id
+                or dataset_id_for(language=language, period_start=start, label=period.label if period else ""),
             )
             for index, language in enumerate(languages)
         ]
@@ -221,7 +229,12 @@ def _build_slices(
                     language="English",
                     period_start=period.start,
                     period_end=period.end or period.start,
-                    corpus_id=corpus_id,
+                    corpus_id=corpus_id
+                    or dataset_id_for(
+                        language="English",
+                        period_start=period.start,
+                        label=period.label,
+                    ),
                 )
             )
         return slices
@@ -277,14 +290,21 @@ def slices_from_disambiguation(payload: dict, *, corpus_id: str = "") -> list[Co
         end = item.get("end_year")
         if start is None:
             continue
+        language = str(item.get("language") or "English")
+        label = str(item.get("label") or _slice_id(index))
         slices.append(
             ComparisonSlice(
                 slice_id=str(item.get("slice_id") or _slice_id(index)),
-                label=str(item.get("label") or _slice_id(index)),
-                language=str(item.get("language") or "English"),
+                label=label,
+                language=language,
                 period_start=int(start),
                 period_end=int(end if end is not None else start),
-                corpus_id=str(item.get("corpus_id") or corpus_id),
+                corpus_id=str(item.get("corpus_id") or corpus_id)
+                or dataset_id_for(
+                    language=language,
+                    period_start=int(start),
+                    label=label,
+                ),
             )
         )
     return slices

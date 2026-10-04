@@ -11,13 +11,15 @@ from typing import Any
 
 import dspy
 
-from src.analytics.feature_engine import compute_feature_metrics
+from src.analytics.feature_engine import attach_corpus_analysis, compute_feature_metrics
 from src.constraints.comparative import (
     DisambiguationAPIError,
     QueryDisambiguationClient,
 )
 from src.decomposition.qdmr_generator import decompose_question
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
+from src.orchestration.slice_executor import RetrievalAPIError
+from src.retrieval.corpora import dataset_ids_for_slice
 from src.retrieval.multi_slice_retriever import (
     CrossDatasetMultiSliceRetriever,
     MockMultiSliceRetriever,
@@ -203,10 +205,26 @@ class HistoricalQAOrchestrator(dspy.Module):
             slice_id: [str(item.get("text") or "") for item in items]
             for slice_id, items in state.passages.items()
         }
-        state.feature_metrics = compute_feature_metrics(
-            texts,
-            state.knowledge_extension.get("feature_lenses") or [],
-        )
+        lenses = state.knowledge_extension.get("feature_lenses") or []
+        metrics = compute_feature_metrics(texts, lenses)
+        client = getattr(self.retriever, "client", None)
+        analyze = getattr(client, "corpus_analysis_search", None)
+        if callable(analyze):
+            for slice_id, query in (state.search_queries or {}).items():
+                local = metrics.setdefault(slice_id, {"passage_count": 0})
+                slice_obj = None
+                if state.intent:
+                    slice_obj = next(
+                        (item for item in state.intent.slices if item.slice_id == slice_id),
+                        None,
+                    )
+                dataset_ids = dataset_ids_for_slice(slice_obj) if slice_obj else None
+                try:
+                    payload = analyze(query, dataset_ids=dataset_ids)
+                    attach_corpus_analysis(local, payload)
+                except RetrievalAPIError as exc:
+                    attach_corpus_analysis(local, None, error=str(exc))
+        state.feature_metrics = metrics
         state.status = "features_computed"
         return state
 

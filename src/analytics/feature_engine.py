@@ -67,6 +67,44 @@ def compute_collocations(passages: list[str], target_word: str, top_k: int = 5) 
     return dict(counts.most_common(top_k))
 
 
+def attach_corpus_analysis(
+    slice_metrics: dict[str, Any],
+    payload: dict[str, Any] | None,
+    *,
+    error: str | None = None,
+) -> dict[str, Any]:
+    """Keep local KWIC/lenses and add Cross-Dataset Discovery corpus-analysis hits."""
+    results = (payload or {}).get("results") or []
+    hits: list[dict[str, Any]] = []
+    features: list[dict[str, Any]] = []
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        hits.append(
+            {
+                "object_id": item.get("object_id"),
+                "dataset_id": item.get("dataset_id"),
+                "similarity": item.get("similarity"),
+                "metadata": meta,
+            }
+        )
+        if meta:
+            features.append(meta)
+    slice_metrics["corpus_analysis"] = {
+        "source": (
+            "local-fallback" if error and not hits else "cross-dataset-discovery/corpus-analysis-search"
+        ),
+        "query_time": (payload or {}).get("query_time"),
+        "hit_count": len(hits),
+        "features": features,
+        "hits": hits,
+    }
+    if error:
+        slice_metrics["corpus_analysis"]["error"] = error
+    return slice_metrics
+
+
 def compute_feature_metrics(
     slice_passages: dict[str, list[str]],
     feature_lenses: list[str],

@@ -18,6 +18,7 @@ from src.orchestration.slice_executor import (
     RetrievalAPIError,
     build_search_query,
 )
+from src.retrieval.corpora import dataset_ids_for_slice
 from src.schemas.slice import ComparisonSlice
 
 _SYNTHESIZE = (
@@ -152,7 +153,7 @@ class CrossDatasetMultiSliceRetriever:
         sub_tasks: list[str] | None = None,
     ) -> list[RetrievedPassage]:
         query = search_query_for_slice(concept, slice_, variants, sub_tasks)
-        dataset_ids = [slice_.corpus_id] if slice_.corpus_id else None
+        dataset_ids = dataset_ids_for_slice(slice_)
         payload = self.client.search(query, k=self.k, dataset_ids=dataset_ids)
         passages: list[RetrievedPassage] = []
         for item in payload.get("results") or []:

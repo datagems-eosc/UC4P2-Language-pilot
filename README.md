@@ -15,10 +15,12 @@ PYTHONPATH=. python -m uvicorn src.app.main:app --host 0.0.0.0 --port 8080
 - Health: http://localhost:8080/health
 
 ```bash
-curl -s -X POST "http://localhost:8080/compare" \
+curl -s -X POST "http://localhost:8080/ThematicExploration" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
+
+`POST /compare` is an alias of the same operation.
 
 Each pipeline node also has its own endpoint. It runs from the start through that node and returns that node as `result`, with the prefix in `pipeline`.
 
@@ -32,7 +34,7 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 | POST | `/steps/retrieve` | `retrieve_slices` |
 | POST | `/steps/features` | `compute_features` |
 | POST | `/steps/synthesize` | `synthesize` |
-| POST | `/steps/export` | `export_benchmark` (same as `/compare`) |
+| POST | `/steps/export` | `export_benchmark` (same as `/ThematicExploration`) |
 
 ```bash
 curl -s -X POST "http://localhost:8080/steps/disambiguate" \
@@ -59,7 +61,7 @@ https://datagems-dev.scayle.es/language-pilot/swagger
 ```
 
 ```bash
-curl -s -X POST "https://datagems-dev.scayle.es/language-pilot/compare" \
+curl -s -X POST "https://datagems-dev.scayle.es/language-pilot/ThematicExploration" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
@@ -68,7 +70,18 @@ Kubernetes manifests: [`UC4P2-Language-pilot-deployment-dev`](../UC4P2-Language-
 
 ## Retrieval
 
-Each comparison slice issues `POST /search/` on Cross-Dataset Discovery. The search string is the decomposed sub-question for that slice plus lexical variants. Auth uses a Keycloak password-grant token (`DG_USERNAME` / `DG_PASSWORD`) unless `CROSS_DATASET_DISCOVERY_TOKEN` is set.
+Each comparison slice issues `POST /search/` (and `POST /corpus-analysis-search/`) on Cross-Dataset Discovery, restricted to the language corpora:
+
+| Key | Name | Language / era | UUID |
+|-----|------|----------------|------|
+| Encyc | EncycNet | German, historical | `07382b91-5bc5-42f9-8391-33adc2460c19` |
+| Kp | 19th C. Knowledge Project (Britannica) | English, historical | `d84d1a2e-127d-4393-91d0-afb7e4fd9c68` |
+| Diderot | Encyclopédie | French, historical | `d5c34990-9acf-4349-91d4-924f58565922` |
+| Wiki | Wikipedia | present-day | `1f6fba0c-9aea-4345-b5a3-457c924f9e0c` |
+
+The search string is the decomposed sub-question for that slice plus lexical variants. Auth uses a Keycloak password-grant token (`DG_USERNAME` / `DG_PASSWORD`) unless `CROSS_DATASET_DISCOVERY_TOKEN` is set.
+
+`compute_features` then calls `POST /corpus-analysis-search/` on the same service (UC4P1-style features live in the result `metadata`). Local KWIC/collocations stay on the retrieved passages as a fallback if that call fails.
 
 ## Tests
 

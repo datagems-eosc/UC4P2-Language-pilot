@@ -16,6 +16,7 @@ import dspy
 from pydantic import BaseModel, Field
 
 from src.oidc import OIDCTokenError, bearer_token_from_env, cached_oidc_access_token, reset_oidc_cache
+from src.retrieval.corpora import ALL_LANGUAGE_DATASET_IDS
 
 DEFAULT_DISCOVERY_URL = "https://datagems-dev.scayle.es/cross-dataset-discovery"
 
@@ -44,7 +45,7 @@ class Citation(BaseModel):
 
 
 class CrossDatasetDiscoveryClient:
-    """Client for ``POST /search/`` on Cross-Dataset Discovery.
+    """Client for Cross-Dataset Discovery search and corpus-analysis features.
 
     See https://datagems-eosc.github.io/cross-dataset-discovery-docs/latest/api-overview/
     """
@@ -78,42 +79,61 @@ class CrossDatasetDiscoveryClient:
         dataset_ids: list[str] | None = None,
         search_mode: str | None = None,
     ) -> dict[str, Any]:
-        url = f"{self.base_url}/search/"
+        return self._json_post(
+            "/search/",
+            self._search_body(query, k=k, dataset_ids=dataset_ids, search_mode=search_mode),
+        )
+
+    def corpus_analysis_search(
+        self,
+        query: str,
+        k: int | None = None,
+        dataset_ids: list[str] | None = None,
+        search_mode: str | None = None,
+    ) -> dict[str, Any]:
+        """Match the working curl: query + dataset_ids only (no k / search_mode)."""
         ids = dataset_ids if dataset_ids is not None else _dataset_ids_from_env()
-        # API rejects dataset_ids=[] — omit the field to search all corpora.
+        body: dict[str, Any] = {"query": query, "dataset_ids": ids}
+        return self._json_post("/corpus-analysis-search/", body)
+
+    def _search_body(
+        self,
+        query: str,
+        *,
+        k: int,
+        dataset_ids: list[str] | None,
+        search_mode: str | None,
+    ) -> dict[str, Any]:
+        ids = dataset_ids if dataset_ids is not None else _dataset_ids_from_env()
         body: dict[str, Any] = {
             "query": query,
             "k": k,
             "search_mode": search_mode or self.search_mode,
+            "dataset_ids": ids,
         }
-        if ids:
-            body["dataset_ids"] = ids
+        return body
+
+    def _json_post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        payload = json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             url,
-            data=json.dumps(body).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                **({"Authorization": f"Bearer {self.token}"} if self.token else {}),
-            },
+            data=payload,
+            headers=self._headers(),
             method="POST",
         )
         try:
-            payload = self._post(request)
+            result = self._post(request)
         except urllib.error.HTTPError as exc:
             if exc.code == 401 and self._try_refresh_token():
-                request = urllib.request.Request(
+                retry = urllib.request.Request(
                     url,
-                    data=request.data,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "Authorization": f"Bearer {self.token}",
-                    },
+                    data=payload,
+                    headers=self._headers(),
                     method="POST",
                 )
                 try:
-                    payload = self._post(request)
+                    result = self._post(retry)
                 except urllib.error.HTTPError as retry_exc:
                     detail = retry_exc.read().decode("utf-8", errors="replace")
                     raise RetrievalAPIError(
@@ -128,9 +148,18 @@ class CrossDatasetDiscoveryClient:
             raise RetrievalAPIError(
                 f"Cross-Dataset Discovery is unreachable: {exc.reason}"
             ) from exc
-        if not isinstance(payload, dict):
+        if not isinstance(result, dict):
             raise RetrievalAPIError("Cross-Dataset Discovery returned a non-object payload.")
-        return payload
+        return result
+
+    def _headers(self) -> dict[str, str]:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        return headers
 
     def _post(self, request: urllib.request.Request) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
@@ -149,7 +178,8 @@ class CrossDatasetDiscoveryClient:
 
 def _dataset_ids_from_env() -> list[str]:
     raw = os.getenv("CROSS_DATASET_IDS", "")
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    ids = [item.strip() for item in raw.split(",") if item.strip()]
+    return ids or list(ALL_LANGUAGE_DATASET_IDS)
 
 
 def citations_from_search(payload: dict[str, Any], slice_id: str) -> list[Citation]:

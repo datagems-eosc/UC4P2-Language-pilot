@@ -6,7 +6,7 @@ Matches the curl template:
     POST .../oauth/realms/dev/protocol/openid-connect/token
     grant_type=password&client_id=swagger-client
     username=...&password=...
-    scope=openid cross-dataset-discovery-api offline_access
+    scope=openid datagems offline_access
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ DEFAULT_OIDC_TOKEN_URL = (
     "https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token"
 )
 DEFAULT_OIDC_CLIENT_ID = "swagger-client"
-DEFAULT_OIDC_SCOPE = "openid cross-dataset-discovery-api offline_access"
+DEFAULT_OIDC_SCOPE = "openid datagems offline_access"
 
 _lock = threading.Lock()
 _cached_token: str | None = None

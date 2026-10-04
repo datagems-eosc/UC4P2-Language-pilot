@@ -75,13 +75,16 @@ def test_compare_endpoint(monkeypatch):
     monkeypatch.setattr("src.app.runner.stream_steps", fake_stream)
     monkeypatch.setenv("AUTH_DISABLED", "true")
     client = TestClient(app)
-    response = client.post("/compare", json={"query": MARRIAGE, "query_id": "q-http"})
+    response = client.post("/ThematicExploration", json={"query": MARRIAGE, "query_id": "q-http"})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["status"] == "ok"
     assert body["synthesized_answer"]
     assert body["pipeline"][0]["name"] == "route"
     assert body["pipeline"][-1]["name"] == "export_benchmark"
+    alias = client.post("/compare", json={"query": MARRIAGE, "query_id": "q-alias"})
+    assert alias.status_code == 200, alias.text
+    assert alias.json()["status"] == "ok"
     health = client.get("/health")
     assert health.json() == {"status": "healthy"}
     catalog = client.get("/steps")

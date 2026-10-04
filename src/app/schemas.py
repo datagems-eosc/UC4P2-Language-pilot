@@ -17,7 +17,7 @@ class QueryRequest(BaseModel):
     k: Optional[int] = Field(default=None, ge=1, le=20)
 
 
-class CompareRequest(QueryRequest):
+class ThematicExplorationRequest(QueryRequest):
     until: Optional[str] = Field(
         default=None,
         description=(
@@ -25,6 +25,9 @@ class CompareRequest(QueryRequest):
             "decompose, retrieve_slices, compute_features, synthesize, export_benchmark."
         ),
     )
+
+
+CompareRequest = ThematicExplorationRequest
 
 
 class PipelineStep(BaseModel):
@@ -38,7 +41,7 @@ class PipelineStep(BaseModel):
     output: dict[str, Any] = Field(default_factory=dict)
 
 
-class CompareResponse(BaseModel):
+class ThematicExplorationResponse(BaseModel):
     service: str = "UC4P2 Language Pilot"
     query_id: str = ""
     question: str
@@ -67,3 +70,6 @@ class CompareResponse(BaseModel):
     benchmark: Optional[dict[str, Any]] = None
     steps: list[str] = Field(default_factory=list)
     raw_trace: Optional[list[dict[str, Any]]] = None
+
+
+CompareResponse = ThematicExplorationResponse
