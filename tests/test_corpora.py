@@ -69,6 +69,30 @@ def test_query_without_years_defaults_to_knowledge_project_and_wikipedia():
     assert intent.slices[0].period_end == 1899
 
 
+def test_galileo_reporting_question_extracts_concept_and_default_periods():
+    intent, errors = parse_query_intent(
+        "How do historical accounts differ in reporting Galileo origin and family?"
+    )
+    assert errors == []
+    assert intent is not None
+    assert "Galileo" in intent.target_concept
+    assert [item.label for item in intent.slices] == ["19th century", "present"]
+
+
+def test_odin_today_adds_historical_corpus_slice():
+    intent, errors = parse_query_intent(
+        "How was Odin portrayed in earlier records compared to today?"
+    )
+    assert errors == []
+    assert intent is not None
+    assert intent.target_concept.lower() == "odin"
+    assert [item.label for item in intent.slices] == ["19th century", "present"]
+    assert [item.corpus_id for item in intent.slices] == [
+        LANGUAGE_DATASETS["kp"]["uuid"],
+        LANGUAGE_DATASETS["wiki"]["uuid"],
+    ]
+
+
 def test_dataset_ids_for_slice_prefers_existing_uuid():
     slice_ = ComparisonSlice(
         slice_id="slice_1",

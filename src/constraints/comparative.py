@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from src.constraints.base import BaseConstraint
 
 from src.oidc import OIDCTokenError, bearer_token_from_env
-from src.retrieval.corpora import default_temporal_spans
+from src.retrieval.corpora import fill_default_temporal_pair, is_present_era
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 ComparisonType = Literal["temporal", "cross_lingual", "multi-dimensional"]
@@ -60,6 +60,15 @@ _CONCEPT_PATTERNS = (
     re.compile(
         r"descriptions of (?:the )?(.+?)"
         r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
+        re.I,
+    ),
+    re.compile(
+        r"(?:reporting|about|regarding|concerning)\s+(?:the |a |an )?(.+?)(?:\?|$)",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:accounts|portrayals)\s+(?:of|about)\s+(?:the |a |an )?(.+?)"
+        r"(?:\s+differ|\s+vary|\s+compared|\?|$)",
         re.I,
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
@@ -123,6 +132,12 @@ def _extract_concepts(query: str) -> list[str]:
     lowered = query.lower()
     if re.search(r"\bmarriage\b", lowered):
         return ["marriage"]
+    if re.search(r"\bgalileo\b", lowered):
+        return ["Galileo"]
+    if re.search(r"\bodin\b", lowered):
+        return ["Odin"]
+    if re.search(r"\bdresden\b", lowered):
+        return ["Dresden"]
     if re.search(r"\b(united states|u\.s\.|usa)\b", lowered) or re.search(r"\bUS\b", query):
         return ["US"]
     return []
@@ -397,16 +412,50 @@ class HistoricalComparativeConstraints(BaseConstraint):
         concepts = _extract_concepts(query)
         languages = _extract_languages(query)
         periods = _extract_periods(query, reference)
-        if not periods and len(languages) < 2:
+        dated = [period for period in periods if period.start_year is not None]
+        if len(languages) < 2 and len(dated) < 2:
+            existing = [
+                {
+                    "label": period.label,
+                    "start": period.start_year,
+                    "end": period.end_year,
+                }
+                for period in dated
+            ]
             language = languages[0] if languages else "English"
-            for span in default_temporal_spans(language, now_year=reference.year):
-                periods.append(
+            filled = fill_default_temporal_pair(
+                existing, language=language, now_year=reference.year
+            )
+            if dated:
+                original = dated[0]
+                hist, present = filled[0], filled[-1]
+                if is_present_era(original.label or "", int(original.start_year or 0)):
+                    periods = [
+                        _PeriodSpan(
+                            label=hist["label"],
+                            start_year=hist["start"],
+                            end_year=hist["end"],
+                        ),
+                        original,
+                    ]
+                else:
+                    periods = [
+                        original,
+                        _PeriodSpan(
+                            label=present["label"],
+                            start_year=present["start"],
+                            end_year=present["end"],
+                        ),
+                    ]
+            else:
+                periods = [
                     _PeriodSpan(
                         label=span["label"],
                         start_year=span["start"],
                         end_year=span["end"],
                     )
-                )
+                    for span in filled
+                ]
         comparison_type = _comparison_type(languages, periods, query)
         slices = _build_slices(comparison_type, languages, periods)
         errors: list[str] = []

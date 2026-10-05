@@ -91,6 +91,26 @@ def default_temporal_spans(language: str = "English", *, now_year: int) -> list[
     ]
 
 
+def fill_default_temporal_pair(
+    existing: list[dict[str, Any]],
+    *,
+    language: str = "English",
+    now_year: int,
+) -> list[dict[str, Any]]:
+    """Ensure a temporal comparison has both indexed eras when only one (or none) is named."""
+    pair = default_temporal_spans(language, now_year=now_year)
+    if not existing:
+        return pair
+    if len(existing) >= 2:
+        return existing
+    one = existing[0]
+    start = int(one.get("start") or 0)
+    label = str(one.get("label") or "")
+    if is_present_era(label, start):
+        return [pair[0], one]
+    return [one, pair[1]]
+
+
 def is_present_era(label: str = "", period_start: int = 0) -> bool:
     folded = (label or "").strip().lower()
     if any(marker in folded for marker in _PRESENT_LABELS):

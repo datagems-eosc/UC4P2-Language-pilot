@@ -2,7 +2,7 @@
 
 Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/`.
 
-**Access token.** Protected POSTs require a DataGEMS AAI JWT, same as [dg-app-api](https://github.com/datagems-eosc/dg-app-api): `Authorization: Bearer …`. The service checks signature, issuer, expiry, and audience, then forwards that token to Cross-Dataset Discovery. Get a token from category D (`scripts/dev/19-keycloak-token.sh` or `scripts/dev/_token.sh`), then paste `access_token` as `PASTE_ACCESS_TOKEN`. Language-pilot POST scripts fetch the token themselves. Health and catalog GETs stay public.
+**Access token.** Protected POSTs require a DataGEMS AAI JWT, same as [dg-app-api](https://github.com/datagems-eosc/dg-app-api). Each standard curl below fetches the token inline with `jq`. Scope is `openid datagems offline_access` (not `cross-dataset-discovery-api`). Health and catalog GETs stay public.
 
 **Example question:** `How did a marriage look like in the 1800s compared to now?`
 
@@ -37,7 +37,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.8`), docs path, step list
+- Returns: service name, version (`0.1.9`), docs path, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -150,7 +150,13 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-full", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -159,7 +165,13 @@ Stop after retrieve:
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "until": "retrieve_slices"}'
 ```
@@ -176,7 +188,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-alias", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -193,7 +211,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/tree \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   --data-binary @runs/thematic_exploration_marriage_v014.json \
   -o thematic-tree.html
@@ -203,7 +227,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/tree \
 
 ## C. Language pilot — one HTTP call per pipeline step
 
-Each POST **restarts from the start** and stops at that node. The stopped node is `result`; everything up to there is `pipeline[]`. Send `Authorization: Bearer PASTE_ACCESS_TOKEN`.
+Each POST **restarts from the start** and stops at that node. The stopped node is `result`; everything up to there is `pipeline[]`. Auth is fetched inline in the curl.
 
 Shared body:
 
@@ -224,7 +248,13 @@ Shared body:
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -242,7 +272,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguate \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -260,7 +296,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguat
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-knowledge \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -278,7 +320,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-know
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/decompose \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -298,7 +346,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/decompose \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/retrieve \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -317,7 +371,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/retrieve \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -336,7 +396,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -354,7 +420,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/export \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -363,7 +435,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/export \
 
 ## D. Keycloak (access token)
 
-Get `access_token` once, then send it as `Authorization: Bearer PASTE_ACCESS_TOKEN` on language-pilot POSTs, Cross-Dataset Discovery search, and query-disambiguation. Language-pilot retrieve/features also fetch this token inside the pod for CDD.
+The nested `$(curl … | jq -r '.access_token')` in categories B, C, E, and F is this call. Language-pilot also forwards that JWT to Cross-Dataset Discovery.
 
 ### D1. Password grant
 
@@ -379,16 +451,14 @@ Get `access_token` once, then send it as `Authorization: Bearer PASTE_ACCESS_TOK
 **Standard curl**
 
 ```bash
-curl -sS -X POST https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password" \
-  -d "client_id=swagger-client" \
-  -d "username=dg-user-1" \
-  -d "password=dg-user-1" \
-  -d "scope=openid datagems offline_access"
+curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=password' \
+  --data-urlencode 'client_id=swagger-client' \
+  --data-urlencode 'username=dg-user-1' \
+  --data-urlencode 'password=dg-user-1' \
+  --data-urlencode 'scope=openid datagems offline_access'
 ```
-
-Copy `access_token` into `PASTE_ACCESS_TOKEN` in categories B, C, E, and F.
 
 ---
 
@@ -425,7 +495,13 @@ curl -sS https://datagems-dev.scayle.es/cross-dataset-discovery/health
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the definition of a marriage in the 1800s? wedding nuptials matrimony", "k": 5, "search_mode": "hybrid", "dataset_ids": ["d84d1a2e-127d-4393-91d0-afb7e4fd9c68"]}'
 ```
@@ -443,7 +519,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the definition of a marriage in the present? wedding marriage union", "k": 5, "search_mode": "hybrid", "dataset_ids": ["1f6fba0c-9aea-4345-b5a3-457c924f9e0c"]}'
 ```
@@ -460,7 +542,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "Ehe Hochzeit", "k": 5, "search_mode": "hybrid", "dataset_ids": ["07382b91-5bc5-42f9-8391-33adc2460c19"]}'
 ```
@@ -477,7 +565,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "mariage", "k": 5, "search_mode": "hybrid", "dataset_ids": ["d5c34990-9acf-4349-91d4-924f58565922"]}'
 ```
@@ -495,7 +589,13 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/corpus-analysis-search/ \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the definition of a marriage in the 1800s?", "dataset_ids": ["d84d1a2e-127d-4393-91d0-afb7e4fd9c68"]}'
 ```
@@ -519,7 +619,13 @@ Used by language-pilot `disambiguate`. On the cluster the pod calls the in-names
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language \
-  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```

@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.retrieval.corpora import dataset_id_for, default_temporal_spans
+from src.retrieval.corpora import dataset_id_for, fill_default_temporal_pair
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 
@@ -37,6 +37,15 @@ _CONCEPT_PATTERNS = (
     re.compile(
         r"descriptions of (?:the )?(.+?)"
         r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
+        re.I,
+    ),
+    re.compile(
+        r"(?:reporting|about|regarding|concerning)\s+(?:the |a |an )?(.+?)(?:\?|$)",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:accounts|portrayals)\s+(?:of|about)\s+(?:the |a |an )?(.+?)"
+        r"(?:\s+differ|\s+vary|\s+compared|\?|$)",
         re.I,
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
@@ -110,6 +119,12 @@ def _concept(query: str) -> str:
                 return text
     if re.search(r"\bmarriage\b", query, re.I):
         return "marriage"
+    if re.search(r"\bgalileo\b", query, re.I):
+        return "Galileo"
+    if re.search(r"\bodin\b", query, re.I):
+        return "Odin"
+    if re.search(r"\bdresden\b", query, re.I):
+        return "Dresden"
     if re.search(r"\b(united states|u\.s\.|usa)\b", query, re.I) or re.search(r"\bUS\b", query):
         return "US"
     return ""
@@ -265,6 +280,41 @@ def _build_slices(
     return []
 
 
+def _period_from_span(span: dict) -> _Period:
+    return _Period(
+        str(span["label"]),
+        int(span["start"]),
+        int(span["end"]),
+        False,
+        corpus_id=str(span.get("corpus_id") or ""),
+    )
+
+
+def _ensure_two_periods(
+    periods: list[_Period],
+    languages: list[str],
+    reference: datetime,
+) -> list[_Period]:
+    if len(languages) >= 2:
+        return periods
+    dated = [period for period in periods if period.start is not None]
+    if len(dated) >= 2:
+        return periods
+    language = languages[0] if languages else "English"
+    existing = [
+        {
+            "label": period.label,
+            "start": period.start,
+            "end": period.end or period.start,
+            "corpus_id": period.corpus_id,
+        }
+        for period in periods
+        if period.start is not None
+    ]
+    filled = fill_default_temporal_pair(existing, language=language, now_year=reference.year)
+    return [_period_from_span(span) for span in filled]
+
+
 def parse_query_intent(
     query: str,
     *,
@@ -275,19 +325,7 @@ def parse_query_intent(
     reference = reference or datetime.now()
     concept = _concept(query)
     languages = _languages(query)
-    periods = _periods(query, reference)
-    if not periods and len(languages) < 2:
-        language = languages[0] if languages else "English"
-        for span in default_temporal_spans(language, now_year=reference.year):
-            periods.append(
-                _Period(
-                    span["label"],
-                    span["start"],
-                    span["end"],
-                    False,
-                    corpus_id=str(span["corpus_id"]),
-                )
-            )
+    periods = _ensure_two_periods(_periods(query, reference), languages, reference)
     dimension = _dimension(languages, periods, query)
     slices = _build_slices(dimension, languages, periods, corpus_id)
     errors: list[str] = []
