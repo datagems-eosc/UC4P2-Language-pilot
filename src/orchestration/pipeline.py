@@ -182,7 +182,22 @@ class HistoricalQAOrchestrator(dspy.Module):
                 disambiguation={"proceed": True, "fallback_reason": str(exc)},
             )
         if not remote.get("proceed"):
-            errors = list(remote.get("constraint_errors") or [])
+            local_intent, errors = parse_query_intent(question)
+            if local_intent is not None:
+                merged = dict(remote)
+                merged["proceed"] = True
+                merged["fallback_reason"] = (
+                    "No explicit time period in the query; slices defaulted to indexed corpus eras."
+                )
+                return PipelineState(
+                    question=question,
+                    query_id=identifier,
+                    status="disambiguated",
+                    intent=local_intent,
+                    disambiguation=merged,
+                    disambiguation_source="local-fallback",
+                )
+            errors = list(remote.get("constraint_errors") or errors)
             return PipelineState(
                 question=question,
                 query_id=identifier,

@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.retrieval.corpora import dataset_id_for
+from src.retrieval.corpora import dataset_id_for, default_temporal_spans
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 
@@ -35,7 +35,8 @@ _PRESENT_MARKERS = (
 _UNINDEXED_ERAS = ("medieval", "middle ages", "antiquity", "ancient", "renaissance", "early modern")
 _CONCEPT_PATTERNS = (
     re.compile(
-        r"descriptions of (?:the )?(.+?)(?:\s+differ|\s+different|\s+in\b|\s+compared|\?|$)",
+        r"descriptions of (?:the )?(.+?)"
+        r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
         re.I,
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
@@ -75,11 +76,19 @@ class ParsedQueryIntent(BaseModel):
 
 
 class _Period:
-    def __init__(self, label: str, start: Optional[int], end: Optional[int], unindexed: bool):
+    def __init__(
+        self,
+        label: str,
+        start: Optional[int],
+        end: Optional[int],
+        unindexed: bool,
+        corpus_id: str = "",
+    ):
         self.label = label
         self.start = start
         self.end = end
         self.unindexed = unindexed
+        self.corpus_id = corpus_id
 
 
 def _slice_id(index: int) -> str:
@@ -91,7 +100,12 @@ def _concept(query: str) -> str:
         match = pattern.search(query)
         if match:
             text = re.sub(r"\s+", " ", match.group(1)).strip(" .?!,;:'\"")
-            text = re.sub(r"\s+(in|across|compared|versus|vs)\b.*$", "", text, flags=re.I).strip()
+            text = re.sub(
+                r"\s+(in|across|over|during|between|from|compared|versus|vs|vary)\b.*$",
+                "",
+                text,
+                flags=re.I,
+            ).strip()
             if text and text.lower() not in {"it", "this", "that"}:
                 return text
     if re.search(r"\bmarriage\b", query, re.I):
@@ -161,7 +175,14 @@ def _periods(query: str, reference: datetime) -> list[_Period]:
 
 
 def _dimension(languages: list[str], periods: list[_Period], query: str) -> str:
-    comparative = bool(re.search(r"\b(compar\w*|versus|vs\.?|differ\w*|between)\b", query, re.I))
+    comparative = bool(
+        re.search(
+            r"\b(compar\w*|versus|vs\.?|differ\w*|between|vary|varies|varied)\b"
+            r"|across time|over time|through time",
+            query,
+            re.I,
+        )
+    )
     if len(languages) >= 2 and len(periods) >= 2:
         return "multi-dimensional"
     if len(languages) >= 2 and (comparative or periods):
@@ -191,6 +212,7 @@ def _build_slices(
                 period_start=period.start or 0,
                 period_end=period.end or period.start or 0,
                 corpus_id=corpus_id
+                or period.corpus_id
                 or dataset_id_for(
                     language=language,
                     period_start=period.start or 0,
@@ -213,6 +235,7 @@ def _build_slices(
                 period_start=start,
                 period_end=end,
                 corpus_id=corpus_id
+                or (period.corpus_id if period else "")
                 or dataset_id_for(language=language, period_start=start, label=period.label if period else ""),
             )
             for index, language in enumerate(languages)
@@ -230,6 +253,7 @@ def _build_slices(
                     period_start=period.start,
                     period_end=period.end or period.start,
                     corpus_id=corpus_id
+                    or period.corpus_id
                     or dataset_id_for(
                         language="English",
                         period_start=period.start,
@@ -252,6 +276,18 @@ def parse_query_intent(
     concept = _concept(query)
     languages = _languages(query)
     periods = _periods(query, reference)
+    if not periods and len(languages) < 2:
+        language = languages[0] if languages else "English"
+        for span in default_temporal_spans(language, now_year=reference.year):
+            periods.append(
+                _Period(
+                    span["label"],
+                    span["start"],
+                    span["end"],
+                    False,
+                    corpus_id=str(span["corpus_id"]),
+                )
+            )
     dimension = _dimension(languages, periods, query)
     slices = _build_slices(dimension, languages, periods, corpus_id)
     errors: list[str] = []

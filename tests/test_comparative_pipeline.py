@@ -63,6 +63,44 @@ class ScriptedRetrieval:
         }
 
 
+def test_missing_periods_use_indexed_corpus_eras():
+    gate = HistoricalComparativeConstraints.from_query(
+        "How do historical descriptions of the Dresden's cultural nicknames "
+        "and the reasons given for them vary across time"
+    )
+    assert gate.clarification() is None
+    assert gate.comparison_type == "temporal"
+    assert [item.label for item in gate.slices] == ["19th century", "present"]
+    assert gate.slices[0].start_year == 1800
+    assert gate.slices[1].label == "present"
+
+
+def test_remote_reject_without_years_falls_back_to_corpus_periods():
+    client = ScriptedDisambiguation(
+        {
+            "proceed": False,
+            "constraint_errors": [
+                "A comparison needs at least two slices. Provide two or more periods or source languages."
+            ],
+            "clarification": (
+                "This historical comparative query cannot be executed against the indexed archives. "
+                "Please name the concept and restrict every slice to indexed sources from 1800 onward."
+            ),
+            "slices": [],
+        }
+    )
+    query = (
+        "How do historical descriptions of the Dresden's cultural nicknames "
+        "and the reasons given for them vary across time"
+    )
+    pipeline = HistoricalQAOrchestrator(disambiguation_client=client)
+    state = pipeline.resolve(query)
+    assert state.status == "disambiguated"
+    assert state.disambiguation_source == "local-fallback"
+    assert state.intent is not None
+    assert [item.label for item in state.intent.slices] == ["19th century", "present"]
+
+
 def test_local_gate_flags_pre_1800_archives():
     gate = HistoricalComparativeConstraints.from_query(PRE_1800)
     errors = gate.validate_boundaries()

@@ -48,6 +48,27 @@ def test_cross_lingual_slices_use_encycnet_and_britannica():
     assert by_lang["English"] == LANGUAGE_DATASETS["kp"]["uuid"]
 
 
+DRESDEN_NICKNAMES = (
+    "How do historical descriptions of the Dresden's cultural nicknames "
+    "and the reasons given for them vary across time"
+)
+
+
+def test_query_without_years_defaults_to_knowledge_project_and_wikipedia():
+    intent, errors = parse_query_intent(DRESDEN_NICKNAMES)
+    assert errors == []
+    assert intent is not None
+    assert intent.dimension == "temporal"
+    assert "Dresden" in intent.target_concept
+    assert [item.label for item in intent.slices] == ["19th century", "present"]
+    assert [item.corpus_id for item in intent.slices] == [
+        LANGUAGE_DATASETS["kp"]["uuid"],
+        LANGUAGE_DATASETS["wiki"]["uuid"],
+    ]
+    assert intent.slices[0].period_start == 1800
+    assert intent.slices[0].period_end == 1899
+
+
 def test_dataset_ids_for_slice_prefers_existing_uuid():
     slice_ = ComparisonSlice(
         slice_id="slice_1",

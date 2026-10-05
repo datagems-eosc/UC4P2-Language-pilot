@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from src.constraints.base import BaseConstraint
 
 from src.oidc import OIDCTokenError, bearer_token_from_env
+from src.retrieval.corpora import default_temporal_spans
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 ComparisonType = Literal["temporal", "cross_lingual", "multi-dimensional"]
@@ -58,7 +59,7 @@ _UNINDEXED_ERAS = (
 _CONCEPT_PATTERNS = (
     re.compile(
         r"descriptions of (?:the )?(.+?)"
-        r"(?:\s+differ|\s+different|\s+in\b|\s+compared|\?|$)",
+        r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
         re.I,
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
@@ -104,7 +105,7 @@ def _century_start(number: int) -> int:
 def _strip_concept(text: str) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip(" .?!,;:'\"")
     return re.sub(
-        r"\s+(in|across|over|during|between|from|compared|versus|vs)\b.*$",
+        r"\s+(in|across|over|during|between|from|compared|versus|vs|vary)\b.*$",
         "",
         cleaned,
         flags=re.I,
@@ -210,7 +211,12 @@ def _comparison_type(
     languages: list[str], periods: list[_PeriodSpan], query: str
 ) -> Optional[ComparisonType]:
     comparative = bool(
-        re.search(r"\b(compar\w*|versus|vs\.?|differ\w*|across time)\b", query, re.I)
+        re.search(
+            r"\b(compar\w*|versus|vs\.?|differ\w*|vary|varies|varied)\b"
+            r"|across time|over time|through time",
+            query,
+            re.I,
+        )
     )
     if len(languages) >= 2 and len(periods) >= 2:
         return "multi-dimensional"
@@ -391,6 +397,16 @@ class HistoricalComparativeConstraints(BaseConstraint):
         concepts = _extract_concepts(query)
         languages = _extract_languages(query)
         periods = _extract_periods(query, reference)
+        if not periods and len(languages) < 2:
+            language = languages[0] if languages else "English"
+            for span in default_temporal_spans(language, now_year=reference.year):
+                periods.append(
+                    _PeriodSpan(
+                        label=span["label"],
+                        start_year=span["start"],
+                        end_year=span["end"],
+                    )
+                )
         comparison_type = _comparison_type(languages, periods, query)
         slices = _build_slices(comparison_type, languages, periods)
         errors: list[str] = []
