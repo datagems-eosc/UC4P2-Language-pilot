@@ -17,6 +17,7 @@ PYTHONPATH=. python -m uvicorn src.app.main:app --host 0.0.0.0 --port 8080
 
 ```bash
 curl -s -X POST "http://localhost:8080/ThematicExploration" \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
@@ -41,6 +42,7 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 
 ```bash
 curl -s -X POST "http://localhost:8080/steps/disambiguate" \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
@@ -57,7 +59,11 @@ Optional fields:
 
 The response `pipeline` list is the audit trail: one object per step with `step`, `name`, `title`, `outcome`, `summary`, and `output`. Convenience fields (`synthesized_answer`, `passages`, …) still sit at the top level. Set `include_trace` if you also need the raw LangGraph updates as `raw_trace`.
 
-Dev cluster (after deploy):
+Dev cluster (after deploy). Protected POSTs need a DataGEMS AAI Bearer JWT, same contract as [dg-app-api](https://github.com/datagems-eosc/dg-app-api):
+
+```text
+Authorization: Bearer <access_token>
+```
 
 ```text
 https://datagems-dev.scayle.es/language-pilot/health
@@ -67,6 +73,7 @@ https://datagems-dev.scayle.es/language-pilot/tree
 
 ```bash
 curl -s -X POST "https://datagems-dev.scayle.es/language-pilot/ThematicExploration" \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```

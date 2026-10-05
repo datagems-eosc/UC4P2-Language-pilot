@@ -225,6 +225,7 @@ _PAGE = """<!DOCTYPE html>
     <p>Pipeline tree from the first step to the last. Open a saved JSON run, or ask a question.</p>
     <form class="bar" id="run-form">
       <input type="text" name="query" id="query" placeholder="How did a marriage look like in the 1800s compared to now?" required/>
+      <input type="password" name="token" id="token" placeholder="Bearer access token" autocomplete="off"/>
       <select id="decompose_mode" title="decompose_mode">
         <option value="few-shot">few-shot</option>
         <option value="predict">predict</option>
@@ -342,9 +343,14 @@ _PAGE = """<!DOCTYPE html>
       event.preventDefault();
       const view = document.getElementById("view");
       view.innerHTML = "<p class=\\"empty\\">Running pipeline…</p>";
+      const token = document.getElementById("token").value.trim();
+      if (token) sessionStorage.setItem("dg_access_token", token);
+      const headers = { "Content-Type": "application/json" };
+      const stored = token || sessionStorage.getItem("dg_access_token") || "";
+      if (stored) headers["Authorization"] = "Bearer " + stored;
       const response = await fetch("ThematicExploration", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           query: document.getElementById("query").value,
           decompose_mode: document.getElementById("decompose_mode").value,
@@ -359,6 +365,8 @@ _PAGE = """<!DOCTYPE html>
     });
 
     if (EMBEDDED) renderPayload(EMBEDDED);
+    const saved = sessionStorage.getItem("dg_access_token");
+    if (saved) document.getElementById("token").value = saved;
   </script>
 </body>
 </html>

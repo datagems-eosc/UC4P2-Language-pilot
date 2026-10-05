@@ -2,7 +2,7 @@
 
 Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/`.
 
-Language-pilot auth is disabled on this cluster. Cross-Dataset Discovery needs a Keycloak token (category D).
+**Access token.** Protected POSTs require a DataGEMS AAI JWT, same as [dg-app-api](https://github.com/datagems-eosc/dg-app-api): `Authorization: Bearer …`. The service checks signature, issuer, expiry, and audience, then forwards that token to Cross-Dataset Discovery. Get a token from category D (`scripts/dev/19-keycloak-token.sh` or `scripts/dev/_token.sh`), then paste `access_token` as `PASTE_ACCESS_TOKEN`. Language-pilot POST scripts fetch the token themselves. Health and catalog GETs stay public.
 
 **Example question:** `How did a marriage look like in the 1800s compared to now?`
 
@@ -37,7 +37,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.7`), docs path, step list
+- Returns: service name, version (`0.1.8`), docs path, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -141,7 +141,7 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 **Details**
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration`
-- Auth: none on this cluster
+- Auth: `Authorization: Bearer …` (Keycloak, category D)
 - Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`
 - Script: `scripts/dev/08-thematic-exploration.sh`
 - Until-retrieve script: `scripts/dev/08b-thematic-exploration-until-retrieve.sh`
@@ -150,6 +150,7 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-full", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -158,6 +159,7 @@ Stop after retrieve:
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "until": "retrieve_slices"}'
 ```
@@ -174,6 +176,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-alias", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -190,6 +193,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/tree \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary @runs/thematic_exploration_marriage_v014.json \
   -o thematic-tree.html
@@ -199,7 +203,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/tree \
 
 ## C. Language pilot — one HTTP call per pipeline step
 
-Each POST **restarts from the start** and stops at that node. The stopped node is `result`; everything up to there is `pipeline[]`.
+Each POST **restarts from the start** and stops at that node. The stopped node is `result`; everything up to there is `pipeline[]`. Send `Authorization: Bearer PASTE_ACCESS_TOKEN`.
 
 Shared body:
 
@@ -220,6 +224,7 @@ Shared body:
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -237,6 +242,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguate \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -254,6 +260,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguat
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-knowledge \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -271,6 +278,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-know
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/decompose \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -290,6 +298,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/decompose \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/retrieve \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -308,6 +317,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/retrieve \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -326,6 +336,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
@@ -343,15 +354,16 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/export \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ---
 
-## D. Keycloak (token for Cross-Dataset Discovery)
+## D. Keycloak (access token)
 
-Language-pilot retrieve/features fetch a token inside the pod. Direct CDD curls from a laptop need this first.
+Get `access_token` once, then send it as `Authorization: Bearer PASTE_ACCESS_TOKEN` on language-pilot POSTs, Cross-Dataset Discovery search, and query-disambiguation. Language-pilot retrieve/features also fetch this token inside the pod for CDD.
 
 ### D1. Password grant
 
@@ -376,7 +388,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid
   -d "scope=openid datagems offline_access"
 ```
 
-Copy `access_token` into `PASTE_ACCESS_TOKEN` in category E.
+Copy `access_token` into `PASTE_ACCESS_TOKEN` in categories B, C, E, and F.
 
 ---
 
@@ -499,6 +511,7 @@ Used by language-pilot `disambiguate`. On the cluster the pod calls the in-names
 **Details**
 
 - Method / URL: `POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language`
+- Auth: `Authorization: Bearer …`
 - Body: `query`
 - Script: `scripts/dev/23-query-disambiguation-language.sh`
 
@@ -506,6 +519,7 @@ Used by language-pilot `disambiguate`. On the cluster the pod calls the in-names
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language \
+  -H "Authorization: Bearer PASTE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```

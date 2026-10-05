@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.app.auth import caller_access_token
+from src.constraints.comparative import QueryDisambiguationClient
 from src.decomposition.modes import FEW_SHOT
 from src.orchestration.graph import stream_steps
+from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
 
 PIPELINE_STEPS = (
     {
@@ -182,6 +185,7 @@ def run_compare(
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
 ) -> dict[str, Any]:
+    token = caller_access_token()
     events = list(
         stream_steps(
             question,
@@ -189,6 +193,8 @@ def run_compare(
             until=until,
             k=k,
             decompose_mode=decompose_mode,
+            disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
+            retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
         )
     )
     merged: dict[str, Any] = {"question": question}
