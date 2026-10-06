@@ -30,6 +30,12 @@ PIPELINE_STEPS = (
         "summary": "Expand thematic facets and lexical variants per slice.",
     },
     {
+        "name": "generate_subquestions",
+        "path": "/steps/generate-subquestions",
+        "title": "Create sub-questions from facets and lemmas",
+        "summary": "Turn thematic facets and per-slice lemmas into retrieval sub-questions.",
+    },
+    {
         "name": "decompose",
         "path": "/steps/decompose",
         "title": "Decompose into sub-questions",
@@ -52,6 +58,12 @@ PIPELINE_STEPS = (
         "path": "/steps/synthesize",
         "title": "Synthesize a grounded answer",
         "summary": "Write the comparative answer with citations.",
+    },
+    {
+        "name": "evaluate_answer",
+        "path": "/steps/evaluate",
+        "title": "Evaluate against ground truth",
+        "summary": "Score the synthesized answer against Pilot 2 ground truth with NLG metrics.",
     },
     {
         "name": "export_benchmark",
@@ -95,6 +107,9 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         expansion = output.get("expansion") or {}
         facets = expansion.get("thematic_facets") or []
         return f"Expanded {len(facets)} thematic facets across {max(0, len(expansion) - 2)} slice lexicons."
+    if name == "generate_subquestions":
+        items = output.get("generated_subquestions") or []
+        return f"Created {len(items)} sub-questions from thematic facets and lemmas."
     if name == "decompose":
         qdmr = output.get("qdmr") or []
         numbered = ", ".join(f"#{item.get('step')}" for item in qdmr)
@@ -125,6 +140,15 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         answer = str(output.get("synthesized_answer") or "").strip()
         preview = answer[:160] + ("…" if len(answer) > 160 else "")
         return f"Wrote the answer with {len(used)} of {len(citations)} retrieval citations. {preview}"
+    if name == "evaluate_answer":
+        evaluation = output.get("nlg_evaluation") or {}
+        judge = evaluation.get("llm_judge") or {}
+        base = str(evaluation.get("summary") or "NLG evaluation did not match a ground-truth row.")
+        if judge.get("available"):
+            return base
+        if judge.get("reason"):
+            return f"{base} Judge skipped: {judge['reason']}"
+        return base
     if name == "export_benchmark":
         record = output.get("benchmark") or {}
         return f"Exported benchmark record {record.get('query_id') or ''}."
@@ -219,6 +243,7 @@ def run_compare(
         "comparison_type": merged.get("comparison_type") or "",
         "slices": merged.get("slices") or [],
         "qdmr": merged.get("qdmr") or [],
+        "generated_subquestions": merged.get("generated_subquestions") or [],
         "decompose_mode": merged.get("decompose_mode") or decompose_mode,
         "search_queries": merged.get("search_queries") or {},
         "passages": merged.get("passages") or {},
@@ -226,6 +251,7 @@ def run_compare(
         "feature_metrics": merged.get("feature_metrics") or {},
         "synthesized_answer": merged.get("synthesized_answer"),
         "grounded_citations": merged.get("grounded_citations") or [],
+        "nlg_evaluation": merged.get("nlg_evaluation") or {},
         "benchmark": merged.get("benchmark"),
     }
     if include_trace:

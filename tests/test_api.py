@@ -50,14 +50,18 @@ def test_run_compare_returns_answer(monkeypatch):
         "route",
         "disambiguate",
         "extend_knowledge",
+        "generate_subquestions",
         "decompose",
         "retrieve_slices",
         "compute_features",
         "synthesize",
+        "evaluate_answer",
         "export_benchmark",
     ]
     assert all(item["outcome"] == "ok" for item in payload["pipeline"])
-    assert payload["pipeline"][4]["output"]["passages"]
+    assert payload["pipeline"][5]["output"]["passages"]
+    assert payload["generated_subquestions"]
+    assert "nlg_evaluation" in payload
 
 
 def test_compare_endpoint(monkeypatch):

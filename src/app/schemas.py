@@ -42,7 +42,8 @@ class ThematicExplorationRequest(QueryRequest):
         default=None,
         description=(
             "Stop after this LangGraph node: route, disambiguate, extend_knowledge, "
-            "decompose, retrieve_slices, compute_features, synthesize, export_benchmark."
+            "generate_subquestions, decompose, retrieve_slices, compute_features, "
+            "synthesize, evaluate_answer, export_benchmark."
         ),
     )
 
@@ -81,6 +82,7 @@ class ThematicExplorationResponse(BaseModel):
     comparison_type: str = ""
     slices: list[dict[str, Any]] = Field(default_factory=list)
     qdmr: list[dict[str, Any]] = Field(default_factory=list)
+    generated_subquestions: list[dict[str, str]] = Field(default_factory=list)
     decompose_mode: str = ""
     search_queries: dict[str, str] = Field(default_factory=dict)
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
@@ -88,6 +90,7 @@ class ThematicExplorationResponse(BaseModel):
     feature_metrics: dict[str, Any] = Field(default_factory=dict)
     synthesized_answer: Optional[str] = None
     grounded_citations: list[dict[str, Any]] = Field(default_factory=list)
+    nlg_evaluation: dict[str, Any] = Field(default_factory=dict)
     benchmark: Optional[dict[str, Any]] = None
     steps: list[str] = Field(default_factory=list)
     raw_trace: Optional[list[dict[str, Any]]] = None

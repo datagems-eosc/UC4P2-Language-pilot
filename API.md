@@ -24,7 +24,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
 | `include_trace` | `true` adds `raw_trace` |
-| `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `export_benchmark` |
+| `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `generate_subquestions`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `evaluate_answer`, `export_benchmark` |
 
 ---
 
@@ -37,7 +37,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.9`), docs path, step list
+- Returns: service name, version (`0.1.10`), docs path, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -307,6 +307,31 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-know
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
+### C3b. Generate sub-questions from facets and lemmas
+
+**Details**
+
+- Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/generate-subquestions`
+- Stops after: `generate_subquestions`
+- Look at: `generated_subquestions` — one question per thematic facet and lemma, per slice, plus a contrast question
+- Retrieve later uses these questions together with QDMR
+- Script: `scripts/dev/13b-steps-generate-subquestions.sh`
+
+**Standard curl**
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/generate-subquestions \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+```
+
 ### C4. Decompose
 
 **Details**
@@ -396,6 +421,32 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+```
+
+### C7b. Evaluate against ground truth
+
+**Details**
+
+- Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/evaluate`
+- Stops after: `evaluate_answer`
+- Looks up `Ground_Truth` in `data/*.json` (Pilot 2: `pilot2_benchmark_english.v1.json`) by `Question_ID`, exact question, concept (parent row for comparative queries), or overlap
+- Look at: `nlg_evaluation.metrics` (BLEU, ROUGE, token F1, METEOR) and `nlg_evaluation.llm_judge` (separate LLM, not the synthesizer)
+- The marriage walkthrough matches Question_ID `9`. Judge stays on Scayle but uses another model (`JUDGE_LLM_MODEL`, default `glm-5.3-flash` vs pipeline `qwen3`)
+- Script: `scripts/dev/17b-steps-evaluate.sh`
+
+**Standard curl**
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/evaluate \
   -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
         --header 'Content-Type: application/x-www-form-urlencoded' \
         --data-urlencode 'grant_type=password' \
@@ -628,4 +679,44 @@ curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disam
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
+```
+
+---
+
+## G. Britannica vs Wikipedia (same search, two corpora)
+
+Same `POST /search/`, token, `k`, and `hybrid`. Only `query` and `dataset_ids` change. Language-pilot retrieve uses this pair: slice_1 → Knowledge Project, slice_2 → Wikipedia (often empty).
+
+### G1. 19th C. Knowledge Project (Britannica)
+
+Dataset `d84d1a2e-127d-4393-91d0-afb7e4fd9c68`. Usually returns hits.
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the definition of a marriage in the 1800s? wedding nuptials matrimony", "k": 5, "search_mode": "hybrid", "dataset_ids": ["d84d1a2e-127d-4393-91d0-afb7e4fd9c68"]}'
+```
+
+### G2. Wikipedia (present, often empty)
+
+Dataset `1f6fba0c-9aea-4345-b5a3-457c924f9e0c`. Often `results: []`.
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the definition of a marriage in the present? wedding marriage union", "k": 5, "search_mode": "hybrid", "dataset_ids": ["1f6fba0c-9aea-4345-b5a3-457c924f9e0c"]}'
 ```

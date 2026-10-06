@@ -52,21 +52,36 @@ def test_comparative_trace_emits_each_step():
         "route",
         "disambiguate",
         "extend_knowledge",
+        "generate_subquestions",
         "decompose",
         "retrieve_slices",
         "compute_features",
         "synthesize",
+        "evaluate_answer",
         "export_benchmark",
     ]
     by_step = {event["step"]: event["output"] for event in events}
     assert by_step["route"]["domain"] == "comparative"
     assert by_step["disambiguate"]["concept"] == "marriage"
     assert by_step["disambiguate"]["comparison_type"] == "temporal"
-    assert "husband" in by_step["extend_knowledge"]["expansion"]["thematic_facets"]
+    facets = by_step["extend_knowledge"]["expansion"]["thematic_facets"]
+    assert "marriage" in facets
+    assert "definition" in facets
+    assert "husband" not in facets
+    assert by_step["generate_subquestions"]["generated_subquestions"]
+    assert any(
+        item["source"] == "facet" and "definition" in item["question"]
+        for item in by_step["generate_subquestions"]["generated_subquestions"]
+    )
     assert "#1" in by_step["decompose"]["qdmr"][2]["instruction"]
+    assert "metrics" in by_step["evaluate_answer"]["nlg_evaluation"]
+    assert by_step["evaluate_answer"]["nlg_evaluation"]["matched"] is True
+    assert by_step["evaluate_answer"]["nlg_evaluation"]["question_id"] == "9"
     assert by_step["retrieve_slices"]["passages"]["slice_1"][0]["text_snippet"]
     assert by_step["retrieve_slices"]["passages"]["slice_2"][0]["text_snippet"]
-    assert "legal_standing" in by_step["compute_features"]["feature_metrics"]["slice_1"]
+    lenses = by_step["extend_knowledge"]["expansion"]["feature_lenses"]
+    slice_metrics = by_step["compute_features"]["feature_metrics"]["slice_1"]
+    assert any(lens in slice_metrics for lens in lenses)
     assert "coverture" in by_step["synthesize"]["synthesized_answer"]
     assert by_step["export_benchmark"]["benchmark"]["query_id"] == "q-marriage"
     assert client.queries == [MARRIAGE]
@@ -88,6 +103,7 @@ def test_trace_stops_after_a_named_step():
         "route",
         "disambiguate",
         "extend_knowledge",
+        "generate_subquestions",
         "decompose",
     ]
 

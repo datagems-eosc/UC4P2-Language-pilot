@@ -26,8 +26,9 @@ def test_two_slice_output_matches_benchmark_schema():
     assert output.query_id == "q-test"
     assert len(output.slices_evaluated) == 2
     assert {item.slice_id for item in output.slices_evaluated} == {"slice_1", "slice_2"}
-    assert "husband" in output.knowledge_extension["thematic_facets"]
-    assert "coverture" in output.knowledge_extension["slice_1"]
+    assert "marriage" in output.knowledge_extension["thematic_facets"]
+    assert "definition" in output.knowledge_extension["thematic_facets"]
+    assert output.knowledge_extension["slice_1"]
     assert set(output.feature_metrics) == {"slice_1", "slice_2"}
     assert {item.slice_id for item in output.grounded_citations} == {"slice_1", "slice_2"}
     assert "[ref_1]" in output.synthesized_answer

@@ -1,37 +1,50 @@
-"""Facet, lemma, and feature-lens expansion across every comparison slice."""
+"""Facet, lemma, and feature-lens expansion across every comparison slice.
+
+Offline fallback is generic: it uses the query concept and slice metadata only.
+Question-specific lexicons (marriage, US, …) are not hardcoded. When an LM is
+configured, it proposes facets and period/language lemmas for whatever concept
+the question names.
+"""
 
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 import dspy
 
 from src.schemas.slice import ComparisonSlice
 
-_MARRIAGE_FACETS = [
-    "husband",
-    "wife",
-    "divorce",
-    "dowry",
-    "property ownership",
-    "spousal duties",
-]
-_MARRIAGE_LENSES = ["legal_standing", "economic_contract", "social_stance"]
-_US_LENSES = ["social_stance", "political_framing", "national_identity"]
-_US_GERMAN = ["Amerika", "Vereinigte Staaten", "Nordamerika"]
-_MARRIAGE_1800_ENGLISH = ["coverture", "matrimony", "common-law"]
+# Encyclopedic comparison dimensions. Not tied to a Pilot 2 question.
+_GENERIC_FACETS = (
+    "definition",
+    "origin",
+    "attributes",
+    "roles or functions",
+    "reputation",
+)
+_GENERIC_LENSES = (
+    "definitional_focus",
+    "social_stance",
+    "topical_focus",
+    "institutional_framing",
+)
 
 
 class KnowledgeExtension(dspy.Signature):
-    """Expand a concept into facets, per-slice lemmas, and comparative lenses."""
+    """Expand whatever concept the question names. Do not assume a topic.
+
+    Facets are aspects of this concept (definition, origin, attributes, …).
+    Lemmas are how each slice's language and period would name the concept.
+    Lenses are two to four comparative angles, not topic-specific word lists.
+    """
 
     query: str = dspy.InputField()
+    concept: str = dspy.InputField(desc="Concept extracted from the question")
     slices: str = dspy.InputField(desc="JSON list of comparison slices")
-    thematic_facets: list[str] = dspy.OutputField(desc="Thematic and facet terms")
+    thematic_facets: list[str] = dspy.OutputField(desc="Thematic aspects of this concept")
     slice_lexical_variants: dict[str, list[str]] = dspy.OutputField(
-        desc="Language- and period-specific variants keyed by slice_id"
+        desc="Language- and period-specific names for the concept, keyed by slice_id"
     )
     feature_lenses: list[str] = dspy.OutputField(desc="Two to four comparative metrics")
 
@@ -45,10 +58,6 @@ def _unique(items: list[str]) -> list[str]:
     return seen
 
 
-def _is_us(concept: str, query: str) -> bool:
-    return bool(re.search(r"\b(US|U\.S\.|USA|United States|America)\b", f"{concept} {query}"))
-
-
 def _language(slice_: ComparisonSlice) -> str:
     if slice_.language and slice_.language.lower() not in {"unspecified", "english"}:
         return slice_.language
@@ -56,19 +65,17 @@ def _language(slice_: ComparisonSlice) -> str:
 
 
 def variants_for_slice(query: str, concept: str, slice_: ComparisonSlice) -> list[str]:
-    """Period- and language-accurate lemmas for one slice."""
+    """Generic lemmas: the concept, tagged by this slice's language and period."""
+    del query
+    subject = (concept or "").strip() or "the subject"
     language = _language(slice_)
-    if "marriage" in concept.lower() or re.search(r"\bmarriage\b", query, re.I):
-        if language == "German":
-            return ["Ehe", "Gattin", "Mitgift"]
-        if slice_.period_start < 1900:
-            return list(_MARRIAGE_1800_ENGLISH)
-        return ["marriage", "spouse", "partnership"]
-    if _is_us(concept, query):
-        if language == "German":
-            return list(_US_GERMAN)
-        return ["United States", "America", "the Union"]
-    return [concept]
+    label = (slice_.label or "").strip()
+    words = [subject]
+    if language and language.lower() != "english":
+        words.append(f"{subject} ({language})")
+    if label:
+        words.append(f"{subject} in {label}")
+    return _unique(words)
 
 
 def heuristic_expansion(
@@ -76,29 +83,19 @@ def heuristic_expansion(
     concept: str,
     slices: list[ComparisonSlice],
 ) -> dict[str, Any]:
-    """Lexicon used when no language model is configured or the model call fails."""
-    facets: list[str] = []
-    lenses: list[str] = []
-    if "marriage" in concept.lower() or re.search(r"\bmarriage\b", query, re.I):
-        facets.extend(_MARRIAGE_FACETS)
-        lenses.extend(_MARRIAGE_LENSES)
-    if _is_us(concept, query):
-        lenses.extend(_US_LENSES)
-        if concept not in facets:
-            facets.append(concept)
-    if not facets:
-        facets.append(concept)
-    if len(lenses) < 2:
-        lenses.extend(["social_stance", "topical_focus"])
+    """Offline expansion when no LM is configured or the model call fails."""
+    subject = (concept or "").strip() or "the subject"
+    facets = _unique([subject, *_GENERIC_FACETS])
+    lenses = list(_GENERIC_LENSES)
     variants = {
-        slice_.slice_id: variants_for_slice(query, concept, slice_) for slice_ in slices
+        slice_.slice_id: variants_for_slice(query, subject, slice_) for slice_ in slices
     }
     flat: dict[str, list[str]] = {
-        "thematic_facets": _unique(facets),
-        "feature_lenses": _unique(lenses)[:4],
+        "thematic_facets": facets,
+        "feature_lenses": lenses[:4],
     }
     for slice_id, words in variants.items():
-        flat[slice_id] = _unique(words)
+        flat[slice_id] = words
     flat["_variants"] = variants  # type: ignore[assignment]
     return flat
 
@@ -143,6 +140,7 @@ def expand_knowledge(
     try:
         prediction = dspy.Predict(KnowledgeExtension)(
             query=query,
+            concept=concept,
             slices=json.dumps([slice_.model_dump() for slice_ in slices]),
         )
     except Exception:
@@ -157,7 +155,8 @@ def expand_knowledge(
     merged = heuristic_expansion(query, concept, slices)
     merged["thematic_facets"] = _unique([str(item) for item in facets])
     merged["feature_lenses"] = _unique([str(item) for item in lenses])[:4]
+    subject = (concept or "").strip() or "the subject"
     for slice_ in slices:
-        words = variants.get(slice_.slice_id) or merged.get(slice_.slice_id) or []
-        merged[slice_.slice_id] = _unique([str(item) for item in words])
+        words = variants.get(slice_.slice_id) or [subject]
+        merged[slice_.slice_id] = _unique([str(item) for item in words]) or [subject]
     return merged

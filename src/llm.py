@@ -13,6 +13,9 @@ or reuse ``dg-query-disambiguation/.env``.
 - ``openai`` — ``OPENAI_API_KEY``, optional ``OPENAI_BASE_URL``,
   ``OPENAI_MODEL_NAME``.
 - ``gemini`` — Gemini's OpenAI-compatible endpoint.
+
+Judge calls stay on Scayle (``JUDGE_LLM_MODEL``, default ``glm-5.3-flash``)
+and never reuse the pipeline model (``SCAYLE_MODEL_NAME``, default ``qwen3``).
 """
 
 from __future__ import annotations
@@ -216,15 +219,60 @@ class ProviderChatLM(dspy.LM):
                 time.sleep(15)
 
 
-def llm_credentials_present() -> bool:
-    provider = _provider()
-    if provider == "gemini":
+def credentials_present_for(provider: str) -> bool:
+    name = _PROVIDER_ALIASES.get((provider or "").strip().lower(), (provider or "").strip().lower())
+    if name == "gemini":
         return bool(_gemini_api_key())
-    if provider == "openai":
-        return bool(os.getenv("OPENAI_API_KEY"))
-    if provider == "ollama":
+    if name == "openai":
+        return bool(os.getenv("OPENAI_API_KEY", "").strip())
+    if name == "ollama":
         return True
-    return bool(os.getenv("SCAYLE_USERNAME") and os.getenv("SCAYLE_PASSWORD"))
+    if name == "scayle":
+        return bool(os.getenv("SCAYLE_USERNAME", "").strip() and os.getenv("SCAYLE_PASSWORD", "").strip())
+    return False
+
+
+def llm_credentials_present() -> bool:
+    return credentials_present_for(_provider())
+
+
+def pipeline_lm_identity() -> tuple[str, str]:
+    """Provider and model used by synthesis / knowledge extension (global DSPy LM)."""
+    current = getattr(dspy.settings, "lm", None)
+    if current is not None:
+        provider = str(getattr(current, "provider", "") or _provider())
+        model = str(getattr(current, "_model_name", "") or getattr(current, "model", "") or selected_model(provider))
+        return provider, model.split("/", 1)[-1]
+    provider = _provider()
+    return provider, selected_model(provider)
+
+
+def chat_completion(
+    messages: list[dict[str, str]],
+    *,
+    provider: str,
+    model: str,
+) -> str:
+    """Chat call that does not use or change the pipeline DSPy LM."""
+    name = _PROVIDER_ALIASES.get(provider.strip().lower(), provider.strip().lower())
+    from openai import RateLimitError
+
+    client = _openai_client(name)
+    for attempt in range(3):
+        try:
+            completion = client.chat.completions.create(
+                model=model.split("/", 1)[-1],
+                temperature=0,
+                messages=messages,  # type: ignore[arg-type]
+            )
+            return completion.choices[0].message.content or ""
+        except RateLimitError:
+            if attempt == 2:
+                raise
+            import time
+
+            time.sleep(15)
+    return ""
 
 
 def env_files() -> list[Path]:

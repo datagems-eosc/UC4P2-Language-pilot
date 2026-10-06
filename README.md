@@ -40,10 +40,12 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 | POST | `/steps/route` | `route` |
 | POST | `/steps/disambiguate` | `disambiguate` |
 | POST | `/steps/extend-knowledge` | `extend_knowledge` |
+| POST | `/steps/generate-subquestions` | `generate_subquestions` |
 | POST | `/steps/decompose` | `decompose` |
 | POST | `/steps/retrieve` | `retrieve_slices` |
 | POST | `/steps/features` | `compute_features` |
 | POST | `/steps/synthesize` | `synthesize` |
+| POST | `/steps/evaluate` | `evaluate_answer` |
 | POST | `/steps/export` | `export_benchmark` (same as `/ThematicExploration`) |
 
 ```bash

@@ -58,7 +58,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.9",
+    version="0.1.10",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -128,10 +128,12 @@ def custom_openapi() -> dict[str, Any]:
         "/steps/route",
         "/steps/disambiguate",
         "/steps/extend-knowledge",
+        "/steps/generate-subquestions",
         "/steps/decompose",
         "/steps/retrieve",
         "/steps/features",
         "/steps/synthesize",
+        "/steps/evaluate",
         "/steps/export",
     }
     for path, methods in (schema.get("paths") or {}).items():
@@ -151,7 +153,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.9",
+        "version": "0.1.10",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "tree": "GET /tree",

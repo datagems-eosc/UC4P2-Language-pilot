@@ -21,7 +21,7 @@ _OVERVIEW_KEYS = (
     "constraint_errors",
 )
 
-_END_KEYS = ("synthesized_answer", "grounded_citations")
+_END_KEYS = ("synthesized_answer", "nlg_evaluation", "grounded_citations")
 
 
 def presentation_tree(payload: Any) -> Any:

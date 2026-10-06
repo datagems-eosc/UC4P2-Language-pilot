@@ -31,6 +31,8 @@ class BenchmarkOutput(BaseModel):
     question: str
     slices_evaluated: list[ComparisonSlice]
     knowledge_extension: dict[str, list[str]]
+    generated_subquestions: list[dict[str, str]] = Field(default_factory=list)
     synthesized_answer: str
     feature_metrics: dict[str, Any] = Field(default_factory=dict)
     grounded_citations: list[Citation] = Field(default_factory=list)
+    nlg_evaluation: dict[str, Any] = Field(default_factory=dict)

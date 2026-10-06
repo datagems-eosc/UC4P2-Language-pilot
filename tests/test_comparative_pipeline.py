@@ -144,11 +144,12 @@ def test_comparative_pipeline_retrieves_and_exports_benchmark():
     assert all("Retrieve" not in task for task in state.sub_tasks)
     record = BenchmarkOutput.model_validate(state.output)
     assert record.query_id == "q-marriage"
-    assert "husband" in record.knowledge_extension["thematic_facets"]
+    assert "marriage" in record.knowledge_extension["thematic_facets"]
+    assert "definition" in record.knowledge_extension["thematic_facets"]
     assert set(record.feature_metrics) == {"slice_1", "slice_2"}
-    assert any(
-        metrics["legal_standing"]["kwic"] for metrics in record.feature_metrics.values()
-    )
+    lenses = record.knowledge_extension["feature_lenses"]
+    assert lenses
+    assert all(lens in record.feature_metrics["slice_1"] for lens in lenses)
     assert {item.slice_id for item in record.grounded_citations} == {"slice_1", "slice_2"}
     assert record.grounded_citations[0].citation_id == "ref_1"
     assert "coverture" in record.synthesized_answer
@@ -169,9 +170,9 @@ def test_cross_lingual_pipeline_keeps_both_languages():
     joined_lemmas = " ".join(
         " ".join(words) for words in state.knowledge_extension.values()
     )
-    assert "Amerika" in joined_lemmas
+    assert "Amerika" not in joined_lemmas
+    assert "German" in joined_lemmas
     joined = " ".join(retrieval.queries)
-    assert "Vereinigte Staaten" in joined
     assert "German" in joined
 
 

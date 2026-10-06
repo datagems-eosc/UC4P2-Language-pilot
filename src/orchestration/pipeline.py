@@ -19,7 +19,12 @@ from src.constraints.comparative import (
 )
 from src.decomposition.qdmr_generator import decompose_question
 from src.decomposition.modes import FEW_SHOT
+from src.evaluation.nlg import evaluate_against_ground_truth
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
+from src.knowledge_extension.subquestions import (
+    generate_facet_lemma_subquestions,
+    subquestion_texts,
+)
 from src.orchestration.slice_executor import RetrievalAPIError
 from src.retrieval.corpora import corpus_name_for_id, dataset_ids_for_slice
 from src.retrieval.multi_slice_retriever import (
@@ -246,6 +251,18 @@ class HistoricalQAOrchestrator(dspy.Module):
         state.status = "expanded"
         return state
 
+    def generate_subquestions(self, state: PipelineState) -> PipelineState:
+        intent = state.intent
+        assert intent is not None
+        state.generated_subquestions = generate_facet_lemma_subquestions(
+            state.question,
+            intent.target_concept,
+            intent.slices,
+            dict(state.knowledge_extension),
+        )
+        state.status = "subquestions_generated"
+        return state
+
     def decompose(self, state: PipelineState) -> PipelineState:
         intent = state.intent
         assert intent is not None
@@ -261,11 +278,12 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         expansion = dict(state.knowledge_extension)
+        retrieval_questions = subquestion_texts(state.generated_subquestions) + list(state.sub_tasks)
         passages, errors, queries = self.retriever.retrieve_all(
             intent.target_concept,
             intent.slices,
             _variants(expansion, intent.slices),
-            state.sub_tasks,
+            retrieval_questions,
         )
         state.passages = {
             slice_id: [item.model_dump() for item in items] for slice_id, items in passages.items()
@@ -353,10 +371,28 @@ class HistoricalQAOrchestrator(dspy.Module):
             question=state.question,
             slices_evaluated=intent.slices,
             knowledge_extension=state.knowledge_extension,
+            generated_subquestions=state.generated_subquestions,
             synthesized_answer=answer,
             feature_metrics=state.feature_metrics,
             grounded_citations=citations,
+            nlg_evaluation=state.nlg_evaluation,
         )
+        state.status = "ok"
+        return state
+
+    def evaluate(self, state: PipelineState) -> PipelineState:
+        answer = state.output.synthesized_answer if state.output is not None else ""
+        concept = state.intent.target_concept if state.intent is not None else ""
+        state.nlg_evaluation = evaluate_against_ground_truth(
+            state.question,
+            answer,
+            query_id=state.query_id,
+            concept=concept,
+        )
+        if state.output is not None:
+            state.output = state.output.model_copy(
+                update={"nlg_evaluation": state.nlg_evaluation}
+            )
         state.status = "ok"
         return state
 
@@ -365,10 +401,12 @@ class HistoricalQAOrchestrator(dspy.Module):
         if state.status == "clarification" or state.intent is None:
             return state
         state = self.extend(state)
+        state = self.generate_subquestions(state)
         state = self.decompose(state)
         state = self.retrieve(state)
         state = self.measure(state)
-        return self.synthesize(state)
+        state = self.synthesize(state)
+        return self.evaluate(state)
 
     def forward(self, question: str, query_id: str | None = None) -> BenchmarkOutput:
         state = self.run(question, query_id)

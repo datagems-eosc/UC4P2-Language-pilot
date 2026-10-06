@@ -9,3 +9,4 @@ def offline_qdmr(monkeypatch):
     monkeypatch.setenv("QDMR_MODEL_NAME_OR_PATH", "")
     monkeypatch.setenv("QDMR_MOCK", "false")
     monkeypatch.setenv("AUTH_DISABLED", "true")
+    monkeypatch.setenv("JUDGE_DISABLED", "true")

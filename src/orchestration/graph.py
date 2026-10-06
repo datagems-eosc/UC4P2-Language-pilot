@@ -37,6 +37,7 @@ class PilotState(TypedDict, total=False):
     clarification: str | None
     constraint_errors: list[str]
     expansion: dict[str, Any]
+    generated_subquestions: list[dict[str, str]]
     qdmr: list[dict[str, Any]]
     decompose_mode: str
     search_queries: dict[str, str]
@@ -45,6 +46,7 @@ class PilotState(TypedDict, total=False):
     feature_metrics: dict[str, Any]
     synthesized_answer: str
     grounded_citations: list[dict[str, Any]]
+    nlg_evaluation: dict[str, Any]
     benchmark: dict[str, Any]
 
 
@@ -91,6 +93,14 @@ def build_pilot_graph(
     def extend_knowledge(state: PilotState) -> dict[str, Any]:
         updated = orchestrator.extend(_load(state))
         return {"pipeline": _dump(updated), "expansion": updated.knowledge_extension, "status": updated.status}
+
+    def generate_subquestions(state: PilotState) -> dict[str, Any]:
+        updated = orchestrator.generate_subquestions(_load(state))
+        return {
+            "pipeline": _dump(updated),
+            "generated_subquestions": updated.generated_subquestions,
+            "status": updated.status,
+        }
 
     def decompose(state: PilotState) -> dict[str, Any]:
         updated = orchestrator.decompose(_load(state))
@@ -148,6 +158,14 @@ def build_pilot_graph(
             "status": updated.status,
         }
 
+    def evaluate_answer(state: PilotState) -> dict[str, Any]:
+        updated = orchestrator.evaluate(_load(state))
+        return {
+            "pipeline": _dump(updated),
+            "nlg_evaluation": updated.nlg_evaluation,
+            "status": updated.status,
+        }
+
     def export_benchmark(state: PilotState) -> dict[str, Any]:
         current = _load(state)
         assert current.output is not None
@@ -162,10 +180,12 @@ def build_pilot_graph(
     graph.add_node("route", route)
     graph.add_node("disambiguate", disambiguate)
     graph.add_node("extend_knowledge", extend_knowledge)
+    graph.add_node("generate_subquestions", generate_subquestions)
     graph.add_node("decompose", decompose)
     graph.add_node("retrieve_slices", retrieve_slices)
     graph.add_node("compute_features", compute_features)
     graph.add_node("synthesize", synthesize)
+    graph.add_node("evaluate_answer", evaluate_answer)
     graph.add_node("export_benchmark", export_benchmark)
 
     graph.add_edge(START, "route")
@@ -175,11 +195,13 @@ def build_pilot_graph(
         after_disambiguate,
         {"extend_knowledge": "extend_knowledge", END: END},
     )
-    graph.add_edge("extend_knowledge", "decompose")
+    graph.add_edge("extend_knowledge", "generate_subquestions")
+    graph.add_edge("generate_subquestions", "decompose")
     graph.add_edge("decompose", "retrieve_slices")
     graph.add_edge("retrieve_slices", "compute_features")
     graph.add_edge("compute_features", "synthesize")
-    graph.add_edge("synthesize", "export_benchmark")
+    graph.add_edge("synthesize", "evaluate_answer")
+    graph.add_edge("evaluate_answer", "export_benchmark")
     graph.add_edge("export_benchmark", END)
     return graph.compile()
 
@@ -231,8 +253,8 @@ def main() -> None:
     parser.add_argument(
         "--until",
         default=None,
-        help="Stop after this node (route, disambiguate, extend_knowledge, decompose, "
-        "retrieve_slices, compute_features, synthesize, export_benchmark).",
+        help="Stop after this node (route, disambiguate, extend_knowledge, generate_subquestions, "
+        "decompose, retrieve_slices, compute_features, synthesize, evaluate_answer, export_benchmark).",
     )
     parser.add_argument(
         "--out",
