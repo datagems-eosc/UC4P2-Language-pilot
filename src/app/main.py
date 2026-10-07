@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -58,7 +58,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.11",
+    version="0.1.12",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -153,7 +153,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.11",
+        "version": "0.1.12",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "tree": "GET /tree",
@@ -183,20 +183,26 @@ async def tree_from_json(
 
 
 def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
-    try:
-        payload = run_compare(
-            body.query,
-            query_id=body.query_id,
-            until=until,
-            include_trace=body.include_trace,
-            k=body.k or 5,
-            decompose_mode=body.decompose_mode,
-        )
-    except Exception as exc:
-        logger.exception("pipeline failed until=%s", until)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    # run_compare catches step failures and returns intermediate pipeline[] + failed_step
+    # instead of a bare {"detail": "..."}. Soft-failed CDD corpus-analysis stays in-band.
+    payload = run_compare(
+        body.query,
+        query_id=body.query_id,
+        until=until,
+        include_trace=body.include_trace,
+        k=body.k or 5,
+        decompose_mode=body.decompose_mode,
+    )
     payload["service"] = "UC4P2 Language Pilot"
     payload["question"] = body.query
+    if payload.get("status") in {"timeout", "error"}:
+        logger.warning(
+            "pipeline stopped status=%s failed_step=%s until=%s error=%s",
+            payload.get("status"),
+            payload.get("failed_step"),
+            until,
+            payload.get("error"),
+        )
     return ThematicExplorationResponse.model_validate(payload)
 
 

@@ -68,6 +68,14 @@ class ThematicExplorationResponse(BaseModel):
     question: str
     status: str
     last_step: str = ""
+    failed_step: Optional[str] = Field(
+        default=None,
+        description="Pipeline node that timed out or raised when status is timeout/error.",
+    )
+    error: Optional[str] = Field(
+        default=None,
+        description="Human-readable failure summary when the run stopped early.",
+    )
     result: Optional[PipelineStep] = Field(
         default=None,
         description="The last executed step (the target of a /steps/* call).",

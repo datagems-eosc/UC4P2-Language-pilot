@@ -145,6 +145,7 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 - Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`
 - Script: `scripts/dev/08-thematic-exploration.sh`
 - Until-retrieve script: `scripts/dev/08b-thematic-exploration-until-retrieve.sh`
+- Timeouts / step failures: HTTP 200 with `status` `timeout` or `error`, plus `failed_step`, `error`, and `pipeline[]` for every step completed before the failure (intermediate fields such as `slices`, `qdmr`, `passages` are kept). Soft-failed CDD corpus-analysis stays inside `compute_features` and does not abort the run.
 
 **Standard curl**
 

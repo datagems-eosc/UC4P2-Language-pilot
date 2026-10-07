@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import re
 from typing import Any
 
 from src.app.auth import caller_access_token
@@ -9,6 +11,10 @@ from src.constraints.comparative import QueryDisambiguationClient
 from src.decomposition.modes import FEW_SHOT
 from src.orchestration.graph import stream_steps
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
+
+logger = logging.getLogger(__name__)
+
+_TASK_NAME = re.compile(r"During task with name '([^']+)'")
 
 PIPELINE_STEPS = (
     {
@@ -74,14 +80,44 @@ PIPELINE_STEPS = (
 )
 
 _STEP_TITLES = {item["name"]: item["title"] for item in PIPELINE_STEPS}
+_STEP_ORDER = [item["name"] for item in PIPELINE_STEPS]
 _OUTCOME_STATUS = {
     "ok": "ok",
     "partial": "partial",
     "halted": "clarification",
     "failed": "error",
+    "timeout": "timeout",
 }
 
 _HIDDEN_OUTPUT_KEYS = {"pipeline"}
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    if isinstance(exc, TimeoutError):
+        return True
+    message = str(exc).lower()
+    if "timed out" in message or "timeout" in message:
+        return True
+    cause = exc.__cause__ or exc.__context__
+    return bool(cause and _is_timeout(cause))
+
+
+def _failed_step_name(exc: BaseException, completed: list[str]) -> str:
+    for candidate in (exc, exc.__cause__, exc.__context__):
+        if candidate is None:
+            continue
+        match = _TASK_NAME.search(str(candidate))
+        if match and match.group(1) in _STEP_TITLES:
+            return match.group(1)
+    if not completed:
+        return _STEP_ORDER[0]
+    try:
+        index = _STEP_ORDER.index(completed[-1])
+    except ValueError:
+        return completed[-1]
+    if index + 1 < len(_STEP_ORDER):
+        return _STEP_ORDER[index + 1]
+    return completed[-1]
 
 
 def _strip_internal(output: dict[str, Any]) -> dict[str, Any]:
@@ -132,7 +168,16 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
             and (item.get("corpus_analysis") or {}).get("source")
             == "cross-dataset-discovery/corpus-analysis-search"
         )
+        soft_fails = [
+            f"{slice_id}: {((item or {}).get('corpus_analysis') or {}).get('error')}"
+            for slice_id, item in metrics.items()
+            if isinstance(item, dict) and ((item.get("corpus_analysis") or {}).get("error"))
+        ]
         extra = f" {remote} slice(s) used corpus-analysis-search." if remote else ""
+        if soft_fails:
+            extra += " Soft-failed corpus-analysis: " + "; ".join(soft_fails[:3])
+            if len(soft_fails) > 3:
+                extra += f" (+{len(soft_fails) - 3} more)"
         return f"Computed feature metrics for {len(metrics)} slices.{extra}"
     if name == "synthesize":
         citations = output.get("grounded_citations") or []
@@ -152,11 +197,15 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
     if name == "export_benchmark":
         record = output.get("benchmark") or {}
         return f"Exported benchmark record {record.get('query_id') or ''}."
+    if output.get("error"):
+        return str(output.get("summary") or output["error"])
     return status or "completed"
 
 
 def _outcome(name: str, output: dict[str, Any]) -> str:
     status = str(output.get("status") or "")
+    if output.get("error_kind") == "timeout" or status == "timeout":
+        return "timeout"
     if name == "disambiguate" and status == "clarification":
         return "halted"
     if name == "retrieve_slices" and (output.get("retrieval_errors") or {}):
@@ -165,6 +214,8 @@ def _outcome(name: str, output: dict[str, Any]) -> str:
             return "partial"
         return "failed"
     if status in {"error", "failed"}:
+        return "failed"
+    if output.get("error"):
         return "failed"
     return "ok"
 
@@ -193,34 +244,21 @@ def _overall_status(pipeline: list[dict[str, Any]], merged: dict[str, Any]) -> s
     last_outcome = pipeline[-1]["outcome"] if pipeline else ""
     derived = _OUTCOME_STATUS.get(last_outcome, "")
     merged_status = str(merged.get("status") or "")
-    if last_outcome in {"halted", "failed", "partial"}:
+    if last_outcome in {"halted", "failed", "partial", "timeout"}:
         return derived
-    if merged_status in {"ok", "clarification", "partial"}:
+    if merged_status in {"ok", "clarification", "partial", "timeout", "error"}:
         return merged_status
     return derived or merged_status or "error"
 
 
-def run_compare(
+def _payload_from_events(
     question: str,
+    events: list[dict[str, Any]],
     *,
-    query_id: str | None = None,
-    until: str | None = None,
-    include_trace: bool = False,
-    k: int = 5,
-    decompose_mode: str = FEW_SHOT,
+    query_id: str | None,
+    decompose_mode: str,
+    include_trace: bool,
 ) -> dict[str, Any]:
-    token = caller_access_token()
-    events = list(
-        stream_steps(
-            question,
-            query_id=query_id,
-            until=until,
-            k=k,
-            decompose_mode=decompose_mode,
-            disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
-            retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
-        )
-    )
     merged: dict[str, Any] = {"question": question}
     names: list[str] = []
     for event in events:
@@ -237,6 +275,8 @@ def run_compare(
         "result": pipeline[-1] if pipeline else None,
         "pipeline": pipeline,
         "steps": names,
+        "failed_step": None,
+        "error": None,
         "clarification": merged.get("clarification"),
         "constraint_errors": merged.get("constraint_errors") or [],
         "concept": merged.get("concept") or "",
@@ -256,4 +296,101 @@ def run_compare(
     }
     if include_trace:
         result["raw_trace"] = events
+    return result
+
+
+def _attach_failure(
+    result: dict[str, Any],
+    exc: BaseException,
+) -> dict[str, Any]:
+    """Keep completed steps and record which node timed out or failed."""
+    completed = list(result.get("steps") or [])
+    failed_step = _failed_step_name(exc, completed)
+    timed_out = _is_timeout(exc)
+    outcome = "timeout" if timed_out else "failed"
+    status = "timeout" if timed_out else "error"
+    message = str(exc).strip() or type(exc).__name__
+    kind = "timeout" if timed_out else "error"
+    summary = (
+        f"Timed out during `{failed_step}`: {message}"
+        if timed_out
+        else f"Failed during `{failed_step}`: {message}"
+    )
+    failure_step = {
+        "step": len(result.get("pipeline") or []) + 1,
+        "name": failed_step,
+        "title": _STEP_TITLES.get(failed_step, failed_step.replace("_", " ").title()),
+        "outcome": outcome,
+        "summary": summary,
+        "output": {
+            "status": status,
+            "error": message,
+            "error_type": type(exc).__name__,
+            "error_kind": kind,
+            "failed_step": failed_step,
+            "completed_steps": completed,
+        },
+    }
+    pipeline = list(result.get("pipeline") or [])
+    # Avoid duplicating the same node if LangGraph already emitted a partial update.
+    if pipeline and pipeline[-1].get("name") == failed_step and pipeline[-1].get("outcome") == "ok":
+        pipeline[-1] = {**failure_step, "step": pipeline[-1]["step"]}
+    else:
+        pipeline.append(failure_step)
+    steps = list(completed)
+    if failed_step not in steps:
+        steps.append(failed_step)
+    result.update(
+        {
+            "status": status,
+            "last_step": failed_step,
+            "failed_step": failed_step,
+            "error": summary,
+            "pipeline": pipeline,
+            "result": pipeline[-1],
+            "steps": steps,
+        }
+    )
+    return result
+
+
+def run_compare(
+    question: str,
+    *,
+    query_id: str | None = None,
+    until: str | None = None,
+    include_trace: bool = False,
+    k: int = 5,
+    decompose_mode: str = FEW_SHOT,
+) -> dict[str, Any]:
+    token = caller_access_token()
+    events: list[dict[str, Any]] = []
+    failure: BaseException | None = None
+    try:
+        for event in stream_steps(
+            question,
+            query_id=query_id,
+            until=until,
+            k=k,
+            decompose_mode=decompose_mode,
+            disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
+            retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
+        ):
+            events.append(event)
+    except Exception as exc:  # noqa: BLE001 - surface as structured pipeline failure
+        failure = exc
+        logger.exception(
+            "pipeline interrupted after %s steps until=%s",
+            len(events),
+            until,
+        )
+    result = _payload_from_events(
+        question,
+        events,
+        query_id=query_id,
+        decompose_mode=decompose_mode,
+        include_trace=include_trace,
+    )
+    if failure is not None:
+        return _attach_failure(result, failure)
     return result

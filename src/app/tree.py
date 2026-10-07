@@ -241,7 +241,7 @@ _PAGE = """<!DOCTYPE html>
   </main>
   <script>
     const EMBEDDED = __EMBEDDED__;
-    const OVERVIEW = ["service","query_id","question","status","last_step","decompose_mode","concept","comparison_type","clarification","constraint_errors"];
+    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","decompose_mode","concept","comparison_type","clarification","constraint_errors"];
     const ENDING = ["synthesized_answer","grounded_citations"];
 
     function presentationTree(payload) {

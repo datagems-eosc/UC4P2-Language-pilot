@@ -111,6 +111,85 @@ def test_compare_endpoint(monkeypatch):
     assert dis_body["concept"] == "marriage"
 
 
+def test_run_compare_returns_intermediate_results_on_timeout(monkeypatch):
+    def fake_stream(question, **kwargs):
+        yield {
+            "step": "route",
+            "output": {
+                "domain": "comparative",
+                "route": {"domain": "comparative", "concept": "marriage"},
+            },
+        }
+        yield {
+            "step": "disambiguate",
+            "output": {
+                "status": "disambiguated",
+                "query_id": "q-timeout",
+                "concept": "marriage",
+                "comparison_type": "temporal",
+                "slices": [
+                    {
+                        "slice_id": "slice_1",
+                        "label": "1800s",
+                        "language": "English",
+                        "period_start": 1800,
+                        "period_end": 1899,
+                    }
+                ],
+                "disambiguation_source": "local-fallback",
+            },
+        }
+        raise TimeoutError(
+            "The read operation timed out\n"
+            "During task with name 'extend_knowledge' and id 'abc'"
+        )
+
+    monkeypatch.setattr("src.app.runner.stream_steps", fake_stream)
+    payload = run_compare(MARRIAGE, query_id="q-timeout")
+    assert payload["status"] == "timeout"
+    assert payload["failed_step"] == "extend_knowledge"
+    assert "extend_knowledge" in payload["error"]
+    assert payload["last_step"] == "extend_knowledge"
+    assert payload["concept"] == "marriage"
+    assert payload["slices"]
+    names = [item["name"] for item in payload["pipeline"]]
+    assert names == ["route", "disambiguate", "extend_knowledge"]
+    assert payload["pipeline"][0]["outcome"] == "ok"
+    assert payload["pipeline"][1]["outcome"] == "ok"
+    assert payload["pipeline"][-1]["outcome"] == "timeout"
+    assert payload["pipeline"][-1]["output"]["completed_steps"] == ["route", "disambiguate"]
+
+
+def test_timeout_endpoint_returns_pipeline_body(monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.app.main import app
+
+    def fake_stream(question, **kwargs):
+        yield {
+            "step": "route",
+            "output": {
+                "domain": "comparative",
+                "route": {"domain": "comparative", "concept": "marriage"},
+            },
+        }
+        raise TimeoutError("The read operation timed out")
+
+    monkeypatch.setattr("src.app.runner.stream_steps", fake_stream)
+    monkeypatch.setenv("AUTH_DISABLED", "true")
+    client = TestClient(app)
+    response = client.post(
+        "/ThematicExploration",
+        json={"query": MARRIAGE, "query_id": "q-http-timeout"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "timeout"
+    assert body["failed_step"] == "disambiguate"
+    assert body["pipeline"][0]["name"] == "route"
+    assert body["pipeline"][-1]["outcome"] == "timeout"
+    assert "detail" not in body
+
+
 def test_decompose_mode_on_thematic_exploration(monkeypatch):
     from fastapi.testclient import TestClient
     from src.app.main import app
