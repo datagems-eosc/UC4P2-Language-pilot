@@ -148,6 +148,11 @@ class CrossDatasetDiscoveryClient:
             raise RetrievalAPIError(
                 f"Cross-Dataset Discovery is unreachable: {exc.reason}"
             ) from exc
+        except TimeoutError as exc:
+            # urlopen can raise TimeoutError directly (not only URLError).
+            raise RetrievalAPIError(
+                f"Cross-Dataset Discovery timed out after {self.timeout:.0f}s"
+            ) from exc
         if not isinstance(result, dict):
             raise RetrievalAPIError("Cross-Dataset Discovery returned a non-object payload.")
         return result

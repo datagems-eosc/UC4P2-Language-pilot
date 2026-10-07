@@ -105,3 +105,43 @@ def test_measure_calls_corpus_analysis_search():
     assert analysis["source"] == "cross-dataset-discovery/corpus-analysis-search"
     assert analysis["features"][0]["kwic"] == ["marriage ceremony"]
     assert "legal_standing" in updated.feature_metrics["slice_1"]
+
+
+def test_measure_soft_fails_when_corpus_analysis_times_out():
+    from src.orchestration.pipeline import HistoricalQAOrchestrator
+    from src.retrieval.multi_slice_retriever import CrossDatasetMultiSliceRetriever
+    from src.schemas.slice import ComparisonSlice, ParsedQueryIntent
+    from src.schemas.state import PipelineState
+
+    class Client:
+        def corpus_analysis_search(self, query, k=20, dataset_ids=None, search_mode="hybrid"):
+            raise TimeoutError("The read operation timed out")
+
+    orch = HistoricalQAOrchestrator(retriever=CrossDatasetMultiSliceRetriever(client=Client(), k=2))
+    state = PipelineState(
+        question="How did a marriage look like in the 1800s compared to now?",
+        query_id="q-timeout",
+        status="retrieved",
+        intent=ParsedQueryIntent(
+            original_query="q",
+            target_concept="marriage",
+            dimension="temporal",
+            slices=[
+                ComparisonSlice(
+                    slice_id="slice_1",
+                    label="1800s",
+                    language="English",
+                    period_start=1800,
+                    period_end=1899,
+                )
+            ],
+        ),
+        passages={"slice_1": [{"text": "Coverture bound wife and husband."}]},
+        search_queries={"slice_1": "marriage 1800s"},
+        knowledge_extension={"feature_lenses": ["legal_standing"]},
+    )
+    updated = orch.measure(state)
+    assert updated.status == "features_computed"
+    analysis = updated.feature_metrics["slice_1"]["corpus_analysis"]
+    assert "timed out" in analysis["error"].lower()
+    assert "legal_standing" in updated.feature_metrics["slice_1"]

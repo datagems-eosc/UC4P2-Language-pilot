@@ -315,7 +315,9 @@ class HistoricalQAOrchestrator(dspy.Module):
                 try:
                     payload = analyze(query, dataset_ids=dataset_ids)
                     attach_corpus_analysis(local, payload)
-                except RetrievalAPIError as exc:
+                except (RetrievalAPIError, TimeoutError, OSError) as exc:
+                    # Soft-fail: corpus-analysis is optional enrichment; do not
+                    # abort synthesize/evaluate when CDD hangs or times out.
                     attach_corpus_analysis(local, None, error=str(exc))
         state.feature_metrics = metrics
         state.status = "features_computed"
