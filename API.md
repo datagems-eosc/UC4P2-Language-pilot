@@ -19,7 +19,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 
 | Field | Details |
 |-------|---------|
-| `query` | Required question text |
+| `query` | Required question text. A single named period (for example Berlin’s climate in the 19th century) is a descriptive one-slice run; “compared to now” / “vary across time” still uses two slices. |
 | `query_id` | Optional stable id (also used for gold / NLG match when it equals `Question_ID`) |
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
@@ -38,7 +38,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.18`**.
+Live version: **`0.1.19`**.
 
 ---
 
@@ -51,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.18`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.19`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**

@@ -8,7 +8,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.retrieval.corpora import dataset_id_for, fill_default_temporal_pair
+from src.retrieval.corpora import (
+    dataset_id_for,
+    fill_default_temporal_pair,
+    is_comparative_query,
+    should_fill_default_temporal_pair,
+)
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 
@@ -50,10 +55,15 @@ _CONCEPT_PATTERNS = (
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
     re.compile(
-        r"how (?:was|were|is|are|did) (?:a |an |the )?(.+?) "
+        r"how (?:can|could|would|should) (?:the |a |an )?(.+?) be described",
+        re.I,
+    ),
+    re.compile(
+        r"how (?:was|were|is|are|did|can|could) (?:a |an |the )?(.+?) "
         r"(?:described|portrayed|represented|framed|differ)",
         re.I,
     ),
+    re.compile(r"\bclimate of ([A-Za-z][\w-]*)", re.I),
 )
 _DECADE = re.compile(r"\b([12]\d{3})'?s\b", re.I)
 _CENTURY = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+century\b", re.I)
@@ -125,8 +135,14 @@ def _concept(query: str) -> str:
         return "Odin"
     if re.search(r"\bdresden\b", query, re.I):
         return "Dresden"
+    if re.search(r"\bberlin\b", query, re.I):
+        return "Berlin" if not re.search(r"\b(climate|weather)\b", query, re.I) else "climate of Berlin"
     if re.search(r"\b(united states|u\.s\.|usa)\b", query, re.I) or re.search(r"\bUS\b", query):
         return "US"
+    if re.search(r"\b(climate|weather)\b", query, re.I):
+        for city in ("Paris", "Moscow", "Vienna", "Berlin"):
+            if re.search(rf"\b{city}\b", query, re.I):
+                return f"climate of {city}"
     return ""
 
 
@@ -190,20 +206,15 @@ def _periods(query: str, reference: datetime) -> list[_Period]:
 
 
 def _dimension(languages: list[str], periods: list[_Period], query: str) -> str:
-    comparative = bool(
-        re.search(
-            r"\b(compar\w*|versus|vs\.?|differ\w*|between|vary|varies|varied)\b"
-            r"|across time|over time|through time",
-            query,
-            re.I,
-        )
-    )
+    comparative = is_comparative_query(query)
     if len(languages) >= 2 and len(periods) >= 2:
         return "multi-dimensional"
     if len(languages) >= 2 and (comparative or periods):
         return "cross-lingual"
-    if len(periods) >= 2 or comparative:
+    if len(periods) >= 2 or (len(periods) == 1 and comparative):
         return "temporal"
+    if len(periods) == 1:
+        return "descriptive"
     return ""
 
 
@@ -255,7 +266,7 @@ def _build_slices(
             )
             for index, language in enumerate(languages)
         ]
-    if dimension == "temporal" and len(periods) >= 2:
+    if dimension in {"temporal", "descriptive"} and any(period.start is not None for period in periods):
         slices: list[ComparisonSlice] = []
         for index, period in enumerate(periods):
             if period.start is None:
@@ -294,11 +305,14 @@ def _ensure_two_periods(
     periods: list[_Period],
     languages: list[str],
     reference: datetime,
+    query: str = "",
 ) -> list[_Period]:
     if len(languages) >= 2:
         return periods
     dated = [period for period in periods if period.start is not None]
-    if len(dated) >= 2:
+    if not should_fill_default_temporal_pair(
+        query, dated_periods=len(dated), languages=len(languages)
+    ):
         return periods
     language = languages[0] if languages else "English"
     existing = [
@@ -325,13 +339,18 @@ def parse_query_intent(
     reference = reference or datetime.now()
     concept = _concept(query)
     languages = _languages(query)
-    periods = _ensure_two_periods(_periods(query, reference), languages, reference)
+    periods = _ensure_two_periods(_periods(query, reference), languages, reference, query)
     dimension = _dimension(languages, periods, query)
     slices = _build_slices(dimension, languages, periods, corpus_id)
     errors: list[str] = []
     if not concept:
-        errors.append("The target concept to compare is missing or too vague.")
-    if not dimension or len(slices) < 2:
+        errors.append("The target concept is missing or too vague.")
+    if not dimension or not slices:
+        errors.append(
+            "No indexed archive slice matched the question. Name a period from 1800 onward "
+            "or a contrast across two periods or source languages."
+        )
+    elif dimension != "descriptive" and len(slices) < 2:
         errors.append(
             "A comparison needs at least two slices. Provide two or more periods or source languages."
         )

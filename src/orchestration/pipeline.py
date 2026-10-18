@@ -38,17 +38,18 @@ from src.schemas.state import PipelineState
 
 
 class GroundedSynthesizer(dspy.Signature):
-    """Write a comparison using ONLY the retrieved passages below.
+    """Write an answer using ONLY the retrieved passages below.
 
-    Every factual sentence must include one or more [ref_id] markers from the
-    evidence. Do not use outside knowledge. If a slice has no passages, say that
-    retrieval returned nothing for that slice. Never invent a contrast for a
-    slice with no evidence.
+    For one slice, describe what the sources say. For several slices, compare
+    them. Every factual sentence must include one or more [ref_id] markers from
+    the evidence. Do not use outside knowledge. If a slice has no passages, say
+    that retrieval returned nothing for that slice. Never invent a contrast for
+    a slice with no evidence.
     """
 
     question: str = dspy.InputField()
     evidence: str = dspy.InputField(desc="Retrieved passages, each prefixed with [ref_id], slice, and corpus")
-    answer: str = dspy.OutputField(desc="Grounded comparison; claims marked with [ref_id]")
+    answer: str = dspy.OutputField(desc="Grounded answer; claims marked with [ref_id]")
 
 
 def _query_id(question: str) -> str:
@@ -60,6 +61,8 @@ def _dimension_name(comparison_type: str | None) -> str:
         return "cross-lingual"
     if comparison_type in {"multi-dimensional", "multi_dimensional"}:
         return "multi-dimensional"
+    if comparison_type == "descriptive":
+        return "descriptive"
     return "temporal"
 
 
@@ -186,8 +189,23 @@ class HistoricalQAOrchestrator(dspy.Module):
                 disambiguation_source="local-fallback",
                 disambiguation={"proceed": True, "fallback_reason": str(exc)},
             )
+        local_intent, local_errors = parse_query_intent(question)
+        if local_intent is not None and local_intent.dimension == "descriptive":
+            merged = dict(remote)
+            merged["proceed"] = True
+            merged["comparison_type"] = "descriptive"
+            merged["fallback_reason"] = (
+                "Single-period question; kept one indexed archive slice."
+            )
+            return PipelineState(
+                question=question,
+                query_id=identifier,
+                status="disambiguated",
+                intent=local_intent,
+                disambiguation=merged,
+                disambiguation_source="local-fallback",
+            )
         if not remote.get("proceed"):
-            local_intent, errors = parse_query_intent(question)
             if local_intent is not None:
                 merged = dict(remote)
                 merged["proceed"] = True
@@ -202,7 +220,7 @@ class HistoricalQAOrchestrator(dspy.Module):
                     disambiguation=merged,
                     disambiguation_source="local-fallback",
                 )
-            errors = list(remote.get("constraint_errors") or errors)
+            errors = list(remote.get("constraint_errors") or local_errors)
             return PipelineState(
                 question=question,
                 query_id=identifier,
@@ -213,8 +231,7 @@ class HistoricalQAOrchestrator(dspy.Module):
                 constraint_errors=errors,
             )
         slices = slices_from_disambiguation(remote)
-        if len(slices) < 2:
-            local_intent, errors = parse_query_intent(question)
+        if not slices:
             if local_intent is None:
                 return PipelineState(
                     question=question,
@@ -222,8 +239,8 @@ class HistoricalQAOrchestrator(dspy.Module):
                     status="clarification",
                     disambiguation=remote,
                     disambiguation_source=source,
-                    clarification=_clarification(errors),
-                    constraint_errors=errors,
+                    clarification=_clarification(local_errors),
+                    constraint_errors=local_errors,
                 )
             intent = local_intent
         else:

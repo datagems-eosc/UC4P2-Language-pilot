@@ -63,6 +63,68 @@ class ScriptedRetrieval:
         }
 
 
+BERLIN_CLIMATE = "How can the climate of Berlin in the 19th century be described?"
+
+
+def test_single_period_climate_gate_keeps_one_slice():
+    gate = HistoricalComparativeConstraints.from_query(BERLIN_CLIMATE)
+    assert gate.clarification() is None
+    assert gate.comparison_type == "descriptive"
+    assert gate.target_concepts == ["climate of Berlin"]
+    assert [item.label for item in gate.slices] == ["19th century"]
+    assert len(gate.slices) == 1
+
+
+def test_remote_two_slice_rewrite_does_not_force_present_on_single_period():
+    client = ScriptedDisambiguation(
+        {
+            "proceed": True,
+            "comparison_type": "temporal",
+            "target_concepts": ["Berlin"],
+            "slices": [
+                {
+                    "slice_id": "slice_1",
+                    "label": "19th century",
+                    "start_year": 1801,
+                    "end_year": 1900,
+                    "language": "English",
+                },
+                {
+                    "slice_id": "slice_2",
+                    "label": "present",
+                    "start_year": 2026,
+                    "end_year": 2026,
+                    "language": "English",
+                },
+            ],
+        }
+    )
+    pipeline = HistoricalQAOrchestrator(disambiguation_client=client)
+    state = pipeline.resolve(BERLIN_CLIMATE)
+    assert state.status == "disambiguated"
+    assert state.intent is not None
+    assert state.intent.dimension == "descriptive"
+    assert [item.label for item in state.intent.slices] == ["19th century"]
+
+
+def test_single_period_pipeline_retrieves_one_slice():
+    client = ScriptedDisambiguation(
+        HistoricalComparativeConstraints.from_query(BERLIN_CLIMATE).to_api_dict()
+    )
+    retrieval = ScriptedRetrieval()
+    pipeline = HistoricalQAOrchestrator(
+        disambiguation_client=client,
+        retriever=CrossDatasetMultiSliceRetriever(client=retrieval),
+    )
+    state = pipeline.run(BERLIN_CLIMATE, query_id="34")
+    assert state.status == "ok"
+    assert state.intent is not None
+    assert len(state.intent.slices) == 1
+    assert len(retrieval.queries) == 1
+    assert state.output is not None
+    assert state.output.synthesized_answer
+
+
 def test_missing_periods_use_indexed_corpus_eras():
     gate = HistoricalComparativeConstraints.from_query(
         "How do historical descriptions of the Dresden's cultural nicknames "

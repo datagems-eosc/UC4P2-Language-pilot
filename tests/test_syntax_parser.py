@@ -32,6 +32,27 @@ def test_lexicon_operators_and_bracket_arguments():
     assert arguments == ["count", "#2"]
 
 
+def test_single_slice_plan_summarizes_instead_of_contrasting():
+    slices = [
+        ComparisonSlice(
+            slice_id="slice_1",
+            label="19th century",
+            language="English",
+            period_start=1801,
+            period_end=1900,
+        )
+    ]
+    steps = build_comparative_steps(
+        "How can the climate of Berlin in the 19th century be described?",
+        slices,
+        "climate of Berlin",
+    )
+    assert len(steps) == 2
+    assert "19th century" in steps[0].instruction
+    assert "differ" not in steps[1].instruction.lower()
+    assert "#1" in steps[1].instruction
+
+
 def test_break_roundtrip_matches_comparative_plan():
     slices = [
         ComparisonSlice(

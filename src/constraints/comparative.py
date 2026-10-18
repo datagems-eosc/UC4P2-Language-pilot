@@ -21,10 +21,15 @@ from pydantic import BaseModel, Field
 from src.constraints.base import BaseConstraint
 
 from src.oidc import OIDCTokenError, bearer_token_from_env
-from src.retrieval.corpora import fill_default_temporal_pair, is_present_era
+from src.retrieval.corpora import (
+    fill_default_temporal_pair,
+    is_present_era,
+    is_comparative_query,
+    should_fill_default_temporal_pair,
+)
 
 INDEXED_ARCHIVE_START_YEAR = 1800
-ComparisonType = Literal["temporal", "cross_lingual", "multi-dimensional"]
+ComparisonType = Literal["temporal", "cross_lingual", "multi-dimensional", "descriptive"]
 
 _LANGUAGE_ALIASES = {
     "german": "German",
@@ -73,10 +78,15 @@ _CONCEPT_PATTERNS = (
     ),
     re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
     re.compile(
-        r"how (?:was|were|is|are) (?:a |an |the )?(.+?) "
+        r"how (?:can|could|would|should) (?:the |a |an )?(.+?) be described",
+        re.I,
+    ),
+    re.compile(
+        r"how (?:was|were|is|are|can|could) (?:a |an |the )?(.+?) "
         r"(?:described|portrayed|represented|framed)",
         re.I,
     ),
+    re.compile(r"\bclimate of ([A-Za-z][\w-]*)", re.I),
 )
 _YEAR = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
 _DECADE = re.compile(r"\b([12]\d{3})'?s\b", re.I)
@@ -138,8 +148,14 @@ def _extract_concepts(query: str) -> list[str]:
         return ["Odin"]
     if re.search(r"\bdresden\b", lowered):
         return ["Dresden"]
+    if re.search(r"\bberlin\b", lowered):
+        return ["climate of Berlin"] if re.search(r"\b(climate|weather)\b", lowered) else ["Berlin"]
     if re.search(r"\b(united states|u\.s\.|usa)\b", lowered) or re.search(r"\bUS\b", query):
         return ["US"]
+    if re.search(r"\b(climate|weather)\b", lowered):
+        for city in ("Paris", "Moscow", "Vienna", "Berlin"):
+            if re.search(rf"\b{city.lower()}\b", lowered):
+                return [f"climate of {city}"]
     return []
 
 
@@ -225,14 +241,7 @@ def _extract_periods(query: str, reference: datetime) -> list[_PeriodSpan]:
 def _comparison_type(
     languages: list[str], periods: list[_PeriodSpan], query: str
 ) -> Optional[ComparisonType]:
-    comparative = bool(
-        re.search(
-            r"\b(compar\w*|versus|vs\.?|differ\w*|vary|varies|varied)\b"
-            r"|across time|over time|through time",
-            query,
-            re.I,
-        )
-    )
+    comparative = is_comparative_query(query)
     if len(languages) >= 2 and len(periods) >= 2:
         return "multi-dimensional"
     if len(languages) >= 2 and (comparative or periods):
@@ -241,6 +250,8 @@ def _comparison_type(
         return "temporal"
     if len(languages) >= 2:
         return "cross_lingual"
+    if len(periods) == 1:
+        return "descriptive"
     if comparative:
         return "temporal"
     return None
@@ -289,7 +300,9 @@ def _build_slices(
                 )
             )
         return slices
-    if comparison_type == "temporal" and len(periods) >= 2:
+    if comparison_type in {"temporal", "descriptive"} and any(
+        period.start_year is not None for period in periods
+    ):
         return [
             CorpusSlice(
                 slice_id=_slice_id(index),
@@ -413,7 +426,9 @@ class HistoricalComparativeConstraints(BaseConstraint):
         languages = _extract_languages(query)
         periods = _extract_periods(query, reference)
         dated = [period for period in periods if period.start_year is not None]
-        if len(languages) < 2 and len(dated) < 2:
+        if should_fill_default_temporal_pair(
+            query, dated_periods=len(dated), languages=len(languages)
+        ):
             existing = [
                 {
                     "label": period.label,
@@ -460,13 +475,15 @@ class HistoricalComparativeConstraints(BaseConstraint):
         slices = _build_slices(comparison_type, languages, periods)
         errors: list[str] = []
         if not concepts:
-            errors.append("The target concept to compare is missing or too vague.")
+            errors.append("The target concept is missing or too vague.")
         if comparison_type is None:
             errors.append(
-                "The comparison type is unclear. Specify a temporal contrast "
-                "(two periods) or a cross-lingual contrast (two source languages)."
+                "The comparison type is unclear. Specify a period from 1800 onward, "
+                "a temporal contrast (two periods), or a cross-lingual contrast."
             )
-        elif len(slices) < 2:
+        elif not slices:
+            errors.append("No indexed archive slice matched the named period or language.")
+        elif comparison_type != "descriptive" and len(slices) < 2:
             errors.append(
                 "A comparison needs at least two slices. Provide two or more periods or source languages."
             )
@@ -491,7 +508,7 @@ class HistoricalComparativeConstraints(BaseConstraint):
         result = unwrap_disambiguation_payload(payload)
         slices = [CorpusSlice.model_validate(item) for item in result.get("slices") or []]
         comparison = result.get("comparison_type")
-        if comparison not in {"temporal", "cross_lingual", "multi-dimensional"}:
+        if comparison not in {"temporal", "cross_lingual", "multi-dimensional", "descriptive"}:
             comparison = None
         return cls(
             query=query,
@@ -509,7 +526,8 @@ class HistoricalComparativeConstraints(BaseConstraint):
             "This historical comparative query cannot be executed against the indexed archives. "
             + " ".join(errors)
             + " Please name the concept and restrict each slice to indexed sources from "
-            f"{INDEXED_ARCHIVE_START_YEAR} onward, with either two periods or two source languages."
+            f"{INDEXED_ARCHIVE_START_YEAR} onward. A single named period is enough for a "
+            "descriptive question; comparisons still need two periods or two source languages."
         )
 
     def to_api_dict(self) -> dict[str, Any]:

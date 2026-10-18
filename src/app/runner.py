@@ -136,9 +136,10 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
             return str(output.get("clarification") or "The query cannot proceed.")
         slices = output.get("slices") or []
         labels = ", ".join(str(item.get("label") or item.get("slice_id")) for item in slices)
+        kind = output.get("comparison_type") or "unknown"
+        noun = "slice" if len(slices) == 1 else "slices"
         return (
-            f"Comparison type {output.get('comparison_type') or 'unknown'} "
-            f"over {len(slices)} slices ({labels}). "
+            f"{kind} over {len(slices)} {noun} ({labels}). "
             f"Source: {output.get('disambiguation_source') or 'unknown'}."
         )
     if name == "extend_knowledge":

@@ -79,6 +79,26 @@ def test_galileo_reporting_question_extracts_concept_and_default_periods():
     assert [item.label for item in intent.slices] == ["19th century", "present"]
 
 
+BERLIN_CLIMATE = "How can the climate of Berlin in the 19th century be described?"
+
+
+def test_single_period_climate_question_uses_one_knowledge_project_slice():
+    intent, errors = parse_query_intent(BERLIN_CLIMATE)
+    assert errors == []
+    assert intent is not None
+    assert intent.dimension == "descriptive"
+    assert intent.target_concept.lower() == "climate of berlin"
+    assert [item.label for item in intent.slices] == ["19th century"]
+    assert [item.corpus_id for item in intent.slices] == [LANGUAGE_DATASETS["kp"]["uuid"]]
+    paris, paris_errors = parse_query_intent(
+        "How can the climate of Paris in the 19th century be described?"
+    )
+    assert paris_errors == []
+    assert paris is not None
+    assert paris.target_concept.lower() == "climate of paris"
+    assert len(paris.slices) == 1
+
+
 def test_odin_today_adds_historical_corpus_slice():
     intent, errors = parse_query_intent(
         "How was Odin portrayed in earlier records compared to today?"

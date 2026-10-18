@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 LANGUAGE_DATASETS: dict[str, dict[str, Any]] = {
@@ -60,6 +61,30 @@ def corpus_name_for_id(dataset_id: str) -> str:
 
 _PRESENT_LABELS = {"now", "today", "nowadays", "currently", "current", "modern", "present"}
 _KNOWN_UUIDS = {item["uuid"] for item in LANGUAGE_DATASETS.values()}
+_COMPARATIVE_QUERY = re.compile(
+    r"\b(compar\w*|versus|vs\.?|differ\w*|vary|varies|varied|contrast\w*)\b"
+    r"|across time|over time|through time|compared to|compared with",
+    re.I,
+)
+
+
+def is_comparative_query(query: str) -> bool:
+    """True when the question asks for a contrast, not a single-period description."""
+    return bool(_COMPARATIVE_QUERY.search(query or ""))
+
+
+def should_fill_default_temporal_pair(
+    query: str,
+    *,
+    dated_periods: int,
+    languages: int = 0,
+) -> bool:
+    """Invent the other indexed era only when the question is comparative and incomplete."""
+    if languages >= 2 or dated_periods >= 2:
+        return False
+    if dated_periods == 1 and not is_comparative_query(query):
+        return False
+    return True
 
 
 def historical_dataset_for_language(language: str = "English") -> dict[str, Any]:

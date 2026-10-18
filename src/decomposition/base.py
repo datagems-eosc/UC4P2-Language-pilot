@@ -67,8 +67,11 @@ def build_comparative_steps(
         f"#{index} How is {subject} described in {slice_.label}?"
         for index, slice_ in enumerate(slices, start=1)
     ]
-    refs = ", ".join(f"#{index}" for index in range(1, len(slices) + 1))
-    lines.append(f"#{len(slices) + 1} How does {subject} differ across {refs}?")
+    refs = ", ".join(f"#{index}" for index in range(1, max(len(slices), 1) + 1))
+    if len(slices) <= 1:
+        lines.append(f"#{len(lines) + 1} What does the evidence in {refs} say about {subject}?")
+    else:
+        lines.append(f"#{len(slices) + 1} How does {subject} differ across {refs}?")
     steps: list[QDMRStep] = []
     for line in lines:
         match = _STEP.match(line)
@@ -109,7 +112,7 @@ def steps_are_valid(steps: list[QDMRStep], slice_count: int = 0) -> bool:
 
 
 _SYNTHESIZE = re.compile(
-    r"\b(differ|difference|differences|compare|comparison|contrast|across|synthesize)\b",
+    r"\b(differ|difference|differences|compare|comparison|contrast|across|synthesize|evidence)\b",
     re.I,
 )
 
@@ -127,13 +130,18 @@ def ensure_synthesize_root(steps: list[QDMRStep]) -> list[QDMRStep]:
     """
     if len(steps) < 2:
         return steps
+    content = [step for step in steps if not looks_like_synthesize(step)]
     last = steps[-1]
+    prior = list(range(1, last.step_index if looks_like_synthesize(last) else len(steps) + 1))
+    refs = ", ".join(f"#{index}" for index in prior)
+    body = (
+        f"What does the evidence say, given {refs}?"
+        if len(content) <= 1
+        else f"How do these accounts differ, given {refs}?"
+    )
     if looks_like_synthesize(last):
-        prior = list(range(1, last.step_index))
         if set(last.references) >= set(prior):
             return steps
-        refs = ", ".join(f"#{index}" for index in prior)
-        body = f"How do these accounts differ, given {refs}?"
         return list(steps[:-1]) + [
             QDMRStep(
                 step_index=last.step_index,
@@ -143,9 +151,6 @@ def ensure_synthesize_root(steps: list[QDMRStep]) -> list[QDMRStep]:
                 instruction=f"#{last.step_index} {body}",
             )
         ]
-    prior = list(range(1, len(steps) + 1))
-    refs = ", ".join(f"#{index}" for index in prior)
-    body = f"How do these accounts differ, given {refs}?"
     index = len(steps) + 1
     return list(steps) + [
         QDMRStep(
