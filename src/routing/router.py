@@ -7,6 +7,8 @@ from typing import Any
 import dspy
 from pydantic import BaseModel, Field
 
+from src.schemas.concept import extract_concept
+
 
 class DomainRouter(dspy.Signature):
     """Extract the concept being compared. This pilot has no meteorological route."""
@@ -22,12 +24,13 @@ class RouteDecision(BaseModel):
 
 
 def route_query(query: str) -> RouteDecision:
-    """Mark the question as comparative. An LM may suggest the concept."""
+    """Mark the question as comparative. Concept comes from the wording, or an LM."""
+    heuristic = extract_concept(query) or None
     if getattr(dspy.settings, "lm", None) is None:
-        return RouteDecision(domain="comparative")
+        return RouteDecision(domain="comparative", concept=heuristic)
     try:
         prediction = dspy.Predict(DomainRouter)(query=query)
     except Exception:
-        return RouteDecision(domain="comparative")
-    concept = str(getattr(prediction, "concept", "") or "").strip() or None
+        return RouteDecision(domain="comparative", concept=heuristic)
+    concept = str(getattr(prediction, "concept", "") or "").strip() or heuristic
     return RouteDecision(domain="comparative", concept=concept)

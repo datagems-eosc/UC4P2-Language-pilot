@@ -33,6 +33,7 @@ from src.retrieval.multi_slice_retriever import (
     RetrievedPassage,
 )
 from src.schemas.benchmark import BenchmarkOutput, Citation
+from src.schemas.concept import extract_concept
 from src.schemas.slice import ComparisonSlice, ParsedQueryIntent, parse_query_intent, slices_from_disambiguation
 from src.schemas.state import PipelineState
 
@@ -70,7 +71,7 @@ def _clarification(errors: list[str]) -> str:
     return (
         "This historical comparative query cannot be executed against the indexed archives. "
         + " ".join(errors)
-        + " Please name the concept and restrict every slice to indexed sources from 1800 onward."
+        + " Restrict every slice to indexed sources from 1800 onward."
     )
 
 
@@ -266,9 +267,12 @@ class HistoricalQAOrchestrator(dspy.Module):
             intent = local_intent
         else:
             concepts = list(remote.get("target_concepts") or [])
+            local_concept = local_intent.target_concept if local_intent is not None else ""
             intent = ParsedQueryIntent(
                 original_query=question,
-                target_concept=str(concepts[0] if concepts else ""),
+                target_concept=str(
+                    (concepts[0] if concepts else "") or local_concept or extract_concept(question)
+                ),
                 dimension=_dimension_name(remote.get("comparison_type")),
                 slices=slices,
             )

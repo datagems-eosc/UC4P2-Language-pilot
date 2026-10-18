@@ -1,8 +1,11 @@
+from src.decomposition.benchmark_fewshots import load_benchmark
 from src.retrieval.corpora import (
     LANGUAGE_DATASETS,
     dataset_id_for,
     dataset_ids_for_slice,
 )
+from src.routing.router import route_query
+from src.schemas.concept import extract_concept
 from src.schemas.slice import ComparisonSlice, parse_query_intent
 
 
@@ -79,6 +82,24 @@ def test_galileo_reporting_question_extracts_concept_and_default_periods():
     assert [item.label for item in intent.slices] == ["19th century", "present"]
 
 
+SOCIALISM_ORIGIN = 'How do historical accounts vary in tracing the origin of "socialism"?'
+
+
+def test_socialism_origin_question_extracts_quoted_concept():
+    intent, errors = parse_query_intent(SOCIALISM_ORIGIN)
+    assert errors == []
+    assert intent is not None
+    assert intent.target_concept.lower() == "socialism"
+    assert intent.dimension == "temporal"
+    assert [item.label for item in intent.slices] == ["19th century", "present"]
+    first_use, first_errors = parse_query_intent(
+        'Who used the term "socialism" for the first time?'
+    )
+    assert first_errors == []
+    assert first_use is not None
+    assert first_use.target_concept.lower() == "socialism"
+
+
 BERLIN_CLIMATE = "How can the climate of Berlin in the 19th century be described?"
 
 
@@ -97,6 +118,43 @@ def test_single_period_climate_question_uses_one_knowledge_project_slice():
     assert paris is not None
     assert paris.target_concept.lower() == "climate of paris"
     assert len(paris.slices) == 1
+
+
+def test_generic_questions_extract_a_concept_without_name_lists():
+    cases = {
+        "How is liberty defined?": "liberty",
+        "What is coffee?": "coffee",
+        "Who invented the steam engine?": "steam engine",
+        "How is democracy described in the 19th century?": "democracy",
+        'How do historical accounts vary in tracing the origin of "socialism"?': "socialism",
+        "How is Dresden defined?": "Dresden",
+        "How is love defined?": "love",
+        "How is philosophy defined broadly?": "philosophy",
+    }
+    for question, expected in cases.items():
+        concept = extract_concept(question)
+        assert expected.lower() in concept.lower(), (question, concept)
+        intent, errors = parse_query_intent(question)
+        assert errors == [], (question, errors)
+        assert intent is not None
+        assert expected.lower() in intent.target_concept.lower()
+        assert intent.slices
+        assert route_query(question).concept
+    empty, empty_errors = parse_query_intent("   ")
+    assert empty is None
+    assert empty_errors
+
+
+def test_benchmark_questions_all_parse():
+    missing = []
+    for row in load_benchmark():
+        question = str(row.get("Question") or "").strip()
+        if not question:
+            continue
+        intent, errors = parse_query_intent(question)
+        if errors or intent is None or not intent.target_concept:
+            missing.append((row.get("Question_ID"), question, errors))
+    assert missing == []
 
 
 def test_odin_today_adds_historical_corpus_slice():

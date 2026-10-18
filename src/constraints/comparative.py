@@ -22,11 +22,13 @@ from src.constraints.base import BaseConstraint
 
 from src.oidc import OIDCTokenError, bearer_token_from_env
 from src.retrieval.corpora import (
+    default_temporal_spans,
     fill_default_temporal_pair,
     is_present_era,
     is_comparative_query,
     should_fill_default_temporal_pair,
 )
+from src.schemas.slice import extract_target_concepts
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 ComparisonType = Literal["temporal", "cross_lingual", "multi-dimensional", "descriptive"]
@@ -61,33 +63,6 @@ _UNINDEXED_ERAS = (
     "renaissance",
     "early modern",
 )
-_CONCEPT_PATTERNS = (
-    re.compile(
-        r"descriptions of (?:the )?(.+?)"
-        r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
-        re.I,
-    ),
-    re.compile(
-        r"(?:reporting|about|regarding|concerning)\s+(?:the |a |an )?(.+?)(?:\?|$)",
-        re.I,
-    ),
-    re.compile(
-        r"\b(?:accounts|portrayals)\s+(?:of|about)\s+(?:the |a |an )?(.+?)"
-        r"(?:\s+differ|\s+vary|\s+compared|\?|$)",
-        re.I,
-    ),
-    re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
-    re.compile(
-        r"how (?:can|could|would|should) (?:the |a |an )?(.+?) be described",
-        re.I,
-    ),
-    re.compile(
-        r"how (?:was|were|is|are|can|could) (?:a |an |the )?(.+?) "
-        r"(?:described|portrayed|represented|framed)",
-        re.I,
-    ),
-    re.compile(r"\bclimate of ([A-Za-z][\w-]*)", re.I),
-)
 _YEAR = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
 _DECADE = re.compile(r"\b([12]\d{3})'?s\b", re.I)
 _CENTURY = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+century\b", re.I)
@@ -121,42 +96,8 @@ def _century_start(number: int) -> int:
     return (number - 1) * 100 + 1
 
 
-def _strip_concept(text: str) -> str:
-    cleaned = re.sub(r"\s+", " ", text).strip(" .?!,;:'\"")
-    return re.sub(
-        r"\s+(in|across|over|during|between|from|compared|versus|vs|vary)\b.*$",
-        "",
-        cleaned,
-        flags=re.I,
-    ).strip()
-
-
 def _extract_concepts(query: str) -> list[str]:
-    for pattern in _CONCEPT_PATTERNS:
-        match = pattern.search(query)
-        if not match:
-            continue
-        concept = _strip_concept(match.group(1))
-        if concept and concept.lower() not in {"it", "this", "that"}:
-            return [concept]
-    lowered = query.lower()
-    if re.search(r"\bmarriage\b", lowered):
-        return ["marriage"]
-    if re.search(r"\bgalileo\b", lowered):
-        return ["Galileo"]
-    if re.search(r"\bodin\b", lowered):
-        return ["Odin"]
-    if re.search(r"\bdresden\b", lowered):
-        return ["Dresden"]
-    if re.search(r"\bberlin\b", lowered):
-        return ["climate of Berlin"] if re.search(r"\b(climate|weather)\b", lowered) else ["Berlin"]
-    if re.search(r"\b(united states|u\.s\.|usa)\b", lowered) or re.search(r"\bUS\b", query):
-        return ["US"]
-    if re.search(r"\b(climate|weather)\b", lowered):
-        for city in ("Paris", "Moscow", "Vienna", "Berlin"):
-            if re.search(rf"\b{city.lower()}\b", lowered):
-                return [f"climate of {city}"]
-    return []
+    return extract_target_concepts(query)
 
 
 def _extract_languages(query: str) -> list[str]:
@@ -473,9 +414,21 @@ class HistoricalComparativeConstraints(BaseConstraint):
                 ]
         comparison_type = _comparison_type(languages, periods, query)
         slices = _build_slices(comparison_type, languages, periods)
+        if (comparison_type is None or not slices) and not any(period.unindexed for period in periods):
+            periods = [
+                _PeriodSpan(label=span["label"], start_year=span["start"], end_year=span["end"])
+                for span in default_temporal_spans(
+                    languages[0] if languages else "English",
+                    now_year=reference.year,
+                )
+            ]
+            comparison_type = "cross_lingual" if len(languages) >= 2 else "temporal"
+            slices = _build_slices(comparison_type, languages, periods)
         errors: list[str] = []
-        if not concepts:
-            errors.append("The target concept is missing or too vague.")
+        if not (query or "").strip():
+            errors.append("The question is empty.")
+        elif not concepts:
+            errors.append("The question has no usable topic words.")
         if comparison_type is None:
             errors.append(
                 "The comparison type is unclear. Specify a period from 1800 onward, "
@@ -525,7 +478,7 @@ class HistoricalComparativeConstraints(BaseConstraint):
         return (
             "This historical comparative query cannot be executed against the indexed archives. "
             + " ".join(errors)
-            + " Please name the concept and restrict each slice to indexed sources from "
+            + " Restrict each slice to indexed sources from "
             f"{INDEXED_ARCHIVE_START_YEAR} onward. A single named period is enough for a "
             "descriptive question; comparisons still need two periods or two source languages."
         )

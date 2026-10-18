@@ -125,6 +125,17 @@ def test_single_period_pipeline_retrieves_one_slice():
     assert state.output.synthesized_answer
 
 
+SOCIALISM_ORIGIN = 'How do historical accounts vary in tracing the origin of "socialism"?'
+
+
+def test_socialism_origin_gate_extracts_concept_and_default_slices():
+    gate = HistoricalComparativeConstraints.from_query(SOCIALISM_ORIGIN)
+    assert gate.clarification() is None
+    assert gate.comparison_type == "temporal"
+    assert [item.lower() for item in gate.target_concepts] == ["socialism"]
+    assert [item.label for item in gate.slices] == ["19th century", "present"]
+
+
 def test_missing_periods_use_indexed_corpus_eras():
     gate = HistoricalComparativeConstraints.from_query(
         "How do historical descriptions of the Dresden's cultural nicknames "

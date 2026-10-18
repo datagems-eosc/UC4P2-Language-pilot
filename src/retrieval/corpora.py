@@ -79,7 +79,7 @@ def should_fill_default_temporal_pair(
     dated_periods: int,
     languages: int = 0,
 ) -> bool:
-    """Invent the other indexed era only when the question is comparative and incomplete."""
+    """Fill the missing indexed era when the question names none, or only one in a comparison."""
     if languages >= 2 or dated_periods >= 2:
         return False
     if dated_periods == 1 and not is_comparative_query(query):

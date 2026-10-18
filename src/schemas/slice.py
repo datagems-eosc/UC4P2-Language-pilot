@@ -10,10 +10,12 @@ from pydantic import BaseModel, Field
 
 from src.retrieval.corpora import (
     dataset_id_for,
+    default_temporal_spans,
     fill_default_temporal_pair,
     is_comparative_query,
     should_fill_default_temporal_pair,
 )
+from src.schemas.concept import extract_concept, extract_target_concepts
 
 INDEXED_ARCHIVE_START_YEAR = 1800
 
@@ -38,33 +40,6 @@ _PRESENT_MARKERS = (
     "present",
 )
 _UNINDEXED_ERAS = ("medieval", "middle ages", "antiquity", "ancient", "renaissance", "early modern")
-_CONCEPT_PATTERNS = (
-    re.compile(
-        r"descriptions of (?:the )?(.+?)"
-        r"(?:\s+differ|\s+different|\s+vary|\s+in\b|\s+compared|\?|$)",
-        re.I,
-    ),
-    re.compile(
-        r"(?:reporting|about|regarding|concerning)\s+(?:the |a |an )?(.+?)(?:\?|$)",
-        re.I,
-    ),
-    re.compile(
-        r"\b(?:accounts|portrayals)\s+(?:of|about)\s+(?:the |a |an )?(.+?)"
-        r"(?:\s+differ|\s+vary|\s+compared|\?|$)",
-        re.I,
-    ),
-    re.compile(r"how did (?:a |an |the )?(.+?) look", re.I),
-    re.compile(
-        r"how (?:can|could|would|should) (?:the |a |an )?(.+?) be described",
-        re.I,
-    ),
-    re.compile(
-        r"how (?:was|were|is|are|did|can|could) (?:a |an |the )?(.+?) "
-        r"(?:described|portrayed|represented|framed|differ)",
-        re.I,
-    ),
-    re.compile(r"\bclimate of ([A-Za-z][\w-]*)", re.I),
-)
 _DECADE = re.compile(r"\b([12]\d{3})'?s\b", re.I)
 _CENTURY = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+century\b", re.I)
 _YEAR = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
@@ -115,35 +90,7 @@ def _slice_id(index: int) -> str:
 
 
 def _concept(query: str) -> str:
-    for pattern in _CONCEPT_PATTERNS:
-        match = pattern.search(query)
-        if match:
-            text = re.sub(r"\s+", " ", match.group(1)).strip(" .?!,;:'\"")
-            text = re.sub(
-                r"\s+(in|across|over|during|between|from|compared|versus|vs|vary)\b.*$",
-                "",
-                text,
-                flags=re.I,
-            ).strip()
-            if text and text.lower() not in {"it", "this", "that"}:
-                return text
-    if re.search(r"\bmarriage\b", query, re.I):
-        return "marriage"
-    if re.search(r"\bgalileo\b", query, re.I):
-        return "Galileo"
-    if re.search(r"\bodin\b", query, re.I):
-        return "Odin"
-    if re.search(r"\bdresden\b", query, re.I):
-        return "Dresden"
-    if re.search(r"\bberlin\b", query, re.I):
-        return "Berlin" if not re.search(r"\b(climate|weather)\b", query, re.I) else "climate of Berlin"
-    if re.search(r"\b(united states|u\.s\.|usa)\b", query, re.I) or re.search(r"\bUS\b", query):
-        return "US"
-    if re.search(r"\b(climate|weather)\b", query, re.I):
-        for city in ("Paris", "Moscow", "Vienna", "Berlin"):
-            if re.search(rf"\b{city}\b", query, re.I):
-                return f"climate of {city}"
-    return ""
+    return extract_concept(query)
 
 
 def _languages(query: str) -> list[str]:
@@ -337,14 +284,26 @@ def parse_query_intent(
 ) -> tuple[ParsedQueryIntent | None, list[str]]:
     """Parse an N-way comparative question. Errors block retrieval."""
     reference = reference or datetime.now()
+    if not (query or "").strip():
+        return None, ["The question is empty."]
     concept = _concept(query)
     languages = _languages(query)
     periods = _ensure_two_periods(_periods(query, reference), languages, reference, query)
     dimension = _dimension(languages, periods, query)
     slices = _build_slices(dimension, languages, periods, corpus_id)
+    if (not dimension or not slices) and not any(period.unindexed for period in periods):
+        periods = [
+            _period_from_span(span)
+            for span in default_temporal_spans(
+                languages[0] if languages else "English",
+                now_year=reference.year,
+            )
+        ]
+        dimension = "cross-lingual" if len(languages) >= 2 else "temporal"
+        slices = _build_slices(dimension, languages or ["English"], periods, corpus_id)
     errors: list[str] = []
     if not concept:
-        errors.append("The target concept is missing or too vague.")
+        errors.append("The question has no usable topic words.")
     if not dimension or not slices:
         errors.append(
             "No indexed archive slice matched the question. Name a period from 1800 onward "
