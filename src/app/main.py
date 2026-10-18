@@ -76,7 +76,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.19",
+    version="0.1.20",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -96,6 +96,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Run-Id", "X-Accel-Buffering"],
 )
 
 
@@ -173,7 +174,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.19",
+        "version": "0.1.20",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -364,6 +365,27 @@ def _sse(event: str, payload: dict[str, Any]) -> bytes:
     return f"event: {event}\ndata: {data}\n\n".encode("utf-8")
 
 
+def _slim_running_payload(payload: dict[str, Any], *, limit: int = 240) -> dict[str, Any]:
+    """Keep live SSE frames small so HTTP/2 does not reset after retrieve."""
+
+    def slim(value: Any, depth: int = 0) -> Any:
+        if depth > 8:
+            return value
+        if isinstance(value, str) and len(value) > limit:
+            return value[:limit] + "…"
+        if isinstance(value, list):
+            return [slim(item, depth + 1) for item in value[:8]]
+        if isinstance(value, dict):
+            return {key: slim(item, depth + 1) for key, item in value.items()}
+        return value
+
+    slimmed = slim(payload)
+    if isinstance(slimmed, dict):
+        slimmed["job_id"] = payload.get("job_id")
+        slimmed["status"] = payload.get("status") or "running"
+    return slimmed if isinstance(slimmed, dict) else dict(payload)
+
+
 def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | None):
     cached = _cached_payload(body, until)
     if cached is not None:
@@ -493,18 +515,19 @@ async def thematic_exploration_stream(
     job_id, updates = _start_stream_job(body, body.until, token)
 
     async def generate():
-        yield b": stream-open\n\n"
+        yield f": job {job_id}\n\n".encode("utf-8")
         yield _sse("job", {"job_id": job_id, "status": "running"})
         while True:
             try:
-                item = await asyncio.to_thread(updates.get, True, 2.0)
+                item = await asyncio.to_thread(updates.get, True, 1.0)
             except queue.Empty:
                 yield b": keepalive\n\n"
                 continue
             if item is None:
                 break
             event = "done" if item.get("status") != "running" else "step"
-            yield _sse(event, item)
+            frame = item if event == "done" else _slim_running_payload(item)
+            yield _sse(event, frame)
             if event == "done":
                 break
             yield b": keepalive\n\n"

@@ -407,7 +407,11 @@ def tree_page(payload: Any | None = None, *, error: str = "") -> str:
 
 
 def html_response(payload: Any | None = None, *, error: str = "", status_code: int = 200) -> HTMLResponse:
-    return HTMLResponse(tree_page(payload, error=error), status_code=status_code)
+    return HTMLResponse(
+        tree_page(payload, error=error),
+        status_code=status_code,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"},
+    )
 
 
 _PAGE = """<!DOCTYPE html>
@@ -966,13 +970,21 @@ _PAGE = """<!DOCTYPE html>
     function parseSseChunk(chunk) {
       let event = "message";
       const dataLines = [];
+      let commentJob = "";
       for (const raw of chunk.split("\\n")) {
         const line = raw.replace(/\\r$/, "");
-        if (!line || line.startsWith(":")) continue;
+        if (!line) continue;
+        if (line.startsWith(":")) {
+          const note = line.slice(1).trim();
+          if (note.startsWith("job ")) commentJob = note.slice(4).trim();
+          continue;
+        }
         if (line.startsWith("event:")) event = line.slice(6).trim();
         else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
       }
-      if (!dataLines.length) return null;
+      if (!dataLines.length) {
+        return commentJob ? { event: "job", payload: { job_id: commentJob, status: "running" } } : null;
+      }
       return { event, payload: JSON.parse(dataLines.join("\\n")) };
     }
 
@@ -1010,6 +1022,10 @@ _PAGE = """<!DOCTYPE html>
       return fetch(url, { method: "POST", headers, body });
     }
 
+    function jobIdFrom(payload, fallback) {
+      return String((payload && payload.job_id) || fallback || "");
+    }
+
     async function pollJob(accessToken, jobId) {
       setProgress("Stream dropped — still running, updating from the server…", "");
       for (let attempt = 0; attempt < 180; attempt++) {
@@ -1039,6 +1055,40 @@ _PAGE = """<!DOCTYPE html>
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       throw new Error("Timed out waiting for the run to finish.");
+    }
+
+    async function finishWithoutStream(accessToken, requestBody) {
+      setProgress("Stream dropped — finishing the pipeline…", "");
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer " + accessToken,
+      };
+      let response = await postUrl(FALLBACK_URL, headers, requestBody);
+      if (response.status === 401) {
+        accessToken = await mintAccessToken();
+        headers.Authorization = "Bearer " + accessToken;
+        response = await postUrl(FALLBACK_URL, headers, requestBody);
+      }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ detail: "HTTP " + response.status }));
+        throw new Error(payload.detail ? String(payload.detail) : JSON.stringify(payload));
+      }
+      const payload = await response.json();
+      progressFromPayload(payload);
+      renderPayload(payload);
+      return payload;
+    }
+
+    async function recoverRun(accessToken, jobId, requestBody) {
+      if (jobId) {
+        try {
+          return await pollJob(accessToken, jobId);
+        } catch (_error) {
+          setProgress("Run snapshot unavailable — finishing the pipeline…", "");
+        }
+      }
+      return finishWithoutStream(accessToken, requestBody);
     }
 
     document.getElementById("run-form").addEventListener("submit", async (event) => {
@@ -1100,33 +1150,22 @@ _PAGE = """<!DOCTYPE html>
           return;
         }
         let lastPayload = null;
-        let jobId = response.headers.get("X-Run-Id") || "";
+        let jobId = response.headers.get("X-Run-Id") || response.headers.get("x-run-id") || "";
         try {
           await readSse(response, (event, payload) => {
-            if (payload && payload.job_id) jobId = payload.job_id;
+            jobId = jobIdFrom(payload, jobId);
             if (event === "job") return;
             lastPayload = payload;
             progressFromPayload(payload);
             renderPayload(payload);
           });
         } catch (error) {
-          if (jobId) {
-            lastPayload = await pollJob(token, jobId);
-            return;
-          }
-          if (lastPayload) {
-            progressFromPayload(lastPayload);
-            setProgress(
-              "Stream interrupted after " + ((lastPayload.pipeline || []).length) +
-                " step(s): " + (error && error.message ? error.message : error),
-              lastPayload.status === "running" ? "fail" : ""
-            );
-            return;
-          }
-          throw error;
+          jobId = jobIdFrom(lastPayload, jobId);
+          lastPayload = await recoverRun(token, jobId, body);
+          return;
         }
-        if (lastPayload && lastPayload.status === "running" && jobId) {
-          lastPayload = await pollJob(token, jobId);
+        if (lastPayload && lastPayload.status === "running") {
+          lastPayload = await recoverRun(token, jobIdFrom(lastPayload, jobId), body);
         }
       } catch (error) {
         setProgress("", "");

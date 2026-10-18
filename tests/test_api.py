@@ -225,6 +225,7 @@ def test_stream_endpoint_emits_sse_steps(monkeypatch):
     assert "event: step" in response.text
     assert "event: done" in response.text
     assert "event: job" in response.text
+    assert ": job " in response.text
     assert response.headers.get("x-run-id")
     assert '"status": "running"' in response.text
     assert "Need a later period." in response.text

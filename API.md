@@ -38,7 +38,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.19`**.
+Live version: **`0.1.20`**.
 
 ---
 
@@ -51,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.19`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.20`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -248,7 +248,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
 - Body: same as B1
 - Returns: `text/event-stream`. First `event: job` has `job_id`. Each finished node is `event: step` with `status: "running"` and a growing `pipeline[]`. The last `event: done` is the same JSON as POST `/ThematicExploration` (including `memory`). Comment keepalives are sent while a step is still running.
 - The pipeline keeps running in a background job if the SSE connection drops. Poll B1c with `job_id` (also in `X-Run-Id`).
-- The `/tree` UI streams live, then polls B1c if the stream drops so the run still finishes on screen.
+- The `/tree` UI streams live, then polls B1c if the stream drops. If the job snapshot is missing it finishes with a normal POST `/ThematicExploration` instead of stopping on a network error.
 - Memory hits emit `event: job` then a single `event: done`.
 
 **Standard curl**

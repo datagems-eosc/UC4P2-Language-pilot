@@ -108,7 +108,10 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert "ThematicExploration/runs/" in page.text
     assert "function apiUrl" in page.text
     assert "function pollJob" in page.text
+    assert "function recoverRun" in page.text
+    assert "finishWithoutStream" in page.text
     assert "Stream dropped" in page.text
+    assert "no-store" in (page.headers.get("cache-control") or "")
     assert "Running pipeline" in page.text
     assert "tree/questions" in page.text
     assert "id=\"drawer\"" in page.text
