@@ -100,13 +100,20 @@ def _citation_card(item: dict[str, Any], *, anchor: bool = True) -> str:
         meta = f"{meta} · sim {similarity}" if meta else f"sim {similarity}"
     meta_html = f'<span class="cite-meta">{html.escape(meta)}</span>' if meta else ""
     identity = f' id="cite-{html.escape(citation_id)}"' if anchor and citation_id else ""
+    flag = "" if used else '<span class="cite-flag">not cited in the answer</span>'
     return (
         f'<article class="cite {_tone(citation_id)}{unused}"{identity} '
         f'data-ref="{html.escape(citation_id)}">'
         f'<header><span class="ref-chip {_tone(citation_id)}">{html.escape(citation_id or "citation")}</span>'
-        f"{meta_html}</header>"
+        f"{flag}{meta_html}</header>"
         f'<p>{html.escape(str(item.get("text") or ""))}</p></article>'
     )
+
+
+def _ref_sort_key(item: dict[str, Any]) -> tuple[int, str]:
+    citation_id = str(item.get("citation_id") or "")
+    digits = "".join(char for char in citation_id if char.isdigit())
+    return (int(digits) if digits else 10**9, citation_id)
 
 
 def _prepare_citations(citations: list[Any]) -> list[dict[str, Any]]:
@@ -115,6 +122,7 @@ def _prepare_citations(citations: list[Any]) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         prepared.append(item if "text" in item else _normalize_citation(item))
+    prepared.sort(key=_ref_sort_key)
     return prepared
 
 
@@ -126,26 +134,18 @@ def _citations_block(
     anchors: bool = True,
 ) -> str:
     prepared = _prepare_citations(citations)
-    used = [item for item in prepared if item.get("used_in_answer", True)]
-    unused = [item for item in prepared if not item.get("used_in_answer", True)]
-    used_cards = "".join(_citation_card(item, anchor=anchors) for item in used)
-    unused_cards = "".join(_citation_card(item, anchor=anchors) for item in unused)
+    used = sum(1 for item in prepared if item.get("used_in_answer", True))
+    unused = len(prepared) - used
+    cards = "".join(_citation_card(item, anchor=anchors) for item in prepared)
     opened = " open" if open_node else ""
-    if unused:
-        title = (
-            f"{html.escape(key)} <em>[ {len(used)} cited · {len(unused)} retrieved ]</em>"
-        )
-        extra = (
-            f"<details class=\"cites unused-wrap\"><summary>Retrieved but not cited "
-            f"<em>[ {len(unused)} ]</em></summary>"
-            f'<div class="cite-list">{unused_cards}</div></details>'
-        )
-    else:
-        title = _label(key, prepared)
-        extra = ""
+    title = (
+        f"{html.escape(key)} <em>[ {used} cited · {unused} not cited · shown as ref_1… ]</em>"
+        if unused
+        else _label(key, prepared)
+    )
     return (
         f"<details{opened} class=\"cites\"><summary>{title}</summary>"
-        f'<div class="cite-list">{used_cards}</div>{extra}</details>'
+        f'<div class="cite-list">{cards}</div></details>'
     )
 
 
@@ -527,8 +527,8 @@ _PAGE = """<!DOCTYPE html>
     .cite header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
     .cite-meta { color: var(--muted); font-size: .85rem; }
     .cite p { margin: 0; white-space: pre-wrap; }
-    .cite.unused { opacity: .55; }
-    .unused-wrap { margin-top: 10px; }
+    .cite.unused { opacity: .7; }
+    .cite-flag { color: var(--muted); font-size: .78rem; font-weight: 650; }
     .cite.lit, a.ref.lit, .cite.hover, a.ref.hover, .cite:target { box-shadow: 0 0 0 2px currentColor; }
     .tree details {
       border-left: 1px solid var(--line);
@@ -810,28 +810,36 @@ _PAGE = """<!DOCTYPE html>
       }
       const meta = bits.join(" · ");
       const identity = anchors && citationId ? ' id="cite-' + escapeHtml(citationId) + '"' : "";
+      const flag = unused ? '<span class="cite-flag">not cited in the answer</span>' : "";
       return '<article class="cite ' + tone(citationId) + unused + '"' + identity +
         ' data-ref="' + escapeHtml(citationId) + '"><header><span class="ref-chip ' + tone(citationId) + '">' +
-        escapeHtml(citationId || "citation") + "</span>" +
+        escapeHtml(citationId || "citation") + "</span>" + flag +
         (meta ? '<span class="cite-meta">' + escapeHtml(meta) + "</span>" : "") +
         "</header><p>" + escapeHtml((item && item.text) || "") + "</p></article>";
     }
 
+    function refSortKey(item) {
+      const citationId = String((item && item.citation_id) || "");
+      const digits = citationId.replace(/\\D/g, "");
+      return [digits ? parseInt(digits, 10) : 1e9, citationId];
+    }
+
     function citationsBlock(key, items, anchors) {
       const prepared = (items || []).map(item => item && item.text !== undefined ? item : normalizeCitation(item || {}));
-      const used = prepared.filter(item => item.used_in_answer !== false);
-      const unused = prepared.filter(item => item.used_in_answer === false);
-      const usedCards = used.map(item => citationCard(item, !!anchors)).join("");
-      let extra = "";
+      prepared.sort((left, right) => {
+        const a = refSortKey(left);
+        const b = refSortKey(right);
+        return a[0] - b[0] || String(a[1]).localeCompare(String(b[1]));
+      });
+      const used = prepared.filter(item => item.used_in_answer !== false).length;
+      const unused = prepared.length - used;
+      const cards = prepared.map(item => citationCard(item, !!anchors)).join("");
       let title = label(key, prepared);
-      if (unused.length) {
-        title = escapeHtml(key) + " <em>[ " + used.length + " cited · " + unused.length + " retrieved ]</em>";
-        extra = '<details class="cites unused-wrap"><summary>Retrieved but not cited <em>[ ' +
-          unused.length + " ]</em></summary><div class=\\"cite-list\\">" +
-          unused.map(item => citationCard(item, !!anchors)).join("") + "</div></details>";
+      if (unused) {
+        title = escapeHtml(key) + " <em>[ " + used + " cited · " + unused + " not cited · shown as ref_1… ]</em>";
       }
       return '<details open class="cites"><summary>' + title +
-        '</summary><div class="cite-list">' + usedCards + "</div>" + extra + "</details>";
+        '</summary><div class="cite-list">' + cards + "</div></details>";
     }
 
     function nodeHtml(key, value, openNode, citations) {

@@ -1,5 +1,9 @@
 from src.constraints.comparative import DisambiguationAPIError, HistoricalComparativeConstraints
-from src.orchestration.pipeline import HistoricalQAOrchestrator, _answer_is_grounded
+from src.orchestration.pipeline import (
+    HistoricalQAOrchestrator,
+    _answer_is_grounded,
+    _publish_cited_only,
+)
 from src.retrieval.multi_slice_retriever import MockMultiSliceRetriever
 from src.schemas.benchmark import BenchmarkOutput, Citation
 
@@ -60,6 +64,23 @@ def test_scripted_service_payload_still_runs():
     assert state.disambiguation_source == "query-disambiguation-api"
     assert state.output is not None
     BenchmarkOutput.model_validate(state.output.model_dump())
+
+
+def test_grounded_citations_drop_unused_hits_and_renumber():
+    citations = [
+        Citation(citation_id="ref_1", slice_id="slice_1", source_document="a", text_snippet="old"),
+        Citation(citation_id="ref_6", slice_id="slice_2", source_document="b", text_snippet="jewel box"),
+        Citation(citation_id="ref_9", slice_id="slice_2", source_document="c", text_snippet="collections"),
+    ]
+    answer, published = _publish_cited_only(
+        "Dresden was called the Jewel Box [ref_6]. The collections began in the 16th century [ref_9].",
+        citations,
+    )
+    assert "[ref_1]" in answer and "[ref_2]" in answer
+    assert "[ref_6]" not in answer and "[ref_9]" not in answer
+    assert [item.citation_id for item in published] == ["ref_1", "ref_2"]
+    assert [item.source_document for item in published] == ["b", "c"]
+    assert all(item.used_in_answer for item in published)
 
 
 def test_answer_must_cite_retrieved_refs():

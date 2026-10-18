@@ -221,9 +221,10 @@ def test_tree_markup_separates_unused_citations():
             ],
         }
     )
-    assert "2 cited · 1 retrieved" in markup
-    assert "Retrieved but not cited" in markup
-    assert markup.index("used one") < markup.index("Retrieved but not cited") < markup.index("unused hit")
+    assert "2 cited · 1 not cited" in markup
+    assert "not cited in the answer" in markup
+    assert markup.index('id="cite-ref_1"') < markup.index('id="cite-ref_2"') < markup.index('id="cite-ref_3"')
+    assert markup.index("used one") < markup.index("unused hit") < markup.index("used two")
 
 
 def test_tree_token_endpoint_returns_access_token(monkeypatch):

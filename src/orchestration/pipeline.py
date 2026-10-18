@@ -118,6 +118,27 @@ def _mark_used(citations: list[Citation], answer: str) -> list[Citation]:
     return [item.model_copy(update={"used_in_answer": item.citation_id in used}) for item in citations]
 
 
+def _publish_cited_only(answer: str, citations: list[Citation]) -> tuple[str, list[Citation]]:
+    """Keep only passages the answer marks, remumbered as ref_1… in cite order."""
+    marked = _mark_used(citations, answer)
+    by_id = {item.citation_id: item for item in marked if item.used_in_answer}
+    ordered_ids: list[str] = []
+    for citation_id in _REF.findall(answer or ""):
+        if citation_id in by_id and citation_id not in ordered_ids:
+            ordered_ids.append(citation_id)
+    mapping = {old: f"ref_{index}" for index, old in enumerate(ordered_ids, start=1)}
+    published = [
+        by_id[old].model_copy(update={"citation_id": mapping[old], "used_in_answer": True})
+        for old in ordered_ids
+    ]
+
+    def _replace(match: re.Match[str]) -> str:
+        old = match.group(1)
+        return f"[{mapping[old]}]" if old in mapping else match.group(0)
+
+    return _REF.sub(_replace, answer or ""), published
+
+
 def _evidence_block(citations: list[Citation]) -> str:
     lines = []
     for item in citations:
@@ -384,7 +405,7 @@ class HistoricalQAOrchestrator(dspy.Module):
                     answer = model_answer
             except Exception:
                 pass
-        citations = _mark_used(citations, answer)
+        answer, citations = _publish_cited_only(answer, citations)
         state.output = BenchmarkOutput(
             query_id=state.query_id,
             question=state.question,

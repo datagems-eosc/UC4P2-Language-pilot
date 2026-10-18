@@ -184,10 +184,9 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         return f"Computed feature metrics for {len(metrics)} slices.{extra}"
     if name == "synthesize":
         citations = output.get("grounded_citations") or []
-        used = [item for item in citations if item.get("used_in_answer", True)]
         answer = str(output.get("synthesized_answer") or "").strip()
         preview = answer[:160] + ("…" if len(answer) > 160 else "")
-        return f"Wrote the answer with {len(used)} of {len(citations)} retrieval citations. {preview}"
+        return f"Wrote the answer with {len(citations)} cited passage(s). {preview}"
     if name == "evaluate_answer":
         evaluation = output.get("nlg_evaluation") or {}
         judge = evaluation.get("llm_judge") or {}
