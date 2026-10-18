@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import Any, Iterator
 
 from src.app.auth import caller_access_token
 from src.constraints.comparative import QueryDisambiguationClient
@@ -90,6 +90,8 @@ _OUTCOME_STATUS = {
 }
 
 _HIDDEN_OUTPUT_KEYS = {"pipeline"}
+_TERMINAL_OUTCOMES = {"halted", "failed", "timeout"}
+_FINAL_STEP = "export_benchmark"
 
 
 def _is_timeout(exc: BaseException) -> bool:
@@ -354,7 +356,19 @@ def _attach_failure(
     return result
 
 
-def run_compare(
+def _is_complete(pipeline: list[dict[str, Any]], until: str | None) -> bool:
+    if not pipeline:
+        return False
+    last = pipeline[-1]
+    if last.get("outcome") in _TERMINAL_OUTCOMES:
+        return True
+    name = str(last.get("name") or "")
+    if until and name == until:
+        return True
+    return name == _FINAL_STEP
+
+
+def iter_compare(
     question: str,
     *,
     query_id: str | None = None,
@@ -362,10 +376,11 @@ def run_compare(
     include_trace: bool = False,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
-) -> dict[str, Any]:
-    token = caller_access_token()
+    access_token: str | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Yield a growing ThematicExploration payload after each finished node."""
+    token = access_token if access_token is not None else caller_access_token()
     events: list[dict[str, Any]] = []
-    failure: BaseException | None = None
     try:
         for event in stream_steps(
             question,
@@ -377,20 +392,64 @@ def run_compare(
             retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
         ):
             events.append(event)
+            snapshot = _payload_from_events(
+                question,
+                events,
+                query_id=query_id,
+                decompose_mode=decompose_mode,
+                include_trace=False,
+            )
+            if not _is_complete(snapshot.get("pipeline") or [], until):
+                snapshot["status"] = "running"
+            elif include_trace:
+                snapshot["raw_trace"] = events
+            yield snapshot
+            if snapshot.get("status") != "running":
+                return
     except Exception as exc:  # noqa: BLE001 - surface as structured pipeline failure
-        failure = exc
         logger.exception(
             "pipeline interrupted after %s steps until=%s",
             len(events),
             until,
         )
-    result = _payload_from_events(
+        result = _payload_from_events(
+            question,
+            events,
+            query_id=query_id,
+            decompose_mode=decompose_mode,
+            include_trace=include_trace,
+        )
+        yield _attach_failure(result, exc)
+        return
+    if not events:
+        yield _payload_from_events(
+            question,
+            events,
+            query_id=query_id,
+            decompose_mode=decompose_mode,
+            include_trace=include_trace,
+        )
+
+
+def run_compare(
+    question: str,
+    *,
+    query_id: str | None = None,
+    until: str | None = None,
+    include_trace: bool = False,
+    k: int = 5,
+    decompose_mode: str = FEW_SHOT,
+    access_token: str | None = None,
+) -> dict[str, Any]:
+    last: dict[str, Any] = {}
+    for payload in iter_compare(
         question,
-        events,
         query_id=query_id,
-        decompose_mode=decompose_mode,
+        until=until,
         include_trace=include_trace,
-    )
-    if failure is not None:
-        return _attach_failure(result, failure)
-    return result
+        k=k,
+        decompose_mode=decompose_mode,
+        access_token=access_token,
+    ):
+        last = payload
+    return last

@@ -20,11 +20,25 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | Field | Details |
 |-------|---------|
 | `query` | Required question text |
-| `query_id` | Optional stable id |
+| `query_id` | Optional stable id (also used for gold / NLG match when it equals `Question_ID`) |
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
 | `include_trace` | `true` adds `raw_trace` |
 | `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `generate_subquestions`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `evaluate_answer`, `export_benchmark` |
+| `use_memory` | Default `true`. Reuse a stored result for the same question + options instead of re-running |
+| `refresh` | Default `false`. If `true`, ignore stored memory, run again, and overwrite storage (consistency check) |
+
+**Response highlights**
+
+| Field | Details |
+|-------|---------|
+| `status` | `ok`, `running` (SSE only), `clarification`, `partial`, `timeout`, or `error` |
+| `pipeline[]` | Ordered steps with `outcome`, `summary`, and `output` (decomposed questions, passages, etc.) |
+| `memory` | `{ hit, key, stored_at, path }` — `hit: true` when served from run memory |
+| `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
+| `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
+
+Live version: **`0.1.15`**.
 
 ---
 
@@ -37,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.10`), docs path, step list
+- Returns: service name, version (`0.1.15`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -116,13 +130,15 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/redoc
 curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 ```
 
-### A7. HTML tree (empty viewer)
+### A7. HTML tree (viewer)
 
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
-- Auth: none for the page; Run auto-fills Bearer via `GET /tree/token` (demo Keycloak user) unless you paste your own
+- Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
+- UI: banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` in the answer is highlighted and jumps to the matching `grounded_citations` card (same color); steps expand to show decomposed questions, retrieved passages, citations, NLG; **Refresh** checkbox forces a new run (`refresh: true`)
+- Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
 **Standard curl**
@@ -131,11 +147,26 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 curl -sS https://datagems-dev.scayle.es/language-pilot/tree
 ```
 
+### A8. Tree default Bearer token
+
+**Details**
+
+- Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree/token`
+- Auth: none
+- Returns: `{"access_token":"…","token_type":"Bearer","expires_in":…}` (uses `DG_USERNAME` / `DG_PASSWORD`, else demo `dg-user-1`). The `/tree` **Run** button calls this on every click so the pipeline never reuses a leftover JWT.
+- Disable with `TREE_AUTO_TOKEN=false`
+
+**Standard curl**
+
+```bash
+curl -sS https://datagems-dev.scayle.es/language-pilot/tree/token
+```
+
 ---
 
 ## B. Language pilot — full ThematicExploration
 
-Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `passages`, `synthesized_answer`, `grounded_citations`.
+Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `passages`, `synthesized_answer`, `grounded_citations`, `nlg_evaluation`, and `memory`.
 
 ### B1. ThematicExploration
 
@@ -146,10 +177,10 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 - Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`, `use_memory` (default `true`), `refresh` (default `false`)
 - Script: `scripts/dev/08-thematic-exploration.sh`
 - Until-retrieve script: `scripts/dev/08b-thematic-exploration-until-retrieve.sh`
-- Run memory: same question + options returns the stored result (`memory.hit=true`) instead of re-running. Set `"refresh": true` to force a new pipeline run (and overwrite storage) when checking consistency. Set `"use_memory": false` to never read/write. Files under `RUN_MEMORY_DIR` (default `runs/memory/`).
-- Timeouts / step failures: HTTP 200 with `status` `timeout` or `error`, plus `failed_step`, `error`, and `pipeline[]` for every step completed before the failure (intermediate fields such as `slices`, `qdmr`, `passages` are kept). Soft-failed CDD corpus-analysis stays inside `compute_features` and does not abort the run.
+- Run memory: same question + `query_id` + `k` + `decompose_mode` + `until` returns the stored result (`memory.hit=true`) instead of re-running. Storage is JSON files under `RUN_MEMORY_DIR` (default `runs/memory/` locally, `/app/runs/memory/` in the pod). Pod disk is ephemeral unless a volume is mounted. Set `"refresh": true` to force a new pipeline run and overwrite storage. Set `"use_memory": false` to never read/write.
+- Timeouts / step failures: HTTP 200 with `status` `timeout` or `error`, plus `failed_step`, `error`, and `pipeline[]` for every step completed before the failure. Soft-failed CDD corpus-analysis stays inside `compute_features` and does not abort the run.
 
-**Standard curl**
+**Standard curl** (first run stores; second run is a memory hit)
 
 ```bash
 curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
@@ -161,7 +192,22 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-full", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
+```
+
+Force a fresh run (consistency check):
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot", "refresh": true}'
 ```
 
 Stop after retrieve:
@@ -177,6 +223,33 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "until": "retrieve_slices"}'
+```
+
+### B1b. ThematicExploration stream (SSE)
+
+**Details**
+
+- Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration/stream`
+- Auth: same Bearer JWT as B1
+- Body: same as B1
+- Returns: `text/event-stream`. Each finished node is `event: step` with `status: "running"` and a growing `pipeline[]`. The last `event: done` is the same JSON as POST `/ThematicExploration` (including `memory`).
+- The `/tree` UI uses this so results appear while the banner still says Running pipeline. If the stream is unavailable it falls back to B1.
+- Memory hits emit a single `event: done`.
+
+**Standard curl**
+
+```bash
+curl -sS -N -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration/stream \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### B2. Compare (deprecated alias)
@@ -207,7 +280,8 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
 **Details**
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/tree`
-- Body: a ThematicExploration JSON document
+- Auth: Bearer JWT
+- Body: a ThematicExploration JSON document (large payloads may hit ingress `413`; prefer GET `/tree` + **Open JSON** in the browser)
 - Script: `scripts/dev/10-tree-from-json.sh` (reads `runs/thematic_exploration_marriage_v014.json`)
 
 **Standard curl**

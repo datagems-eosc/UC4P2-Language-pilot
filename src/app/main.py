@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -12,9 +14,9 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
-from src.app.auth import require_access_token
+from src.app.auth import caller_access_token, require_access_token
 from src.app.run_memory import (
     attach_memory_meta,
     load_run,
@@ -23,7 +25,7 @@ from src.app.run_memory import (
     save_run,
     should_store,
 )
-from src.app.runner import PIPELINE_STEPS, run_compare
+from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
 from src.llm import configure_lm_from_env
@@ -63,11 +65,12 @@ app = FastAPI(
         "POST /ThematicExploration runs the full pipeline. POST /steps/<name> stops after that "
         "node and returns it as result, plus pipeline[] for everything up to there. "
         "POST /compare is kept as an alias. "
+        "POST /ThematicExploration/stream sends each finished step as SSE. "
         "Protected routes require a DataGEMS AAI Bearer JWT "
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.14",
+    version="0.1.15",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -132,6 +135,7 @@ def custom_openapi() -> dict[str, Any]:
     }
     protected = {
         "/ThematicExploration",
+        "/ThematicExploration/stream",
         "/compare",
         "/tree",
         "/steps/route",
@@ -162,9 +166,10 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.14",
+        "version": "0.1.15",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
+        "thematic_exploration_stream": "POST /ThematicExploration/stream",
         "tree": "GET /tree",
         "tree_token": "GET /tree/token",
         "compare": "POST /compare (alias)",
@@ -177,18 +182,38 @@ async def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-def _tree_demo_token() -> str:
+def _jwt_exp(token: str) -> float | None:
+    try:
+        parts = token.split(".")
+        if len(parts) < 2:
+            return None
+        padded = parts[1] + "=" * (-len(parts[1]) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")))
+        exp = payload.get("exp")
+        return float(exp) if isinstance(exp, (int, float)) else None
+    except (ValueError, json.JSONDecodeError, OSError):
+        return None
+
+
+def _tree_demo_token(*, force: bool = False) -> str:
     """Token for the tree UI auto-fill (same password-grant as EXAMPLES.md curls)."""
     if os.getenv("TREE_AUTO_TOKEN", "true").strip().lower() in {"0", "false", "no", "off"}:
         raise OIDCTokenError("TREE_AUTO_TOKEN is disabled.")
-    try:
-        return cached_oidc_access_token()
-    except OIDCTokenError:
-        # Fall back to the documented Scayle demo user when DG_* are unset in the pod.
-        return fetch_oidc_access_token(
-            username=os.getenv("TREE_DEMO_USERNAME", "dg-user-1"),
-            password=os.getenv("TREE_DEMO_PASSWORD", "dg-user-1"),
-        )
+
+    def _issue(*, refresh: bool) -> str:
+        try:
+            return cached_oidc_access_token(force=refresh)
+        except OIDCTokenError:
+            return fetch_oidc_access_token(
+                username=os.getenv("TREE_DEMO_USERNAME", "dg-user-1"),
+                password=os.getenv("TREE_DEMO_PASSWORD", "dg-user-1"),
+            )
+
+    token = _issue(refresh=force)
+    exp = _jwt_exp(token)
+    if exp is not None and exp < time.time() + 30:
+        token = _issue(refresh=True)
+    return token
 
 
 @app.get(
@@ -202,7 +227,9 @@ async def tree_token() -> dict[str, Any]:
         token = _tree_demo_token()
     except OIDCTokenError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return {"access_token": token, "token_type": "Bearer"}
+    exp = _jwt_exp(token)
+    expires_in = max(0, int(exp - time.time())) if exp is not None else None
+    return {"access_token": token, "token_type": "Bearer", "expires_in": expires_in}
 
 
 @app.get("/tree", summary="HTML pipeline tree", tags=["ThematicExploration"], response_class=HTMLResponse)
@@ -220,54 +247,59 @@ async def tree_from_json(
     return html_response(payload)
 
 
-def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
-    # run_compare catches step failures and returns intermediate pipeline[] + failed_step
-    # instead of a bare {"detail": "..."}. Soft-failed CDD corpus-analysis stays in-band.
+def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
     k = body.k or 5
-    key = memory_key(
-        body.query,
-        query_id=body.query_id,
-        k=k,
-        decompose_mode=body.decompose_mode,
-        until=until,
-    )
-    request_meta = {
-        "query": body.query,
-        "query_id": body.query_id,
+    return {
+        "key": memory_key(
+            body.query,
+            query_id=body.query_id,
+            k=k,
+            decompose_mode=body.decompose_mode,
+            until=until,
+        ),
         "k": k,
-        "decompose_mode": body.decompose_mode,
-        "until": until,
-        "include_trace": body.include_trace,
+        "request": {
+            "query": body.query,
+            "query_id": body.query_id,
+            "k": k,
+            "decompose_mode": body.decompose_mode,
+            "until": until,
+            "include_trace": body.include_trace,
+        },
+        "use_memory": bool(getattr(body, "use_memory", True)) and memory_enabled(),
+        "refresh": bool(getattr(body, "refresh", False)),
     }
-    use_memory = bool(getattr(body, "use_memory", True)) and memory_enabled()
-    refresh = bool(getattr(body, "refresh", False))
 
-    if use_memory and not refresh:
-        cached = load_run(key)
-        if cached is not None:
-            payload = dict(cached["result"])
-            payload["service"] = "UC4P2 Language Pilot"
-            payload["question"] = body.query
-            payload = attach_memory_meta(
-                payload,
-                hit=True,
-                key=str(cached.get("key") or key),
-                stored_at=cached.get("stored_at") if isinstance(cached.get("stored_at"), str) else None,
-                path=cached.get("path") if isinstance(cached.get("path"), str) else None,
-            )
-            logger.info("run memory hit key=%s until=%s", key[:12], until)
-            return ThematicExplorationResponse.model_validate(payload)
 
-    payload = run_compare(
-        body.query,
-        query_id=body.query_id,
-        until=until,
-        include_trace=body.include_trace,
-        k=k,
-        decompose_mode=body.decompose_mode,
-    )
+def _decorate_payload(payload: dict[str, Any], body: QueryRequest) -> dict[str, Any]:
+    payload = dict(payload)
     payload["service"] = "UC4P2 Language Pilot"
     payload["question"] = body.query
+    return payload
+
+
+def _cached_payload(body: QueryRequest, until: str | None) -> dict[str, Any] | None:
+    meta = _request_meta(body, until)
+    if not meta["use_memory"] or meta["refresh"]:
+        return None
+    cached = load_run(meta["key"])
+    if cached is None:
+        return None
+    payload = _decorate_payload(dict(cached["result"]), body)
+    payload = attach_memory_meta(
+        payload,
+        hit=True,
+        key=str(cached.get("key") or meta["key"]),
+        stored_at=cached.get("stored_at") if isinstance(cached.get("stored_at"), str) else None,
+        path=cached.get("path") if isinstance(cached.get("path"), str) else None,
+    )
+    logger.info("run memory hit key=%s until=%s", meta["key"][:12], until)
+    return payload
+
+
+def _finalize_payload(payload: dict[str, Any], body: QueryRequest, until: str | None) -> dict[str, Any]:
+    meta = _request_meta(body, until)
+    payload = _decorate_payload(payload, body)
     if payload.get("status") in {"timeout", "error"}:
         logger.warning(
             "pipeline stopped status=%s failed_step=%s until=%s error=%s",
@@ -276,18 +308,63 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
             until,
             payload.get("error"),
         )
-    if use_memory and should_store(payload):
-        meta = save_run(key, payload, request=request_meta)
-        payload = attach_memory_meta(
+    if meta["use_memory"] and should_store(payload):
+        stored = save_run(meta["key"], payload, request=meta["request"])
+        return attach_memory_meta(
             payload,
             hit=False,
-            key=str(meta["key"]),
-            stored_at=str(meta.get("stored_at") or ""),
-            path=str(meta.get("path") or ""),
+            key=str(stored["key"]),
+            stored_at=str(stored.get("stored_at") or ""),
+            path=str(stored.get("path") or ""),
         )
-    elif refresh or not use_memory:
-        payload = attach_memory_meta(payload, hit=False, key=key)
-    return ThematicExplorationResponse.model_validate(payload)
+    if meta["refresh"] or not meta["use_memory"]:
+        return attach_memory_meta(payload, hit=False, key=meta["key"])
+    return payload
+
+
+def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
+    # run_compare catches step failures and returns intermediate pipeline[] + failed_step
+    # instead of a bare {"detail": "..."}. Soft-failed CDD corpus-analysis stays in-band.
+    cached = _cached_payload(body, until)
+    if cached is not None:
+        return ThematicExplorationResponse.model_validate(cached)
+    payload = run_compare(
+        body.query,
+        query_id=body.query_id,
+        until=until,
+        include_trace=body.include_trace,
+        k=body.k or 5,
+        decompose_mode=body.decompose_mode,
+    )
+    return ThematicExplorationResponse.model_validate(_finalize_payload(payload, body, until))
+
+
+def _sse(event: str, payload: dict[str, Any]) -> bytes:
+    data = json.dumps(payload, ensure_ascii=False, default=str)
+    return f"event: {event}\ndata: {data}\n\n".encode("utf-8")
+
+
+def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | None):
+    cached = _cached_payload(body, until)
+    if cached is not None:
+        yield cached
+        return
+    last: dict[str, Any] | None = None
+    for payload in iter_compare(
+        body.query,
+        query_id=body.query_id,
+        until=until,
+        include_trace=body.include_trace,
+        k=body.k or 5,
+        decompose_mode=body.decompose_mode,
+        access_token=access_token,
+    ):
+        payload = _decorate_payload(payload, body)
+        last = payload
+        if payload.get("status") == "running":
+            yield payload
+    if last is not None:
+        yield _finalize_payload(last, body, until)
 
 
 @app.get("/steps", summary="List pipeline step APIs", tags=["Steps"])
@@ -327,6 +404,40 @@ async def thematic_exploration(
 ) -> ThematicExplorationResponse:
     """Run the full thematic-exploration pipeline (or stop at `until`)."""
     return _run_pipeline(body, until=body.until)
+
+
+@app.post(
+    "/ThematicExploration/stream",
+    summary="ThematicExploration (SSE stream)",
+    operation_id="ThematicExplorationStream",
+    tags=["ThematicExploration"],
+)
+async def thematic_exploration_stream(
+    body: ThematicExplorationRequest,
+    _: dict[str, Any] = Depends(require_access_token),
+) -> StreamingResponse:
+    """Stream each finished pipeline step as Server-Sent Events.
+
+    `event: step` payloads have `status=running` and a growing `pipeline[]`.
+    The last `event: done` is the same document as POST /ThematicExploration.
+    """
+    token = caller_access_token()
+
+    def generate():
+        yield b": stream-open\n\n"
+        for payload in _stream_pipeline(body, body.until, token):
+            event = "done" if payload.get("status") != "running" else "step"
+            yield _sse(event, payload)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _register_step(spec: dict[str, str]) -> None:

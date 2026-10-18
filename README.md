@@ -30,12 +30,15 @@ curl -s -X POST "http://localhost:8080/ThematicExploration" \
 
 `POST /compare` is an alias of the same operation.
 
+`POST /ThematicExploration/stream` is the same run as SSE: `event: step` after each finished node (`status=running`), then `event: done` with the final document. The `/tree` page uses this so the pipeline appears while it is still running.
+
 Each pipeline node also has its own endpoint. It runs from the start through that node and returns that node as `result`, with the prefix in `pipeline`.
 
 | Method | Path | Stops after |
 |--------|------|-------------|
-| GET | `/tree` | HTML tree of a run (open JSON, or run a question) |
+| GET | `/tree` | HTML tree of a run (open JSON, or run a question; mints a Bearer on Run, then streams steps) |
 | POST | `/tree` | Same tree, from a posted ThematicExploration JSON |
+| POST | `/ThematicExploration/stream` | Same run as `/ThematicExploration`, one SSE event per finished step |
 | GET | `/steps` | Catalog of step APIs |
 | POST | `/steps/route` | `route` |
 | POST | `/steps/disambiguate` | `disambiguate` |

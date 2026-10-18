@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from typing import Any
 
 from fastapi.responses import HTMLResponse
@@ -30,6 +31,105 @@ _OVERVIEW_KEYS = (
 _END_KEYS = ("synthesized_answer", "nlg_evaluation", "grounded_citations")
 
 _TEXT_LIMIT = 600
+_REF = re.compile(r"\[(ref_\d+)\]")
+_TONES = 6
+
+
+def _tone(citation_id: str) -> str:
+    digits = "".join(char for char in str(citation_id or "") if char.isdigit())
+    number = int(digits) if digits else 1
+    return f"t{((number - 1) % _TONES) + 1}"
+
+
+def _normalize_citation(item: dict[str, Any], slice_labels: dict[str, str] | None = None) -> dict[str, Any]:
+    labels = slice_labels or {}
+    dataset_id = str(item.get("dataset_id") or "")
+    return {
+        "citation_id": item.get("citation_id"),
+        "slice": labels.get(str(item.get("slice_id") or ""), item.get("slice_label") or item.get("slice")),
+        "corpus": item.get("corpus_name")
+        or item.get("corpus")
+        or corpus_name_for_id(dataset_id)
+        or dataset_id,
+        "similarity": item.get("similarity"),
+        "used_in_answer": item.get("used_in_answer", True),
+        "text": _truncate(item.get("text_snippet") or item.get("text"), 360),
+        "source_document": item.get("source_document") or item.get("doc_id"),
+    }
+
+
+def _link_refs(text: str, known: set[str]) -> str:
+    parts: list[str] = []
+    cursor = 0
+    for match in _REF.finditer(text):
+        parts.append(html.escape(text[cursor : match.start()]))
+        citation_id = match.group(1)
+        missing = " missing" if known and citation_id not in known else ""
+        parts.append(
+            f'<a class="ref {_tone(citation_id)}{missing}" href="#cite-{html.escape(citation_id)}" '
+            f'data-ref="{html.escape(citation_id)}">{html.escape(match.group(0))}</a>'
+        )
+        cursor = match.end()
+    parts.append(html.escape(text[cursor:]))
+    return "".join(parts)
+
+
+def _answer_block(key: str, text: str, citations: list[Any] | None = None) -> str:
+    known = {
+        str(item.get("citation_id"))
+        for item in (citations or [])
+        if isinstance(item, dict) and item.get("citation_id")
+    }
+    return (
+        f'<div class="answer-block"><span class="key">{html.escape(key)}</span>'
+        f'<div class="answer">{_link_refs(text, known)}</div></div>'
+    )
+
+
+def _citation_card(item: dict[str, Any], *, anchor: bool = True) -> str:
+    citation_id = str(item.get("citation_id") or "")
+    used = item.get("used_in_answer", True)
+    unused = "" if used else " unused"
+    meta = " · ".join(
+        str(part)
+        for part in (item.get("corpus"), item.get("slice"), item.get("source_document"))
+        if part
+    )
+    similarity = item.get("similarity")
+    if similarity not in (None, ""):
+        meta = f"{meta} · sim {similarity}" if meta else f"sim {similarity}"
+    meta_html = f'<span class="cite-meta">{html.escape(meta)}</span>' if meta else ""
+    identity = f' id="cite-{html.escape(citation_id)}"' if anchor and citation_id else ""
+    return (
+        f'<article class="cite {_tone(citation_id)}{unused}"{identity} '
+        f'data-ref="{html.escape(citation_id)}">'
+        f'<header><span class="ref-chip {_tone(citation_id)}">{html.escape(citation_id or "citation")}</span>'
+        f"{meta_html}</header>"
+        f'<p>{html.escape(str(item.get("text") or ""))}</p></article>'
+    )
+
+
+def _citations_block(
+    key: str,
+    citations: list[Any],
+    *,
+    open_node: bool = True,
+    anchors: bool = True,
+) -> str:
+    cards = "".join(
+        _citation_card(
+            item if "text" in item else _normalize_citation(item),
+            anchor=anchors,
+        )
+        if isinstance(item, dict)
+        else ""
+        for item in citations
+    )
+    opened = " open" if open_node else ""
+    return (
+        f"<details{opened} class=\"cites\"><summary>{_label(key, citations)}</summary>"
+        f'<div class="cite-list">{cards}</div></details>'
+    )
 
 
 def _truncate(text: Any, limit: int = _TEXT_LIMIT) -> str:
@@ -127,22 +227,11 @@ def _enrich_step(step: dict[str, Any], slice_labels: dict[str, str]) -> dict[str
         display["feature_metrics"] = compact
     elif name == "synthesize":
         display["answer"] = output.get("synthesized_answer")
-        citations = []
-        for item in output.get("grounded_citations") or []:
-            if not isinstance(item, dict):
-                continue
-            citations.append(
-                {
-                    "citation_id": item.get("citation_id"),
-                    "slice": slice_labels.get(str(item.get("slice_id") or ""), item.get("slice_label")),
-                    "corpus": item.get("corpus_name")
-                    or corpus_name_for_id(str(item.get("dataset_id") or "")),
-                    "similarity": item.get("similarity"),
-                    "used_in_answer": item.get("used_in_answer"),
-                    "text": _truncate(item.get("text_snippet") or item.get("text"), 360),
-                }
-            )
-        display["citations"] = citations
+        display["citations"] = [
+            _normalize_citation(item, slice_labels)
+            for item in output.get("grounded_citations") or []
+            if isinstance(item, dict)
+        ]
     elif name == "evaluate_answer":
         display["nlg_evaluation"] = output.get("nlg_evaluation")
     elif name == "export_benchmark":
@@ -177,7 +266,14 @@ def presentation_tree(payload: Any) -> Any:
     for key in _END_KEYS:
         value = payload.get(key)
         if value not in (None, "", []):
-            ordered[key] = value
+            if key == "grounded_citations" and isinstance(value, list):
+                ordered[key] = [
+                    _normalize_citation(item, slice_labels)
+                    for item in value
+                    if isinstance(item, dict)
+                ]
+            else:
+                ordered[key] = value
     return ordered
 
 
@@ -203,8 +299,12 @@ def _label(key: str, value: Any) -> str:
     return html.escape(key)
 
 
-def _node_html(key: str, value: Any, *, open_node: bool = False) -> str:
+def _node_html(key: str, value: Any, *, open_node: bool = False, citations: list[Any] | None = None) -> str:
     opened = " open" if open_node else ""
+    if key in {"synthesized_answer", "answer"} and isinstance(value, str):
+        return _answer_block(key, value, citations)
+    if key in {"grounded_citations", "citations"} and isinstance(value, list):
+        return _citations_block(key, value, open_node=True, anchors=key == "grounded_citations")
     if value is None or isinstance(value, (str, int, float, bool)):
         return (
             f'<div class="leaf"><span class="key">{html.escape(key)}</span>'
@@ -219,7 +319,8 @@ def _node_html(key: str, value: Any, *, open_node: bool = False) -> str:
             )
         is_pipeline = bool(value and isinstance(value[0], dict) and value[0].get("name") and value[0].get("title"))
         children = "".join(
-            _node_html(str(index), item, open_node=is_pipeline) for index, item in enumerate(value, start=1)
+            _node_html(str(index), item, open_node=is_pipeline, citations=citations)
+            for index, item in enumerate(value, start=1)
         )
         return (
             f"<details{opened}><summary>{_label(key, value)}</summary>"
@@ -249,8 +350,9 @@ def _node_html(key: str, value: Any, *, open_node: bool = False) -> str:
             "route",
             "error",
         }
+        step_citations = value.get("citations") if isinstance(value.get("citations"), list) else citations
         children = "".join(
-            _node_html(child, value[child], open_node=child in open_children)
+            _node_html(child, value[child], open_node=child in open_children, citations=step_citations)
             for child in value
             if child not in skip
         )
@@ -258,7 +360,7 @@ def _node_html(key: str, value: Any, *, open_node: bool = False) -> str:
             f"<details{opened} class=\"step {outcome}\"><summary>{summary}</summary>"
             f'<div class="kids">{children}</div></details>'
         )
-    children = "".join(_node_html(child, value[child]) for child in value)
+    children = "".join(_node_html(child, value[child], citations=citations) for child in value)
     return (
         f"<details{opened}><summary>{_label(key, value)}</summary>"
         f'<div class="kids">{children}</div></details>'
@@ -269,9 +371,10 @@ def tree_markup(payload: Any) -> str:
     ordered = presentation_tree(payload)
     if not isinstance(ordered, dict):
         return f'<div class="tree">{_leaf(ordered)}</div>'
-    open_keys = {"pipeline", "question", "status", "synthesized_answer", "slices"}
+    citations = ordered.get("grounded_citations") if isinstance(ordered.get("grounded_citations"), list) else []
+    open_keys = {"pipeline", "question", "status", "synthesized_answer", "slices", "grounded_citations"}
     parts = [
-        _node_html(key, value, open_node=key in open_keys)
+        _node_html(key, value, open_node=key in open_keys, citations=citations)
         for key, value in ordered.items()
     ]
     return f'<div class="tree">{"".join(parts)}</div>'
@@ -335,8 +438,44 @@ _PAGE = """<!DOCTYPE html>
     }
     .bar label.file input { display: none; }
     main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 64px; }
-    .empty, .error { padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+    .empty, .error, .progress { padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
     .error { color: var(--fail); }
+    .progress { background: #eff6ff; border-color: #bfdbfe; color: var(--accent); margin-bottom: 12px; }
+    .progress.done { background: var(--ok-bg); border-color: #bbf7d0; color: var(--ok); }
+    .progress.fail { background: #fee2e2; border-color: #fecaca; color: var(--fail); }
+    .answer-block {
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+      padding: 12px 14px; margin: 10px 0;
+    }
+    .answer-block .key { display: block; margin-bottom: 6px; color: var(--muted); font-size: .85rem; }
+    .answer { white-space: pre-wrap; }
+    a.ref, .ref-chip {
+      display: inline; border-radius: 4px; padding: 0 5px; font-weight: 700;
+      text-decoration: none; font-size: .85em; cursor: pointer;
+    }
+    a.ref.missing { background: #fee2e2; color: #991b1b; }
+    .t1, .t1 .ref-chip { background: #fef3c7; color: #92400e; }
+    .t2, .t2 .ref-chip { background: #dbeafe; color: #1e3a8a; }
+    .t3, .t3 .ref-chip { background: #dcfce7; color: #166534; }
+    .t4, .t4 .ref-chip { background: #fce7f3; color: #9d174d; }
+    .t5, .t5 .ref-chip { background: #e0e7ff; color: #3730a3; }
+    .t6, .t6 .ref-chip { background: #ffedd5; color: #9a3412; }
+    .cite-list { display: grid; gap: 8px; margin: 8px 0 12px; }
+    .cite {
+      border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px;
+      padding: 10px 12px; background: var(--card);
+    }
+    .cite.t1 { border-left-color: #d97706; }
+    .cite.t2 { border-left-color: #2563eb; }
+    .cite.t3 { border-left-color: #16a34a; }
+    .cite.t4 { border-left-color: #db2777; }
+    .cite.t5 { border-left-color: #4f46e5; }
+    .cite.t6 { border-left-color: #ea580c; }
+    .cite header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+    .cite-meta { color: var(--muted); font-size: .85rem; }
+    .cite p { margin: 0; white-space: pre-wrap; }
+    .cite.unused { opacity: .55; }
+    .cite.lit, a.ref.lit, .cite.hover, a.ref.hover, .cite:target { box-shadow: 0 0 0 2px currentColor; }
     .tree details {
       border-left: 1px solid var(--line);
       margin-left: 8px; padding-left: 10px;
@@ -370,10 +509,9 @@ _PAGE = """<!DOCTYPE html>
 <body>
   <header>
     <h1>ThematicExploration</h1>
-    <p>Pipeline tree from the first step to the last. Open a saved JSON run, or ask a question.</p>
+    <p>Pipeline tree from the first step to the last. Run mints a Bearer token, then streams each step.</p>
     <form class="bar" id="run-form">
       <input type="text" name="query" id="query" placeholder="How did a marriage look like in the 1800s compared to now?" required/>
-      <input type="password" name="token" id="token" placeholder="Bearer token (auto if empty)" autocomplete="off"/>
       <select id="decompose_mode" title="decompose_mode">
         <option value="few-shot">few-shot</option>
         <option value="predict">predict</option>
@@ -388,6 +526,7 @@ _PAGE = """<!DOCTYPE html>
   </header>
   <main>
     __ERROR__
+    <p id="progress" class="progress" hidden></p>
     <div id="view">__TREE__</div>
   </main>
   <script>
@@ -421,6 +560,25 @@ _PAGE = """<!DOCTYPE html>
         labels[id] = corpus ? (label + " · " + corpus) : label;
       }
       return labels;
+    }
+
+    function tone(citationId) {
+      const digits = String(citationId || "").replace(/\\D/g, "");
+      const number = parseInt(digits || "1", 10);
+      return "t" + ((((number - 1) % 6) + 6) % 6 + 1);
+    }
+
+    function normalizeCitation(item, labels) {
+      labels = labels || {};
+      return {
+        citation_id: item.citation_id,
+        slice: labels[item.slice_id] || item.slice_label || item.slice,
+        corpus: item.corpus_name || item.corpus || CORPUS[item.dataset_id] || item.dataset_id || "",
+        similarity: item.similarity,
+        used_in_answer: item.used_in_answer !== false,
+        text: truncate(item.text_snippet || item.text, 360),
+        source_document: item.source_document || item.doc_id
+      };
     }
 
     function enrichPassages(passages, labels) {
@@ -484,14 +642,7 @@ _PAGE = """<!DOCTYPE html>
       }
       if (name === "synthesize") {
         display.answer = output.synthesized_answer;
-        display.citations = (output.grounded_citations || []).map(item => ({
-          citation_id: item.citation_id,
-          slice: labels[item.slice_id] || item.slice_label,
-          corpus: item.corpus_name || CORPUS[item.dataset_id] || item.dataset_id,
-          similarity: item.similarity,
-          used_in_answer: item.used_in_answer,
-          text: truncate(item.text_snippet || item.text, 360)
-        }));
+        display.citations = (output.grounded_citations || []).map(item => normalizeCitation(item, labels));
       }
       if (name === "evaluate_answer") display.nlg_evaluation = output.nlg_evaluation;
       if (name === "export_benchmark") {
@@ -525,7 +676,9 @@ _PAGE = """<!DOCTYPE html>
       for (const key of ENDING) {
         const value = payload[key];
         if (value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0)) {
-          ordered[key] = value;
+          ordered[key] = (key === "grounded_citations" && Array.isArray(value))
+            ? value.filter(item => item && typeof item === "object").map(item => normalizeCitation(item, labels))
+            : value;
         }
       }
       return ordered;
@@ -560,8 +713,59 @@ _PAGE = """<!DOCTYPE html>
       return escapeHtml(key);
     }
 
-    function nodeHtml(key, value, openNode) {
+    function linkRefs(text, known) {
+      const source = String(text || "");
+      const pattern = /\\[(ref_\\d+)\\]/g;
+      let out = "";
+      let cursor = 0;
+      let match;
+      while ((match = pattern.exec(source))) {
+        out += escapeHtml(source.slice(cursor, match.index));
+        const citationId = match[1];
+        const missing = known && known.size && !known.has(citationId) ? " missing" : "";
+        out += '<a class="ref ' + tone(citationId) + missing + '" href="#cite-' + escapeHtml(citationId) +
+          '" data-ref="' + escapeHtml(citationId) + '">' + escapeHtml(match[0]) + "</a>";
+        cursor = match.index + match[0].length;
+      }
+      return out + escapeHtml(source.slice(cursor));
+    }
+
+    function answerBlock(key, text, citations) {
+      const known = new Set((citations || []).map(item => item && item.citation_id).filter(Boolean));
+      return '<div class="answer-block"><span class="key">' + escapeHtml(key) +
+        '</span><div class="answer">' + linkRefs(text, known) + "</div></div>";
+    }
+
+    function citationCard(item, anchors) {
+      const citationId = String((item && item.citation_id) || "");
+      const unused = item && item.used_in_answer === false ? " unused" : "";
+      const bits = [item.corpus, item.slice, item.source_document].filter(Boolean);
+      if (item.similarity !== null && item.similarity !== undefined && item.similarity !== "") {
+        bits.push("sim " + item.similarity);
+      }
+      const meta = bits.join(" · ");
+      const identity = anchors && citationId ? ' id="cite-' + escapeHtml(citationId) + '"' : "";
+      return '<article class="cite ' + tone(citationId) + unused + '"' + identity +
+        ' data-ref="' + escapeHtml(citationId) + '"><header><span class="ref-chip ' + tone(citationId) + '">' +
+        escapeHtml(citationId || "citation") + "</span>" +
+        (meta ? '<span class="cite-meta">' + escapeHtml(meta) + "</span>" : "") +
+        "</header><p>" + escapeHtml((item && item.text) || "") + "</p></article>";
+    }
+
+    function citationsBlock(key, items, anchors) {
+      const cards = (items || []).map(item => citationCard(item && item.text !== undefined ? item : normalizeCitation(item || {}), !!anchors)).join("");
+      return '<details open class="cites"><summary>' + label(key, items) +
+        '</summary><div class="cite-list">' + cards + "</div></details>";
+    }
+
+    function nodeHtml(key, value, openNode, citations) {
       const opened = openNode ? " open" : "";
+      if ((key === "synthesized_answer" || key === "answer") && typeof value === "string") {
+        return answerBlock(key, value, citations);
+      }
+      if ((key === "grounded_citations" || key === "citations") && Array.isArray(value)) {
+        return citationsBlock(key, value, key === "grounded_citations");
+      }
       if (value === null || typeof value !== "object") {
         return '<div class="leaf"><span class="key">' + escapeHtml(key) + '</span><span class="colon">:</span> ' + leaf(value) + '</div>';
       }
@@ -572,7 +776,7 @@ _PAGE = """<!DOCTYPE html>
           return "<details" + opened + "><summary>" + label(key, value) + "</summary><ol class=\\"scalars\\">" + items + "</ol></details>";
         }
         const isPipeline = value.length && value[0] && value[0].name && value[0].title;
-        const children = value.map((item, index) => nodeHtml(String(index + 1), item, !!isPipeline)).join("");
+        const children = value.map((item, index) => nodeHtml(String(index + 1), item, !!isPipeline, citations)).join("");
         return "<details" + opened + "><summary>" + label(key, value) + "</summary><div class=\\"kids\\">" + children + "</div></details>";
       }
       if (/^\\d+$/.test(key) && value.name && value.title) {
@@ -582,13 +786,14 @@ _PAGE = """<!DOCTYPE html>
         let summary = '<span class="badge">' + escapeHtml(key) + "</span> " + title + " <code>" + name + "</code> <span class=\\"outcome " + outcome + "\\">" + outcome + "</span>";
         if (value.summary) summary += '<span class="hint">' + escapeHtml(value.summary) + "</span>";
         const skip = new Set(["step", "name", "title", "outcome", "summary"]);
+        const stepCitations = Array.isArray(value.citations) ? value.citations : citations;
         const children = Object.keys(value)
           .filter(child => !skip.has(child))
-          .map(child => nodeHtml(child, value[child], OPEN_STEP_KEYS.has(child)))
+          .map(child => nodeHtml(child, value[child], OPEN_STEP_KEYS.has(child), stepCitations))
           .join("");
         return "<details" + opened + ' class="step ' + outcome + '"><summary>' + summary + "</summary><div class=\\"kids\\">" + children + "</div></details>";
       }
-      const children = Object.keys(value).map(child => nodeHtml(child, value[child], false)).join("");
+      const children = Object.keys(value).map(child => nodeHtml(child, value[child], false, citations)).join("");
       return "<details" + opened + "><summary>" + label(key, value) + "</summary><div class=\\"kids\\">" + children + "</div></details>";
     }
 
@@ -599,10 +804,37 @@ _PAGE = """<!DOCTYPE html>
         view.innerHTML = "<p class=\\"empty\\">Nothing to show.</p>";
         return;
       }
-      const openKeys = new Set(["pipeline", "question", "status", "synthesized_answer", "slices"]);
-      view.innerHTML = '<div class="tree">' + Object.keys(ordered).map(key => nodeHtml(key, ordered[key], openKeys.has(key))).join("") + "</div>";
+      const citations = Array.isArray(ordered.grounded_citations) ? ordered.grounded_citations : [];
+      const openKeys = new Set(["pipeline", "question", "status", "synthesized_answer", "slices", "grounded_citations"]);
+      view.innerHTML = '<div class="tree">' + Object.keys(ordered).map(key => nodeHtml(key, ordered[key], openKeys.has(key), citations)).join("") + "</div>";
     }
     window.renderPayload = renderPayload;
+
+    const view = document.getElementById("view");
+    view.addEventListener("click", (event) => {
+      const el = event.target.closest("[data-ref]");
+      if (!el) return;
+      const citationId = el.getAttribute("data-ref");
+      if (el.tagName === "A") event.preventDefault();
+      view.querySelectorAll(".lit").forEach(node => node.classList.remove("lit"));
+      view.querySelectorAll('[data-ref="' + citationId + '"]').forEach(node => node.classList.add("lit"));
+      const target = document.getElementById("cite-" + citationId);
+      if (target) {
+        const details = target.closest("details");
+        if (details) details.open = true;
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+    view.addEventListener("mouseover", (event) => {
+      const el = event.target.closest("[data-ref]");
+      if (!el) return;
+      view.querySelectorAll('[data-ref="' + el.getAttribute("data-ref") + '"]').forEach(node => node.classList.add("hover"));
+    });
+    view.addEventListener("mouseout", (event) => {
+      const el = event.target.closest("[data-ref]");
+      if (!el) return;
+      view.querySelectorAll('[data-ref="' + el.getAttribute("data-ref") + '"]').forEach(node => node.classList.remove("hover"));
+    });
 
     document.getElementById("file").addEventListener("change", async (event) => {
       const file = event.target.files && event.target.files[0];
@@ -616,11 +848,11 @@ _PAGE = """<!DOCTYPE html>
       "https://datagems-dev.scayle.es/language-pilot/tree/token"
     ];
 
-    async function fetchDefaultToken() {
+    async function mintAccessToken() {
       let lastError = "token endpoint unavailable";
       for (const url of TOKEN_ENDPOINTS) {
         try {
-          const response = await fetch(url, { headers: { Accept: "application/json" } });
+          const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
           if (!response.ok) {
             lastError = "HTTP " + response.status + " from " + url;
             continue;
@@ -636,63 +868,190 @@ _PAGE = """<!DOCTYPE html>
       throw new Error(lastError);
     }
 
-    async function ensureAccessToken() {
-      const field = document.getElementById("token");
-      const typed = field.value.trim();
-      if (typed) {
-        sessionStorage.setItem("dg_access_token", typed);
-        return typed;
+    const STREAM_ENDPOINTS = [
+      "ThematicExploration/stream",
+      "/language-pilot/ThematicExploration/stream",
+      "https://datagems-dev.scayle.es/language-pilot/ThematicExploration/stream"
+    ];
+    const FALLBACK_ENDPOINTS = [
+      "ThematicExploration",
+      "/language-pilot/ThematicExploration",
+      "https://datagems-dev.scayle.es/language-pilot/ThematicExploration"
+    ];
+
+    function setProgress(text, kind) {
+      const progress = document.getElementById("progress");
+      if (!text) {
+        progress.hidden = true;
+        progress.textContent = "";
+        progress.className = "progress";
+        return;
       }
-      const saved = sessionStorage.getItem("dg_access_token") || "";
-      if (saved) {
-        field.value = saved;
-        return saved;
+      progress.hidden = false;
+      progress.className = "progress" + (kind ? " " + kind : "");
+      progress.textContent = text;
+    }
+
+    function progressFromPayload(payload) {
+      const steps = (payload && payload.pipeline) || [];
+      const last = steps[steps.length - 1] || {};
+      const title = last.title || last.name || "";
+      if (payload && payload.status === "running") {
+        setProgress("Running pipeline… " + steps.length + " step(s) done" + (title ? " — " + title : ""), "");
+        return;
       }
-      const token = await fetchDefaultToken();
-      field.value = token;
-      sessionStorage.setItem("dg_access_token", token);
-      return token;
+      if (payload && payload.memory && payload.memory.hit) {
+        setProgress("Done — reused stored result (memory hit).", "done");
+        return;
+      }
+      if (payload && (payload.status === "timeout" || payload.status === "error")) {
+        setProgress(payload.error || ("Stopped: " + payload.status), "fail");
+        return;
+      }
+      setProgress("Done — " + (payload && payload.status ? payload.status : "ok") + ".", "done");
+    }
+
+    function parseSseChunk(chunk) {
+      let event = "message";
+      const dataLines = [];
+      for (const raw of chunk.split("\\n")) {
+        const line = raw.replace(/\\r$/, "");
+        if (!line || line.startsWith(":")) continue;
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+      }
+      if (!dataLines.length) return null;
+      return { event, payload: JSON.parse(dataLines.join("\\n")) };
+    }
+
+    async function readSse(response, onEvent) {
+      if (!response.body || !response.body.getReader) {
+        const text = await response.text();
+        for (const chunk of text.split("\\n\\n")) {
+          const parsed = parseSseChunk(chunk);
+          if (parsed) onEvent(parsed.event, parsed.payload);
+        }
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\\n\\n")) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const parsed = parseSseChunk(chunk);
+          if (parsed) onEvent(parsed.event, parsed.payload);
+        }
+      }
+      if (buffer.trim()) {
+        const parsed = parseSseChunk(buffer);
+        if (parsed) onEvent(parsed.event, parsed.payload);
+      }
+    }
+
+    async function postFirstOk(urls, headers, body) {
+      let lastError = "endpoint unavailable";
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { method: "POST", headers, body });
+          if (response.status === 404) {
+            lastError = "HTTP 404 from " + url;
+            continue;
+          }
+          return { url, response };
+        } catch (error) {
+          lastError = String(error && error.message ? error.message : error);
+        }
+      }
+      throw new Error(lastError);
     }
 
     document.getElementById("run-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const view = document.getElementById("view");
-      view.innerHTML = "<p class=\\"empty\\">Running pipeline…</p>";
+      const runButton = event.submitter || document.querySelector("#run-form button[type=submit]");
+      view.innerHTML = "";
+      setProgress("Getting access token…", "");
+      if (runButton) runButton.disabled = true;
       let token = "";
       try {
-        token = await ensureAccessToken();
+        token = await mintAccessToken();
       } catch (error) {
-        view.innerHTML = '<p class="error">Could not get a default Bearer token. Paste one manually. ' +
+        setProgress("", "");
+        view.innerHTML = '<p class="error">Could not create a Bearer token. ' +
           escapeHtml(String(error && error.message ? error.message : error)) + "</p>";
+        if (runButton) runButton.disabled = false;
         return;
       }
-      const headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-      };
-      const response = await fetch("ThematicExploration", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          query: document.getElementById("query").value,
-          decompose_mode: document.getElementById("decompose_mode").value,
-          use_memory: true,
-          refresh: !!document.getElementById("refresh").checked,
-        }),
+      setProgress("Running pipeline…", "");
+      const body = JSON.stringify({
+        query: document.getElementById("query").value,
+        decompose_mode: document.getElementById("decompose_mode").value,
+        use_memory: true,
+        refresh: !!document.getElementById("refresh").checked,
       });
-      const payload = await response.json();
-      if (!response.ok) {
-        if (response.status === 401) sessionStorage.removeItem("dg_access_token");
-        view.innerHTML = '<p class="error">' + escapeHtml(JSON.stringify(payload)) + '</p>';
-        return;
+
+      async function postPipeline(accessToken) {
+        const headers = {
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream, application/json",
+          "Authorization": "Bearer " + accessToken,
+        };
+        let usedStream = true;
+        let posted;
+        try {
+          posted = await postFirstOk(STREAM_ENDPOINTS, headers, body);
+          if (!posted.response.ok && posted.response.status !== 401) {
+            usedStream = false;
+            posted = await postFirstOk(FALLBACK_ENDPOINTS, headers, body);
+          }
+        } catch (error) {
+          usedStream = false;
+          posted = await postFirstOk(FALLBACK_ENDPOINTS, headers, body);
+        }
+        return { usedStream, response: posted.response };
       }
-      renderPayload(payload);
+
+      try {
+        let posted = await postPipeline(token);
+        if (posted.response.status === 401) {
+          setProgress("Access token expired — getting a new one…", "");
+          token = await mintAccessToken();
+          posted = await postPipeline(token);
+        }
+        const response = posted.response;
+        const usedStream = posted.usedStream;
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({ detail: "HTTP " + response.status }));
+          setProgress("", "");
+          view.innerHTML = '<p class="error">' + escapeHtml(JSON.stringify(payload)) + "</p>";
+          return;
+        }
+        const contentType = String(response.headers.get("content-type") || "");
+        if (usedStream && contentType.includes("text/event-stream")) {
+          await readSse(response, (_event, payload) => {
+            progressFromPayload(payload);
+            renderPayload(payload);
+          });
+          return;
+        }
+        const payload = await response.json();
+        progressFromPayload(payload);
+        renderPayload(payload);
+      } catch (error) {
+        setProgress("", "");
+        view.innerHTML = '<p class="error">' + escapeHtml(String(error && error.message ? error.message : error)) + "</p>";
+      } finally {
+        if (runButton) runButton.disabled = false;
+      }
     });
 
     if (EMBEDDED) renderPayload(EMBEDDED);
-    ensureAccessToken().catch(() => {
-      /* leave the field empty; Run will surface the error */
-    });
   </script>
 </body>
 </html>

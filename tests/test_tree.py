@@ -101,7 +101,11 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert "text/html" in page.headers["content-type"]
     assert "ThematicExploration" in page.text
     assert "tree/token" in page.text
-    assert "ensureAccessToken" in page.text
+    assert "mintAccessToken" in page.text
+    assert "Getting access token" in page.text
+    assert "id=\"token\"" not in page.text
+    assert "ThematicExploration/stream" in page.text
+    assert "Running pipeline" in page.text
     rendered = client.post(
         "/tree",
         json={
@@ -117,8 +121,56 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert rendered.status_code == 200
     html = rendered.text
     assert html.index("Route the question") < html.index("Disambiguate")
-    assert "A contract [ref_1]." in html
+    assert "[ref_1]" in html
+    assert "A contract" in html
     assert tree_page({"question": "Q"})  # page still builds
+
+
+def test_tree_markup_links_answer_refs_to_citations():
+    markup = tree_markup(
+        {
+            "question": "How did marriage look?",
+            "status": "ok",
+            "pipeline": [
+                {
+                    "step": 1,
+                    "name": "synthesize",
+                    "title": "Synthesize a grounded answer",
+                    "outcome": "ok",
+                    "summary": "wrote",
+                    "output": {
+                        "synthesized_answer": "Marriage was a contract [ref_1].",
+                        "grounded_citations": [
+                            {
+                                "citation_id": "ref_1",
+                                "slice_id": "slice_1",
+                                "slice_label": "19th century",
+                                "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68",
+                                "text_snippet": "Coverture bound a wife to her husband.",
+                                "used_in_answer": True,
+                            }
+                        ],
+                    },
+                }
+            ],
+            "synthesized_answer": "Marriage was a contract [ref_1].",
+            "grounded_citations": [
+                {
+                    "citation_id": "ref_1",
+                    "slice_id": "slice_1",
+                    "slice_label": "19th century",
+                    "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68",
+                    "text_snippet": "Coverture bound a wife to her husband.",
+                    "used_in_answer": True,
+                }
+            ],
+        }
+    )
+    assert 'data-ref="ref_1"' in markup
+    assert 'href="#cite-ref_1"' in markup
+    assert 'id="cite-ref_1"' in markup
+    assert "Coverture bound a wife to her husband." in markup
+    assert "19th C. Knowledge Project (Britannica)" in markup
 
 
 def test_tree_token_endpoint_returns_access_token(monkeypatch):
@@ -128,10 +180,42 @@ def test_tree_token_endpoint_returns_access_token(monkeypatch):
     monkeypatch.setenv("TREE_AUTO_TOKEN", "true")
     monkeypatch.setattr(
         "src.app.main.cached_oidc_access_token",
-        lambda: "demo-jwt-token",
+        lambda **kwargs: "demo-jwt-token",
     )
     client = TestClient(app)
     response = client.get("/tree/token")
     assert response.status_code == 200
     assert response.json()["access_token"] == "demo-jwt-token"
     assert response.json()["token_type"] == "Bearer"
+    assert response.json()["expires_in"] is None
+
+
+def test_tree_token_refreshes_expired_jwt(monkeypatch):
+    import base64
+    import json
+    import time
+
+    from fastapi.testclient import TestClient
+    from src.app.main import app
+
+    def encode(payload: dict) -> str:
+        body = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+        return f"header.{body}.sig"
+
+    expired = encode({"exp": int(time.time()) - 10})
+    fresh = encode({"exp": int(time.time()) + 300})
+    calls = {"n": 0}
+
+    def fake_cached(*, force: bool = False):
+        calls["n"] += 1
+        return fresh if force else expired
+
+    monkeypatch.setenv("TREE_AUTO_TOKEN", "true")
+    monkeypatch.setattr("src.app.main.cached_oidc_access_token", fake_cached)
+    client = TestClient(app)
+    response = client.get("/tree/token")
+    assert response.status_code == 200
+    assert response.json()["access_token"] == fresh
+    assert response.json()["expires_in"] is not None
+    assert response.json()["expires_in"] > 0
+    assert calls["n"] == 2

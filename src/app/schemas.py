@@ -80,7 +80,9 @@ class ThematicExplorationResponse(BaseModel):
     service: str = "UC4P2 Language Pilot"
     query_id: str = ""
     question: str
-    status: str
+    status: str = Field(
+        description="ok, running (SSE only), clarification, partial, timeout, or error."
+    )
     last_step: str = ""
     failed_step: Optional[str] = Field(
         default=None,
