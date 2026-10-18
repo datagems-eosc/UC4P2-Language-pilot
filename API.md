@@ -143,9 +143,10 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration`
 - Auth: `Authorization: Bearer …` (Keycloak, category D)
-- Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`
+- Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`, `use_memory` (default `true`), `refresh` (default `false`)
 - Script: `scripts/dev/08-thematic-exploration.sh`
 - Until-retrieve script: `scripts/dev/08b-thematic-exploration-until-retrieve.sh`
+- Run memory: same question + options returns the stored result (`memory.hit=true`) instead of re-running. Set `"refresh": true` to force a new pipeline run (and overwrite storage) when checking consistency. Set `"use_memory": false` to never read/write. Files under `RUN_MEMORY_DIR` (default `runs/memory/`).
 - Timeouts / step failures: HTTP 200 with `status` `timeout` or `error`, plus `failed_step`, `error`, and `pipeline[]` for every step completed before the failure (intermediate fields such as `slices`, `qdmr`, `passages` are kept). Soft-failed CDD corpus-analysis stays inside `compute_features` and does not abort the run.
 
 **Standard curl**

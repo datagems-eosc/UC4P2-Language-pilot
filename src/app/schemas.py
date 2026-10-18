@@ -27,6 +27,20 @@ class QueryRequest(BaseModel):
         ),
         examples=["few-shot", "predict", "cot"],
     )
+    use_memory: bool = Field(
+        default=True,
+        description=(
+            "If true (default), reuse a stored result for the same question and options "
+            "instead of re-running the pipeline."
+        ),
+    )
+    refresh: bool = Field(
+        default=False,
+        description=(
+            "If true, ignore stored memory, run the pipeline again, and overwrite the "
+            "stored result. Use this to check consistency across runs."
+        ),
+    )
 
     @field_validator("decompose_mode", mode="before")
     @classmethod
@@ -102,6 +116,13 @@ class ThematicExplorationResponse(BaseModel):
     benchmark: Optional[dict[str, Any]] = None
     steps: list[str] = Field(default_factory=list)
     raw_trace: Optional[list[dict[str, Any]]] = None
+    memory: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Run-memory metadata: hit=true when served from storage; key/path/stored_at "
+            "identify the cached record."
+        ),
+    )
 
 
 CompareResponse = ThematicExplorationResponse

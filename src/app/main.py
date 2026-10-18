@@ -15,6 +15,14 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.app.auth import require_access_token
+from src.app.run_memory import (
+    attach_memory_meta,
+    load_run,
+    memory_enabled,
+    memory_key,
+    save_run,
+    should_store,
+)
 from src.app.runner import PIPELINE_STEPS, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
@@ -59,7 +67,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.13",
+    version="0.1.14",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -154,7 +162,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.13",
+        "version": "0.1.14",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "tree": "GET /tree",
@@ -215,12 +223,47 @@ async def tree_from_json(
 def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplorationResponse:
     # run_compare catches step failures and returns intermediate pipeline[] + failed_step
     # instead of a bare {"detail": "..."}. Soft-failed CDD corpus-analysis stays in-band.
+    k = body.k or 5
+    key = memory_key(
+        body.query,
+        query_id=body.query_id,
+        k=k,
+        decompose_mode=body.decompose_mode,
+        until=until,
+    )
+    request_meta = {
+        "query": body.query,
+        "query_id": body.query_id,
+        "k": k,
+        "decompose_mode": body.decompose_mode,
+        "until": until,
+        "include_trace": body.include_trace,
+    }
+    use_memory = bool(getattr(body, "use_memory", True)) and memory_enabled()
+    refresh = bool(getattr(body, "refresh", False))
+
+    if use_memory and not refresh:
+        cached = load_run(key)
+        if cached is not None:
+            payload = dict(cached["result"])
+            payload["service"] = "UC4P2 Language Pilot"
+            payload["question"] = body.query
+            payload = attach_memory_meta(
+                payload,
+                hit=True,
+                key=str(cached.get("key") or key),
+                stored_at=cached.get("stored_at") if isinstance(cached.get("stored_at"), str) else None,
+                path=cached.get("path") if isinstance(cached.get("path"), str) else None,
+            )
+            logger.info("run memory hit key=%s until=%s", key[:12], until)
+            return ThematicExplorationResponse.model_validate(payload)
+
     payload = run_compare(
         body.query,
         query_id=body.query_id,
         until=until,
         include_trace=body.include_trace,
-        k=body.k or 5,
+        k=k,
         decompose_mode=body.decompose_mode,
     )
     payload["service"] = "UC4P2 Language Pilot"
@@ -233,6 +276,17 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
             until,
             payload.get("error"),
         )
+    if use_memory and should_store(payload):
+        meta = save_run(key, payload, request=request_meta)
+        payload = attach_memory_meta(
+            payload,
+            hit=False,
+            key=str(meta["key"]),
+            stored_at=str(meta.get("stored_at") or ""),
+            path=str(meta.get("path") or ""),
+        )
+    elif refresh or not use_memory:
+        payload = attach_memory_meta(payload, hit=False, key=key)
     return ThematicExplorationResponse.model_validate(payload)
 
 

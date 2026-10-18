@@ -24,6 +24,7 @@ _OVERVIEW_KEYS = (
     "clarification",
     "constraint_errors",
     "slices",
+    "memory",
 )
 
 _END_KEYS = ("synthesized_answer", "nlg_evaluation", "grounded_citations")
@@ -378,6 +379,9 @@ _PAGE = """<!DOCTYPE html>
         <option value="predict">predict</option>
         <option value="cot">cot</option>
       </select>
+      <label class="file" title="Re-run the pipeline even if this question is already stored">
+        <input type="checkbox" id="refresh" style="display:inline;margin-right:6px"/>Refresh
+      </label>
       <button type="submit">Run</button>
       <label class="file">Open JSON<input type="file" id="file" accept=".json,application/json"/></label>
     </form>
@@ -388,7 +392,7 @@ _PAGE = """<!DOCTYPE html>
   </main>
   <script>
     const EMBEDDED = __EMBEDDED__;
-    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","decompose_mode","concept","comparison_type","clarification","constraint_errors","slices"];
+    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","concept","comparison_type","clarification","constraint_errors","slices"];
     const ENDING = ["synthesized_answer","nlg_evaluation","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
@@ -672,6 +676,8 @@ _PAGE = """<!DOCTYPE html>
         body: JSON.stringify({
           query: document.getElementById("query").value,
           decompose_mode: document.getElementById("decompose_mode").value,
+          use_memory: true,
+          refresh: !!document.getElementById("refresh").checked,
         }),
       });
       const payload = await response.json();
