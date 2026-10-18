@@ -36,7 +36,8 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 
 | Method | Path | Stops after |
 |--------|------|-------------|
-| GET | `/tree` | HTML tree of a run (open JSON, or run a question; mints a Bearer on Run, then streams steps) |
+| GET | `/tree` | HTML tree of a run (open JSON, pick a benchmark question from the left drawer, or type one) |
+| GET | `/tree/questions` | Benchmark questions from `data/*.json` for the tree drawer |
 | POST | `/tree` | Same tree, from a posted ThematicExploration JSON |
 | POST | `/ThematicExploration/stream` | Same run as `/ThematicExploration`, one SSE event per finished step |
 | GET | `/steps` | Catalog of step APIs |

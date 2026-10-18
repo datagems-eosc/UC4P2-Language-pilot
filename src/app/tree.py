@@ -437,7 +437,7 @@ _PAGE = """<!DOCTYPE html>
       background: var(--bg);
     }
     header {
-      position: sticky; top: 0; z-index: 2;
+      position: sticky; top: 0; z-index: 4;
       background: var(--accent); color: #fff;
       padding: 14px 20px 16px;
       display: grid; gap: 10px;
@@ -454,7 +454,39 @@ _PAGE = """<!DOCTYPE html>
       border-radius: 6px; padding: 8px 12px; cursor: pointer; font: inherit; font-weight: 600;
     }
     .bar label.file input { display: none; }
-    main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 64px; }
+    .shell { display: flex; align-items: stretch; min-height: calc(100vh - 120px); }
+    aside.drawer {
+      flex: 0 0 320px; width: 320px; background: var(--card);
+      border-right: 1px solid var(--line); display: flex; flex-direction: column;
+      max-height: calc(100vh - 120px); position: sticky; top: 0;
+    }
+    aside.drawer.closed { display: none; }
+    .drawer-head { padding: 12px 12px 8px; border-bottom: 1px solid var(--line); }
+    .drawer-head h2 { margin: 0 0 8px; font-size: .95rem; }
+    .drawer-head input {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+      border-radius: 6px; font: inherit;
+    }
+    .drawer-list { overflow: auto; padding: 8px 8px 24px; }
+    .drawer-concept { margin: 10px 4px 4px; font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    .drawer-q {
+      display: block; width: 100%; text-align: left; border: 0; background: transparent;
+      padding: 8px 8px; border-radius: 6px; cursor: pointer; font: inherit; color: inherit;
+    }
+    .drawer-q:hover, .drawer-q.selected { background: #eff6ff; }
+    .drawer-q .qid { display: inline-block; min-width: 1.6em; margin-right: 6px;
+      background: var(--accent); color: #fff; border-radius: 4px; font-size: .7rem;
+      padding: 1px 5px; text-align: center; }
+    .drawer-q .qtext { font-size: .9rem; }
+    .drawer-empty { padding: 12px; color: var(--muted); }
+    main { flex: 1; min-width: 0; max-width: 1100px; margin: 0 auto; padding: 18px 16px 64px; }
+    @media (max-width: 840px) {
+      aside.drawer {
+        position: fixed; z-index: 3; left: 0; top: 0; bottom: 0; max-height: none;
+        box-shadow: 8px 0 24px rgba(0,0,0,.18);
+      }
+    }
     .empty, .error, .progress { padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
     .error { color: var(--fail); }
     .progress { background: #eff6ff; border-color: #bfdbfe; color: var(--accent); margin-bottom: 12px; }
@@ -529,7 +561,9 @@ _PAGE = """<!DOCTYPE html>
     <h1>ThematicExploration</h1>
     <p>Pipeline tree from the first step to the last. Run mints a Bearer token, then streams each step.</p>
     <form class="bar" id="run-form">
+      <button type="button" id="toggle-drawer" title="Benchmark questions">Questions</button>
       <input type="text" name="query" id="query" placeholder="How did a marriage look like in the 1800s compared to now?" required/>
+      <input type="hidden" name="query_id" id="query_id" value=""/>
       <select id="decompose_mode" title="decompose_mode">
         <option value="few-shot">few-shot</option>
         <option value="predict">predict</option>
@@ -542,11 +576,20 @@ _PAGE = """<!DOCTYPE html>
       <label class="file">Open JSON<input type="file" id="file" accept=".json,application/json"/></label>
     </form>
   </header>
-  <main>
-    __ERROR__
-    <p id="progress" class="progress" hidden></p>
-    <div id="view">__TREE__</div>
-  </main>
+  <div class="shell">
+    <aside class="drawer" id="drawer">
+      <div class="drawer-head">
+        <h2>Benchmark questions</h2>
+        <input type="search" id="question-filter" placeholder="Filter by id, concept, or text" autocomplete="off"/>
+      </div>
+      <div class="drawer-list" id="question-list"><p class="drawer-empty">Loading questions…</p></div>
+    </aside>
+    <main>
+      __ERROR__
+      <p id="progress" class="progress" hidden></p>
+      <div id="view">__TREE__</div>
+    </main>
+  </div>
   <script>
     const EMBEDDED = __EMBEDDED__;
     const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","concept","comparison_type","clarification","constraint_errors","slices"];
@@ -871,42 +914,22 @@ _PAGE = """<!DOCTYPE html>
       renderPayload(JSON.parse(await file.text()));
     });
 
-    const TOKEN_ENDPOINTS = [
-      "tree/token",
-      "/language-pilot/tree/token",
-      "https://datagems-dev.scayle.es/language-pilot/tree/token"
-    ];
-
     async function mintAccessToken() {
-      let lastError = "token endpoint unavailable";
-      for (const url of TOKEN_ENDPOINTS) {
-        try {
-          const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
-          if (!response.ok) {
-            lastError = "HTTP " + response.status + " from " + url;
-            continue;
-          }
-          const payload = await response.json();
-          const token = payload && payload.access_token;
-          if (token) return String(token);
-          lastError = "no access_token in response from " + url;
-        } catch (error) {
-          lastError = String(error && error.message ? error.message : error);
-        }
-      }
-      throw new Error(lastError);
+      const response = await fetch(apiUrl("tree/token"), { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error("HTTP " + response.status + " from tree/token");
+      const payload = await response.json();
+      const token = payload && payload.access_token;
+      if (!token) throw new Error("no access_token in tree/token response");
+      return String(token);
     }
 
-    const STREAM_ENDPOINTS = [
-      "ThematicExploration/stream",
-      "/language-pilot/ThematicExploration/stream",
-      "https://datagems-dev.scayle.es/language-pilot/ThematicExploration/stream"
-    ];
-    const FALLBACK_ENDPOINTS = [
-      "ThematicExploration",
-      "/language-pilot/ThematicExploration",
-      "https://datagems-dev.scayle.es/language-pilot/ThematicExploration"
-    ];
+    function apiUrl(suffix) {
+      const base = location.pathname.replace(/\\/tree\\/?$/, "/");
+      const prefix = base.endsWith("/") ? base : base + "/";
+      return prefix + String(suffix || "").replace(/^\\//, "");
+    }
+    const STREAM_URL = apiUrl("ThematicExploration/stream");
+    const FALLBACK_URL = apiUrl("ThematicExploration");
 
     function setProgress(text, kind) {
       const progress = document.getElementById("progress");
@@ -983,21 +1006,8 @@ _PAGE = """<!DOCTYPE html>
       }
     }
 
-    async function postFirstOk(urls, headers, body) {
-      let lastError = "endpoint unavailable";
-      for (const url of urls) {
-        try {
-          const response = await fetch(url, { method: "POST", headers, body });
-          if (response.status === 404) {
-            lastError = "HTTP 404 from " + url;
-            continue;
-          }
-          return { url, response };
-        } catch (error) {
-          lastError = String(error && error.message ? error.message : error);
-        }
-      }
-      throw new Error(lastError);
+    async function postUrl(url, headers, body) {
+      return fetch(url, { method: "POST", headers, body });
     }
 
     document.getElementById("run-form").addEventListener("submit", async (event) => {
@@ -1018,60 +1028,65 @@ _PAGE = """<!DOCTYPE html>
         return;
       }
       setProgress("Running pipeline…", "");
+      const selectedId = document.getElementById("query_id").value.trim();
       const body = JSON.stringify({
         query: document.getElementById("query").value,
+        query_id: selectedId || undefined,
         decompose_mode: document.getElementById("decompose_mode").value,
         use_memory: true,
         refresh: !!document.getElementById("refresh").checked,
       });
 
-      async function postPipeline(accessToken) {
+      async function postPipeline(accessToken, url) {
         const headers = {
           "Content-Type": "application/json",
           "Accept": "text/event-stream, application/json",
           "Authorization": "Bearer " + accessToken,
         };
-        let usedStream = true;
-        let posted;
-        try {
-          posted = await postFirstOk(STREAM_ENDPOINTS, headers, body);
-          if (!posted.response.ok && posted.response.status !== 401) {
-            usedStream = false;
-            posted = await postFirstOk(FALLBACK_ENDPOINTS, headers, body);
-          }
-        } catch (error) {
-          usedStream = false;
-          posted = await postFirstOk(FALLBACK_ENDPOINTS, headers, body);
-        }
-        return { usedStream, response: posted.response };
+        return postUrl(url, headers, body);
       }
 
       try {
-        let posted = await postPipeline(token);
-        if (posted.response.status === 401) {
+        let response = await postPipeline(token, STREAM_URL);
+        if (response.status === 401) {
           setProgress("Access token expired — getting a new one…", "");
           token = await mintAccessToken();
-          posted = await postPipeline(token);
+          response = await postPipeline(token, STREAM_URL);
         }
-        const response = posted.response;
-        const usedStream = posted.usedStream;
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({ detail: "HTTP " + response.status }));
-          setProgress("", "");
-          view.innerHTML = '<p class="error">' + escapeHtml(JSON.stringify(payload)) + "</p>";
+        if (!response.ok || !(String(response.headers.get("content-type") || "").includes("text/event-stream"))) {
+          if (!response.ok && response.status !== 401) {
+            response = await postPipeline(token, FALLBACK_URL);
+          }
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({ detail: "HTTP " + response.status }));
+            setProgress("", "");
+            view.innerHTML = '<p class="error">' + escapeHtml(JSON.stringify(payload)) + "</p>";
+            return;
+          }
+          const payload = await response.json();
+          progressFromPayload(payload);
+          renderPayload(payload);
           return;
         }
-        const contentType = String(response.headers.get("content-type") || "");
-        if (usedStream && contentType.includes("text/event-stream")) {
+        let lastPayload = null;
+        try {
           await readSse(response, (_event, payload) => {
+            lastPayload = payload;
             progressFromPayload(payload);
             renderPayload(payload);
           });
-          return;
+        } catch (error) {
+          if (lastPayload) {
+            progressFromPayload(lastPayload);
+            setProgress(
+              "Stream interrupted after " + ((lastPayload.pipeline || []).length) +
+                " step(s): " + (error && error.message ? error.message : error),
+              lastPayload.status === "running" ? "fail" : ""
+            );
+            return;
+          }
+          throw error;
         }
-        const payload = await response.json();
-        progressFromPayload(payload);
-        renderPayload(payload);
       } catch (error) {
         setProgress("", "");
         view.innerHTML = '<p class="error">' + escapeHtml(String(error && error.message ? error.message : error)) + "</p>";
@@ -1081,6 +1096,77 @@ _PAGE = """<!DOCTYPE html>
     });
 
     if (EMBEDDED) renderPayload(EMBEDDED);
+
+    let catalog = [];
+
+    function renderQuestionList(items) {
+      const root = document.getElementById("question-list");
+      const selected = document.getElementById("query_id").value;
+      if (!items.length) {
+        root.innerHTML = '<p class="drawer-empty">No matching questions.</p>';
+        return;
+      }
+      const groups = {};
+      for (const item of items) {
+        const concept = item.concept || "Other";
+        (groups[concept] || (groups[concept] = [])).push(item);
+      }
+      root.innerHTML = Object.keys(groups).map(concept => {
+        const rows = groups[concept].map(item => {
+          const klass = item.query_id === selected ? "drawer-q selected" : "drawer-q";
+          return '<button type="button" class="' + klass + '" data-id="' + escapeHtml(item.query_id) + '">' +
+            '<span class="qid">' + escapeHtml(item.query_id || "–") + "</span>" +
+            '<span class="qtext">' + escapeHtml(item.question) + "</span></button>";
+        }).join("");
+        return '<div class="drawer-concept">' + escapeHtml(concept) + "</div>" + rows;
+      }).join("");
+    }
+
+    function applyQuestionFilter() {
+      const needle = document.getElementById("question-filter").value.trim().toLowerCase();
+      const filtered = catalog.filter(item => {
+        if (!needle) return true;
+        return String(item.query_id).toLowerCase().includes(needle) ||
+          String(item.concept || "").toLowerCase().includes(needle) ||
+          String(item.question || "").toLowerCase().includes(needle);
+      });
+      renderQuestionList(filtered);
+    }
+
+    document.getElementById("toggle-drawer").addEventListener("click", () => {
+      document.getElementById("drawer").classList.toggle("closed");
+    });
+    document.getElementById("question-filter").addEventListener("input", applyQuestionFilter);
+    document.getElementById("question-list").addEventListener("click", (event) => {
+      const button = event.target.closest(".drawer-q");
+      if (!button) return;
+      const item = catalog.find(row => row.query_id === button.getAttribute("data-id"));
+      if (!item) return;
+      document.getElementById("query").value = item.question;
+      document.getElementById("query_id").value = item.query_id || "";
+      applyQuestionFilter();
+      document.getElementById("query").focus();
+    });
+    document.getElementById("query").addEventListener("input", () => {
+      const typed = document.getElementById("query").value.trim();
+      const match = catalog.find(item => item.question === typed);
+      document.getElementById("query_id").value = match ? match.query_id : "";
+      applyQuestionFilter();
+    });
+
+    (async () => {
+      const root = document.getElementById("question-list");
+      try {
+        const response = await fetch(apiUrl("tree/questions"), { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const payload = await response.json();
+        catalog = Array.isArray(payload.questions) ? payload.questions : [];
+        applyQuestionFilter();
+      } catch (error) {
+        root.innerHTML = '<p class="drawer-empty">' +
+          escapeHtml(String(error && error.message ? error.message : error)) + "</p>";
+      }
+    })();
   </script>
 </body>
 </html>

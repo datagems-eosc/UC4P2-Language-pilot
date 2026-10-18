@@ -105,7 +105,12 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert "Getting access token" in page.text
     assert "id=\"token\"" not in page.text
     assert "ThematicExploration/stream" in page.text
+    assert "function apiUrl" in page.text
+    assert "Stream interrupted" in page.text
     assert "Running pipeline" in page.text
+    assert "tree/questions" in page.text
+    assert "id=\"drawer\"" in page.text
+    assert "Benchmark questions" in page.text
     rendered = client.post(
         "/tree",
         json={
@@ -262,3 +267,18 @@ def test_tree_token_refreshes_expired_jwt(monkeypatch):
     assert response.json()["expires_in"] is not None
     assert response.json()["expires_in"] > 0
     assert calls["n"] == 2
+
+
+def test_tree_questions_lists_benchmark_rows():
+    from fastapi.testclient import TestClient
+    from src.app.main import app
+
+    client = TestClient(app)
+    response = client.get("/tree/questions")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] >= 1
+    questions = body["questions"]
+    marriage = next(item for item in questions if item["query_id"] == "9")
+    assert "marriage" in marriage["question"].lower()
+    assert marriage["concept"]

@@ -232,6 +232,29 @@ def _records() -> tuple[dict[str, Any], ...]:
     return tuple(rows)
 
 
+@lru_cache(maxsize=1)
+def list_data_questions() -> tuple[dict[str, Any], ...]:
+    """Question catalog from ``data/*.json`` for the tree drawer."""
+    rows: list[dict[str, Any]] = []
+    for path in sorted(_DATA_DIR.glob("*.json")):
+        for item in load_benchmark(path):
+            if not isinstance(item, dict):
+                continue
+            question = str(item.get("Question") or "").strip()
+            if not question:
+                continue
+            rows.append(
+                {
+                    "query_id": str(item.get("Question_ID") or ""),
+                    "question": question,
+                    "concept": str(item.get("Concept") or "").strip(),
+                    "source": path.name,
+                    "parent": bool(item.get("Subquestion_IDs")),
+                }
+            )
+    return tuple(rows)
+
+
 def _content_tokens(text: str) -> set[str]:
     return {token for token in _tokens(text) if token not in _STOP and len(token) > 2}
 

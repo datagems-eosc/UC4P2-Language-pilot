@@ -38,7 +38,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.16`**.
+Live version: **`0.1.17`**.
 
 ---
 
@@ -51,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.16`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.17`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -137,7 +137,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` in the answer is highlighted and jumps to the matching cited card. Unused retrieval hits sit under **Retrieved but not cited**. **Refresh** forces a new run.
+- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the cited card. Unused hits sit under **Retrieved but not cited**.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
@@ -160,6 +160,20 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/tree
 
 ```bash
 curl -sS https://datagems-dev.scayle.es/language-pilot/tree/token
+```
+
+### A9. Tree question catalog
+
+**Details**
+
+- Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree/questions`
+- Auth: none
+- Returns: `{ count, questions: [{ query_id, question, concept, source, parent }] }` from `data/*.json`
+
+**Standard curl**
+
+```bash
+curl -sS https://datagems-dev.scayle.es/language-pilot/tree/questions
 ```
 
 ---
@@ -233,7 +247,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
 - Auth: same Bearer JWT as B1
 - Body: same as B1
 - Returns: `text/event-stream`. Each finished node is `event: step` with `status: "running"` and a growing `pipeline[]`. The last `event: done` is the same JSON as POST `/ThematicExploration` (including `memory`).
-- The `/tree` UI uses this so results appear while the banner still says Running pipeline. If the stream is unavailable it falls back to B1.
+- The `/tree` UI uses this so results appear while the banner still says Running pipeline. If the stream is unavailable it falls back to B1. If the SSE connection drops mid-run, already received steps stay on screen. Ingress buffering is off and the stream uses HTTP/1.1.
 - Memory hits emit a single `event: done`.
 
 **Standard curl**

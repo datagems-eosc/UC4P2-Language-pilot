@@ -28,6 +28,7 @@ from src.app.run_memory import (
 from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
+from src.evaluation.nlg import list_data_questions
 from src.llm import configure_lm_from_env
 from src.oidc import OIDCTokenError, cached_oidc_access_token, fetch_oidc_access_token
 
@@ -70,7 +71,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.16",
+    version="0.1.17",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -166,12 +167,13 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.16",
+        "version": "0.1.17",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
         "tree": "GET /tree",
         "tree_token": "GET /tree/token",
+        "tree_questions": "GET /tree/questions",
         "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
     }
@@ -230,6 +232,17 @@ async def tree_token() -> dict[str, Any]:
     exp = _jwt_exp(token)
     expires_in = max(0, int(exp - time.time())) if exp is not None else None
     return {"access_token": token, "token_type": "Bearer", "expires_in": expires_in}
+
+
+@app.get(
+    "/tree/questions",
+    summary="Benchmark questions for the tree drawer",
+    tags=["ThematicExploration"],
+)
+async def tree_questions() -> dict[str, Any]:
+    """Public catalog from ``data/*.json`` so the tree UI can pick a question."""
+    questions = list(list_data_questions())
+    return {"count": len(questions), "questions": questions}
 
 
 @app.get("/tree", summary="HTML pipeline tree", tags=["ThematicExploration"], response_class=HTMLResponse)
@@ -428,13 +441,13 @@ async def thematic_exploration_stream(
         for payload in _stream_pipeline(body, body.until, token):
             event = "done" if payload.get("status") != "running" else "step"
             yield _sse(event, payload)
+            yield b": keepalive\n\n"
 
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",
-            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
