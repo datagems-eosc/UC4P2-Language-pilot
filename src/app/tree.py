@@ -109,6 +109,15 @@ def _citation_card(item: dict[str, Any], *, anchor: bool = True) -> str:
     )
 
 
+def _prepare_citations(citations: list[Any]) -> list[dict[str, Any]]:
+    prepared: list[dict[str, Any]] = []
+    for item in citations:
+        if not isinstance(item, dict):
+            continue
+        prepared.append(item if "text" in item else _normalize_citation(item))
+    return prepared
+
+
 def _citations_block(
     key: str,
     citations: list[Any],
@@ -116,19 +125,27 @@ def _citations_block(
     open_node: bool = True,
     anchors: bool = True,
 ) -> str:
-    cards = "".join(
-        _citation_card(
-            item if "text" in item else _normalize_citation(item),
-            anchor=anchors,
-        )
-        if isinstance(item, dict)
-        else ""
-        for item in citations
-    )
+    prepared = _prepare_citations(citations)
+    used = [item for item in prepared if item.get("used_in_answer", True)]
+    unused = [item for item in prepared if not item.get("used_in_answer", True)]
+    used_cards = "".join(_citation_card(item, anchor=anchors) for item in used)
+    unused_cards = "".join(_citation_card(item, anchor=anchors) for item in unused)
     opened = " open" if open_node else ""
+    if unused:
+        title = (
+            f"{html.escape(key)} <em>[ {len(used)} cited · {len(unused)} retrieved ]</em>"
+        )
+        extra = (
+            f"<details class=\"cites unused-wrap\"><summary>Retrieved but not cited "
+            f"<em>[ {len(unused)} ]</em></summary>"
+            f'<div class="cite-list">{unused_cards}</div></details>'
+        )
+    else:
+        title = _label(key, prepared)
+        extra = ""
     return (
-        f"<details{opened} class=\"cites\"><summary>{_label(key, citations)}</summary>"
-        f'<div class="cite-list">{cards}</div></details>'
+        f"<details{opened} class=\"cites\"><summary>{title}</summary>"
+        f'<div class="cite-list">{used_cards}</div>{extra}</details>'
     )
 
 
@@ -475,6 +492,7 @@ _PAGE = """<!DOCTYPE html>
     .cite-meta { color: var(--muted); font-size: .85rem; }
     .cite p { margin: 0; white-space: pre-wrap; }
     .cite.unused { opacity: .55; }
+    .unused-wrap { margin-top: 10px; }
     .cite.lit, a.ref.lit, .cite.hover, a.ref.hover, .cite:target { box-shadow: 0 0 0 2px currentColor; }
     .tree details {
       border-left: 1px solid var(--line);
@@ -753,9 +771,20 @@ _PAGE = """<!DOCTYPE html>
     }
 
     function citationsBlock(key, items, anchors) {
-      const cards = (items || []).map(item => citationCard(item && item.text !== undefined ? item : normalizeCitation(item || {}), !!anchors)).join("");
-      return '<details open class="cites"><summary>' + label(key, items) +
-        '</summary><div class="cite-list">' + cards + "</div></details>";
+      const prepared = (items || []).map(item => item && item.text !== undefined ? item : normalizeCitation(item || {}));
+      const used = prepared.filter(item => item.used_in_answer !== false);
+      const unused = prepared.filter(item => item.used_in_answer === false);
+      const usedCards = used.map(item => citationCard(item, !!anchors)).join("");
+      let extra = "";
+      let title = label(key, prepared);
+      if (unused.length) {
+        title = escapeHtml(key) + " <em>[ " + used.length + " cited · " + unused.length + " retrieved ]</em>";
+        extra = '<details class="cites unused-wrap"><summary>Retrieved but not cited <em>[ ' +
+          unused.length + " ]</em></summary><div class=\\"cite-list\\">" +
+          unused.map(item => citationCard(item, !!anchors)).join("") + "</div></details>";
+      }
+      return '<details open class="cites"><summary>' + title +
+        '</summary><div class="cite-list">' + usedCards + "</div>" + extra + "</details>";
     }
 
     function nodeHtml(key, value, openNode, citations) {

@@ -173,6 +173,49 @@ def test_tree_markup_links_answer_refs_to_citations():
     assert "19th C. Knowledge Project (Britannica)" in markup
 
 
+def test_tree_markup_separates_unused_citations():
+    markup = tree_markup(
+        {
+            "question": "What is the definition of a marriage in the present?",
+            "status": "ok",
+            "pipeline": [
+                {
+                    "step": 1,
+                    "name": "synthesize",
+                    "title": "Synthesize a grounded answer",
+                    "outcome": "ok",
+                    "summary": "wrote",
+                    "output": {},
+                }
+            ],
+            "synthesized_answer": "Today marriage is a civil contract [ref_1] [ref_3].",
+            "grounded_citations": [
+                {
+                    "citation_id": "ref_1",
+                    "text_snippet": "used one",
+                    "used_in_answer": True,
+                    "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c",
+                },
+                {
+                    "citation_id": "ref_2",
+                    "text_snippet": "unused hit",
+                    "used_in_answer": False,
+                    "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c",
+                },
+                {
+                    "citation_id": "ref_3",
+                    "text_snippet": "used two",
+                    "used_in_answer": True,
+                    "dataset_id": "1f6fba0c-9aea-4345-b5a3-457c924f9e0c",
+                },
+            ],
+        }
+    )
+    assert "2 cited · 1 retrieved" in markup
+    assert "Retrieved but not cited" in markup
+    assert markup.index("used one") < markup.index("Retrieved but not cited") < markup.index("unused hit")
+
+
 def test_tree_token_endpoint_returns_access_token(monkeypatch):
     from fastapi.testclient import TestClient
     from src.app.main import app

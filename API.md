@@ -38,7 +38,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.15`**.
+Live version: **`0.1.16`**.
 
 ---
 
@@ -51,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.15`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.16`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -137,7 +137,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` in the answer is highlighted and jumps to the matching `grounded_citations` card (same color); steps expand to show decomposed questions, retrieved passages, citations, NLG; **Refresh** checkbox forces a new run (`refresh: true`)
+- UI: banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` in the answer is highlighted and jumps to the matching cited card. Unused retrieval hits sit under **Retrieved but not cited**. **Refresh** forces a new run.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
