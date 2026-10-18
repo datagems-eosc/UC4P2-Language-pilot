@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -19,6 +19,7 @@ from src.app.runner import PIPELINE_STEPS, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
 from src.llm import configure_lm_from_env
+from src.oidc import OIDCTokenError, cached_oidc_access_token, fetch_oidc_access_token
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.12",
+    version="0.1.13",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -153,10 +154,11 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.12",
+        "version": "0.1.13",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "tree": "GET /tree",
+        "tree_token": "GET /tree/token",
         "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
     }
@@ -165,6 +167,34 @@ async def root() -> dict[str, Any]:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+def _tree_demo_token() -> str:
+    """Token for the tree UI auto-fill (same password-grant as EXAMPLES.md curls)."""
+    if os.getenv("TREE_AUTO_TOKEN", "true").strip().lower() in {"0", "false", "no", "off"}:
+        raise OIDCTokenError("TREE_AUTO_TOKEN is disabled.")
+    try:
+        return cached_oidc_access_token()
+    except OIDCTokenError:
+        # Fall back to the documented Scayle demo user when DG_* are unset in the pod.
+        return fetch_oidc_access_token(
+            username=os.getenv("TREE_DEMO_USERNAME", "dg-user-1"),
+            password=os.getenv("TREE_DEMO_PASSWORD", "dg-user-1"),
+        )
+
+
+@app.get(
+    "/tree/token",
+    summary="Default Bearer token for the tree UI",
+    tags=["ThematicExploration"],
+)
+async def tree_token() -> dict[str, Any]:
+    """Public helper so the HTML tree can Run without pasting a token each time."""
+    try:
+        token = _tree_demo_token()
+    except OIDCTokenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"access_token": token, "token_type": "Bearer"}
 
 
 @app.get("/tree", summary="HTML pipeline tree", tags=["ThematicExploration"], response_class=HTMLResponse)

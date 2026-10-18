@@ -14,10 +14,65 @@ def test_presentation_tree_is_pipeline_first_to_last():
         "result": {"name": "synthesize"},
     }
     ordered = presentation_tree(payload)
-    assert list(ordered)[:4] == ["question", "status", "pipeline", "synthesized_answer"]
+    keys = list(ordered)
+    assert keys.index("question") < keys.index("pipeline") < keys.index("synthesized_answer")
     assert [item["name"] for item in ordered["pipeline"]] == ["route", "synthesize"]
     assert "feature_metrics" not in ordered
     assert "result" not in ordered
+
+
+def test_presentation_tree_promotes_decompose_and_retrieve_details():
+    payload = {
+        "question": "How was Odin portrayed?",
+        "status": "ok",
+        "slices": [
+            {
+                "slice_id": "slice_1",
+                "label": "19th century",
+                "corpus_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68",
+            }
+        ],
+        "pipeline": [
+            {
+                "step": 1,
+                "name": "decompose",
+                "title": "Decompose",
+                "outcome": "ok",
+                "summary": "qdmr",
+                "output": {
+                    "qdmr": [{"step": 1, "instruction": "#1 Who is Odin?"}],
+                    "decompose_mode": "few-shot",
+                },
+            },
+            {
+                "step": 2,
+                "name": "retrieve_slices",
+                "title": "Retrieve",
+                "outcome": "ok",
+                "summary": "hits",
+                "output": {
+                    "search_queries": {"slice_1": "Odin"},
+                    "passages": {
+                        "slice_1": [
+                            {
+                                "dataset_id": "d84d1a2e-127d-4393-91d0-afb7e4fd9c68",
+                                "doc_id": "d1",
+                                "similarity": 0.5,
+                                "text": "Odin appears in the calendar.",
+                            }
+                        ]
+                    },
+                },
+            },
+        ],
+    }
+    ordered = presentation_tree(payload)
+    decompose, retrieve = ordered["pipeline"]
+    assert decompose["decomposed_questions"][0]["instruction"] == "#1 Who is Odin?"
+    assert "19th century · 19th C. Knowledge Project (Britannica)" in retrieve["retrieved_passages"]
+    rows = retrieve["retrieved_passages"]["19th century · 19th C. Knowledge Project (Britannica)"]
+    assert rows[0]["corpus"] == "19th C. Knowledge Project (Britannica)"
+    assert "Odin" in rows[0]["text"]
 
 
 def test_tree_markup_lists_steps_in_order():
@@ -45,6 +100,8 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert page.status_code == 200
     assert "text/html" in page.headers["content-type"]
     assert "ThematicExploration" in page.text
+    assert "tree/token" in page.text
+    assert "ensureAccessToken" in page.text
     rendered = client.post(
         "/tree",
         json={
@@ -62,3 +119,19 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert html.index("Route the question") < html.index("Disambiguate")
     assert "A contract [ref_1]." in html
     assert tree_page({"question": "Q"})  # page still builds
+
+
+def test_tree_token_endpoint_returns_access_token(monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.app.main import app
+
+    monkeypatch.setenv("TREE_AUTO_TOKEN", "true")
+    monkeypatch.setattr(
+        "src.app.main.cached_oidc_access_token",
+        lambda: "demo-jwt-token",
+    )
+    client = TestClient(app)
+    response = client.get("/tree/token")
+    assert response.status_code == 200
+    assert response.json()["access_token"] == "demo-jwt-token"
+    assert response.json()["token_type"] == "Bearer"

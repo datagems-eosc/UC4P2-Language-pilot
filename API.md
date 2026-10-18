@@ -122,6 +122,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
+- Auth: none for the page; Run auto-fills Bearer via `GET /tree/token` (demo Keycloak user) unless you paste your own
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
 **Standard curl**
