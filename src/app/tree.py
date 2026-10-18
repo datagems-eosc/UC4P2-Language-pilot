@@ -1010,6 +1010,37 @@ _PAGE = """<!DOCTYPE html>
       return fetch(url, { method: "POST", headers, body });
     }
 
+    async function pollJob(accessToken, jobId) {
+      setProgress("Stream dropped — still running, updating from the server…", "");
+      for (let attempt = 0; attempt < 180; attempt++) {
+        let token = accessToken;
+        let response = await fetch(apiUrl("ThematicExploration/runs/" + jobId), {
+          headers: { Accept: "application/json", Authorization: "Bearer " + token },
+          cache: "no-store",
+        });
+        if (response.status === 401) {
+          token = await mintAccessToken();
+          response = await fetch(apiUrl("ThematicExploration/runs/" + jobId), {
+            headers: { Accept: "application/json", Authorization: "Bearer " + token },
+            cache: "no-store",
+          });
+          accessToken = token;
+        }
+        if (response.status === 404) {
+          throw new Error("Run snapshot expired before the pipeline finished.");
+        }
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status + " from run snapshot");
+        }
+        const payload = await response.json();
+        progressFromPayload(payload);
+        renderPayload(payload);
+        if (payload && payload.status !== "running") return payload;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      throw new Error("Timed out waiting for the run to finish.");
+    }
+
     document.getElementById("run-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const view = document.getElementById("view");
@@ -1069,13 +1100,20 @@ _PAGE = """<!DOCTYPE html>
           return;
         }
         let lastPayload = null;
+        let jobId = response.headers.get("X-Run-Id") || "";
         try {
-          await readSse(response, (_event, payload) => {
+          await readSse(response, (event, payload) => {
+            if (payload && payload.job_id) jobId = payload.job_id;
+            if (event === "job") return;
             lastPayload = payload;
             progressFromPayload(payload);
             renderPayload(payload);
           });
         } catch (error) {
+          if (jobId) {
+            lastPayload = await pollJob(token, jobId);
+            return;
+          }
           if (lastPayload) {
             progressFromPayload(lastPayload);
             setProgress(
@@ -1086,6 +1124,9 @@ _PAGE = """<!DOCTYPE html>
             return;
           }
           throw error;
+        }
+        if (lastPayload && lastPayload.status === "running" && jobId) {
+          lastPayload = await pollJob(token, jobId);
         }
       } catch (error) {
         setProgress("", "");

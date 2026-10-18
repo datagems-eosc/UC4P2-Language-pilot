@@ -224,8 +224,14 @@ def test_stream_endpoint_emits_sse_steps(monkeypatch):
     assert "text/event-stream" in response.headers["content-type"]
     assert "event: step" in response.text
     assert "event: done" in response.text
+    assert "event: job" in response.text
+    assert response.headers.get("x-run-id")
     assert '"status": "running"' in response.text
     assert "Need a later period." in response.text
+    job_id = response.headers["x-run-id"]
+    snapshot = client.get(f"/ThematicExploration/runs/{job_id}")
+    assert snapshot.status_code == 200
+    assert snapshot.json()["status"] == "clarification"
 
 
 def test_timeout_endpoint_returns_pipeline_body(monkeypatch):

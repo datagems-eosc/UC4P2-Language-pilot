@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
 import os
+import queue
+import threading
 import time
+import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -17,6 +21,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from src.app.auth import caller_access_token, require_access_token
+from src.app.run_jobs import get_job, put_job
 from src.app.run_memory import (
     attach_memory_meta,
     load_run,
@@ -71,7 +76,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.17",
+    version="0.1.18",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -137,6 +142,7 @@ def custom_openapi() -> dict[str, Any]:
     protected = {
         "/ThematicExploration",
         "/ThematicExploration/stream",
+        "/ThematicExploration/runs/{job_id}",
         "/compare",
         "/tree",
         "/steps/route",
@@ -167,10 +173,11 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.17",
+        "version": "0.1.18",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
+        "thematic_exploration_run": "GET /ThematicExploration/runs/{job_id}",
         "tree": "GET /tree",
         "tree_token": "GET /tree/token",
         "tree_questions": "GET /tree/questions",
@@ -380,6 +387,52 @@ def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | 
         yield _finalize_payload(last, body, until)
 
 
+def _start_stream_job(
+    body: QueryRequest,
+    until: str | None,
+    access_token: str | None,
+) -> tuple[str, queue.Queue]:
+    job_id = uuid.uuid4().hex
+    updates: queue.Queue = queue.Queue()
+    put_job(
+        job_id,
+        {
+            "job_id": job_id,
+            "status": "running",
+            "question": body.query,
+            "query_id": body.query_id or "",
+            "pipeline": [],
+        },
+    )
+
+    def worker() -> None:
+        try:
+            for payload in _stream_pipeline(body, until, access_token):
+                payload = dict(payload)
+                payload["job_id"] = job_id
+                put_job(job_id, payload)
+                updates.put(payload)
+        except Exception as exc:  # noqa: BLE001 - last snapshot must stay pollable
+            logger.exception("stream job failed id=%s", job_id)
+            previous = get_job(job_id) or {}
+            payload = {
+                "job_id": job_id,
+                "status": "error",
+                "error": str(exc),
+                "question": body.query,
+                "query_id": body.query_id or "",
+                "pipeline": previous.get("pipeline") or [],
+                "failed_step": previous.get("last_step") or previous.get("failed_step"),
+            }
+            put_job(job_id, payload)
+            updates.put(payload)
+        finally:
+            updates.put(None)
+
+    threading.Thread(target=worker, name=f"te-job-{job_id[:8]}", daemon=True).start()
+    return job_id, updates
+
+
 @app.get("/steps", summary="List pipeline step APIs", tags=["Steps"])
 async def list_steps() -> dict[str, Any]:
     return {
@@ -433,14 +486,27 @@ async def thematic_exploration_stream(
 
     `event: step` payloads have `status=running` and a growing `pipeline[]`.
     The last `event: done` is the same document as POST /ThematicExploration.
+    The pipeline keeps running in a background job if the SSE connection drops;
+    poll GET /ThematicExploration/runs/{job_id} for the latest snapshot.
     """
     token = caller_access_token()
+    job_id, updates = _start_stream_job(body, body.until, token)
 
-    def generate():
+    async def generate():
         yield b": stream-open\n\n"
-        for payload in _stream_pipeline(body, body.until, token):
-            event = "done" if payload.get("status") != "running" else "step"
-            yield _sse(event, payload)
+        yield _sse("job", {"job_id": job_id, "status": "running"})
+        while True:
+            try:
+                item = await asyncio.to_thread(updates.get, True, 2.0)
+            except queue.Empty:
+                yield b": keepalive\n\n"
+                continue
+            if item is None:
+                break
+            event = "done" if item.get("status") != "running" else "step"
+            yield _sse(event, item)
+            if event == "done":
+                break
             yield b": keepalive\n\n"
 
     return StreamingResponse(
@@ -449,8 +515,25 @@ async def thematic_exploration_stream(
         headers={
             "Cache-Control": "no-cache, no-transform",
             "X-Accel-Buffering": "no",
+            "X-Run-Id": job_id,
         },
     )
+
+
+@app.get(
+    "/ThematicExploration/runs/{job_id}",
+    summary="ThematicExploration run snapshot",
+    tags=["ThematicExploration"],
+)
+async def thematic_exploration_run(
+    job_id: str,
+    _: dict[str, Any] = Depends(require_access_token),
+) -> dict[str, Any]:
+    """Latest snapshot of a streamed run, including after the SSE connection drops."""
+    payload = get_job(job_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Unknown or expired run.")
+    return payload
 
 
 def _register_step(spec: dict[str, str]) -> None:

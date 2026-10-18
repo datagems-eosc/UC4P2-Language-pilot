@@ -105,8 +105,10 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert "Getting access token" in page.text
     assert "id=\"token\"" not in page.text
     assert "ThematicExploration/stream" in page.text
+    assert "ThematicExploration/runs/" in page.text
     assert "function apiUrl" in page.text
-    assert "Stream interrupted" in page.text
+    assert "function pollJob" in page.text
+    assert "Stream dropped" in page.text
     assert "Running pipeline" in page.text
     assert "tree/questions" in page.text
     assert "id=\"drawer\"" in page.text

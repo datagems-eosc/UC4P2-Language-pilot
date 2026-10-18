@@ -38,7 +38,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.17`**.
+Live version: **`0.1.18`**.
 
 ---
 
@@ -51,7 +51,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.17`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.18`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -246,9 +246,10 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration/stream`
 - Auth: same Bearer JWT as B1
 - Body: same as B1
-- Returns: `text/event-stream`. Each finished node is `event: step` with `status: "running"` and a growing `pipeline[]`. The last `event: done` is the same JSON as POST `/ThematicExploration` (including `memory`).
-- The `/tree` UI uses this so results appear while the banner still says Running pipeline. If the stream is unavailable it falls back to B1. If the SSE connection drops mid-run, already received steps stay on screen. Ingress buffering is off and the stream uses HTTP/1.1.
-- Memory hits emit a single `event: done`.
+- Returns: `text/event-stream`. First `event: job` has `job_id`. Each finished node is `event: step` with `status: "running"` and a growing `pipeline[]`. The last `event: done` is the same JSON as POST `/ThematicExploration` (including `memory`). Comment keepalives are sent while a step is still running.
+- The pipeline keeps running in a background job if the SSE connection drops. Poll B1c with `job_id` (also in `X-Run-Id`).
+- The `/tree` UI streams live, then polls B1c if the stream drops so the run still finishes on screen.
+- Memory hits emit `event: job` then a single `event: done`.
 
 **Standard curl**
 
@@ -264,6 +265,27 @@ curl -sS -N -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplor
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
+```
+
+### B1c. ThematicExploration run snapshot
+
+**Details**
+
+- Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/ThematicExploration/runs/{job_id}`
+- Auth: same Bearer JWT as B1
+- Returns: the latest streamed payload for that `job_id` (`status` stays `running` until the background job finishes)
+
+**Standard curl**
+
+```bash
+curl -sS https://datagems-dev.scayle.es/language-pilot/ThematicExploration/runs/JOB_ID \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')"
 ```
 
 ### B2. Compare (deprecated alias)
