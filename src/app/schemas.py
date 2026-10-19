@@ -44,9 +44,9 @@ class QueryRequest(BaseModel):
     use_extension_questions: bool = Field(
         default=False,
         description=(
-            "If true, the decompose plan is the knowledge-extension questions, each "
-            "is retrieved, and the answer is grounded on those passages. Default is "
-            "one search per slice from the ordinary QDMR plan."
+            "If true, each knowledge-extension question is retrieved as its own "
+            "search. Decomposition still uses the original question. Default is "
+            "one search per slice from the QDMR plan."
         ),
     )
 

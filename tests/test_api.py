@@ -293,7 +293,7 @@ def test_decompose_mode_on_thematic_exploration(monkeypatch):
     assert bad.status_code == 422
 
 
-def test_extension_questions_option_on_decompose(monkeypatch):
+def test_extension_questions_option_retrieves_each_question(monkeypatch):
     from fastapi.testclient import TestClient
     from src.app.main import app
     from src.orchestration import graph as graph_mod
@@ -307,16 +307,23 @@ def test_extension_questions_option_on_decompose(monkeypatch):
 
     monkeypatch.setattr("src.app.runner.stream_steps", fake_stream)
     monkeypatch.setenv("AUTH_DISABLED", "true")
+    monkeypatch.setenv("RUN_MEMORY_ENABLED", "false")
     client = TestClient(app)
-    response = client.post(
+    decomposed = client.post(
         "/steps/decompose",
-        json={"query": MARRIAGE, "query_id": "q-ke", "use_extension_questions": True},
+        json={"query": MARRIAGE, "query_id": "q-ke-decompose", "use_extension_questions": True},
     )
-    assert response.status_code == 200, response.text
-    body = response.json()
+    assert decomposed.status_code == 200, decomposed.text
+    body = decomposed.json()
     assert body["use_extension_questions"] is True
     instructions = " ".join(
         str(item.get("instruction") or "") for item in (body.get("qdmr") or [])
     )
-    assert "definition" in instructions.lower()
-    assert "differ across" in instructions.lower()
+    assert "definition" not in instructions.lower()
+    retrieved = client.post(
+        "/steps/retrieve",
+        json={"query": MARRIAGE, "query_id": "q-ke-retrieve", "use_extension_questions": True},
+    )
+    assert retrieved.status_code == 200, retrieved.text
+    queries = " ".join((retrieved.json().get("search_queries") or {}).values())
+    assert "definition" in queries.lower()

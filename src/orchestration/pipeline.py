@@ -23,7 +23,6 @@ from src.evaluation.nlg import evaluate_against_ground_truth
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
 from src.knowledge_extension.subquestions import (
     generate_facet_lemma_subquestions,
-    qdmr_from_extension_questions,
     retrieval_jobs_from_extension,
 )
 from src.orchestration.slice_executor import RetrievalAPIError
@@ -313,13 +312,7 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         context = intent.target_concept or "the subject"
-        planned: list[str] = []
-        if self.use_extension_questions:
-            planned = qdmr_from_extension_questions(
-                state.generated_subquestions,
-                concept=context,
-            )
-        state.sub_tasks = planned or decompose_question(
+        state.sub_tasks = decompose_question(
             state.question, intent.slices, context, decompose_mode=self.decompose_mode
         )
         state.decompose_mode = self.decompose_mode

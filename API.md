@@ -23,7 +23,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `query_id` | Optional stable id (also used for gold / NLG match when it equals `Question_ID`) |
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
-| `use_extension_questions` | Default `false`. If `true`, decompose uses the knowledge-extension questions, each is retrieved, and the answer is grounded on those passages |
+| `use_extension_questions` | Default `false`. If `true`, each knowledge-extension question is retrieved as its own search. Decomposition still uses the original question |
 | `include_trace` | `true` adds `raw_trace` |
 | `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `generate_subquestions`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `evaluate_answer`, `export_benchmark` |
 | `use_memory` | Default `true`. Reuse a stored result for the same question + options instead of re-running |
@@ -39,7 +39,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.23`**.
+Live version: **`0.1.24`**.
 
 ---
 
@@ -52,7 +52,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.23`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.24`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -138,7 +138,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Check **KE questions** to decompose and retrieve every knowledge-extension question (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
+- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
@@ -428,7 +428,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-know
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/generate-subquestions`
 - Stops after: `generate_subquestions`
 - Look at: `generated_subquestions` — one question per thematic facet and lemma, per slice, plus a contrast question
-- Retrieve later uses these questions together with QDMR
+- These stay out of QDMR. With `use_extension_questions`, retrieve searches each one as a single query
 - Script: `scripts/dev/13b-steps-generate-subquestions.sh`
 
 **Standard curl**

@@ -153,8 +153,7 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         qdmr = output.get("qdmr") or []
         numbered = ", ".join(f"#{item.get('step')}" for item in qdmr)
         mode = output.get("decompose_mode") or FEW_SHOT
-        extra = " from knowledge-extension questions" if output.get("use_extension_questions") else ""
-        return f"Produced {len(qdmr)} sub-questions ({numbered}) with {mode} decomposition{extra}."
+        return f"Produced {len(qdmr)} sub-questions ({numbered}) with {mode} decomposition."
     if name == "retrieve_slices":
         passages = output.get("passages") or {}
         errors = output.get("retrieval_errors") or {}

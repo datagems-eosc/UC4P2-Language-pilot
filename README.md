@@ -74,7 +74,7 @@ Optional fields:
 | `until` | Stop after a LangGraph node (`disambiguate`, `retrieve_slices`, …) |
 | `k` | Passages per slice (default 5) |
 | `decompose_mode` | Decomposition prompting: `predict`, `cot`, or `few-shot` (default) |
-| `use_extension_questions` | If true, decompose and retrieve every knowledge-extension question (default: one search per slice) |
+| `use_extension_questions` | If true, retrieve each knowledge-extension question as its own search (default: one search per slice) |
 | `include_trace` | Include every node update |
 
 The response `pipeline` list is the audit trail: one object per step with `step`, `name`, `title`, `outcome`, `summary`, and `output`. Convenience fields (`synthesized_answer`, `passages`, …) still sit at the top level. Set `include_trace` if you also need the raw LangGraph updates as `raw_trace`.

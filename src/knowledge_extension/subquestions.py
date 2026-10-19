@@ -184,25 +184,6 @@ def retrieval_items(items: list[dict[str, str]]) -> list[dict[str, str]]:
     return selected
 
 
-def qdmr_from_extension_questions(
-    items: list[dict[str, str]],
-    *,
-    concept: str,
-) -> list[str]:
-    """Turn knowledge-extension questions into a numbered QDMR plan."""
-    selected = retrieval_items(items)
-    if not selected:
-        return []
-    lines = [
-        f"#{index} {str(item.get('question') or '').strip()}"
-        for index, item in enumerate(selected, start=1)
-    ]
-    refs = ", ".join(f"#{index}" for index in range(1, len(lines) + 1))
-    subject = (concept or "the subject").strip() or "the subject"
-    lines.append(f"#{len(lines) + 1} How does {subject} differ across {refs}?")
-    return lines
-
-
 def retrieval_jobs_from_extension(
     items: list[dict[str, str]],
     slices: list[ComparisonSlice],
