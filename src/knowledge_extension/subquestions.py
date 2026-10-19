@@ -162,3 +162,67 @@ def generate_facet_lemma_subquestions(
 
 def subquestion_texts(items: list[dict[str, str]]) -> list[str]:
     return [str(item.get("question") or "") for item in items if item.get("question")]
+
+
+_MAX_RETRIEVE_PER_SLICE = 8
+
+
+def retrieval_items(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Slice-bound facet/lemma questions; skip the contrast step."""
+    selected: list[dict[str, str]] = []
+    per_slice: dict[str, int] = {}
+    for item in items:
+        slice_id = str(item.get("slice_id") or "").strip()
+        question = str(item.get("question") or "").strip()
+        if not slice_id or not question or str(item.get("source") or "") == "contrast":
+            continue
+        count = per_slice.get(slice_id, 0)
+        if count >= _MAX_RETRIEVE_PER_SLICE:
+            continue
+        per_slice[slice_id] = count + 1
+        selected.append(item)
+    return selected
+
+
+def qdmr_from_extension_questions(
+    items: list[dict[str, str]],
+    *,
+    concept: str,
+) -> list[str]:
+    """Turn knowledge-extension questions into a numbered QDMR plan."""
+    selected = retrieval_items(items)
+    if not selected:
+        return []
+    lines = [
+        f"#{index} {str(item.get('question') or '').strip()}"
+        for index, item in enumerate(selected, start=1)
+    ]
+    refs = ", ".join(f"#{index}" for index in range(1, len(lines) + 1))
+    subject = (concept or "the subject").strip() or "the subject"
+    lines.append(f"#{len(lines) + 1} How does {subject} differ across {refs}?")
+    return lines
+
+
+def retrieval_jobs_from_extension(
+    items: list[dict[str, str]],
+    slices: list[ComparisonSlice],
+    variants_by_slice: dict[str, list[str]],
+) -> list[dict[str, Any]]:
+    """One CDD search per knowledge-extension question, tagged with its slice."""
+    del variants_by_slice
+    by_id = {slice_.slice_id: slice_ for slice_ in slices}
+    jobs: list[dict[str, Any]] = []
+    for item in retrieval_items(items):
+        slice_ = by_id.get(str(item.get("slice_id") or ""))
+        if slice_ is None:
+            continue
+        question = str(item.get("question") or "").strip()
+        jobs.append(
+            {
+                "id": str(item.get("id") or f"sq_{len(jobs) + 1}"),
+                "slice": slice_,
+                "question": question,
+                "query": question,
+            }
+        )
+    return jobs

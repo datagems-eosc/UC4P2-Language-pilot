@@ -133,7 +133,9 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert html.index("Route the question") < html.index("Disambiguate")
     assert "[ref_1]" in html
     assert "A contract" in html
-    assert tree_page({"question": "Q"})  # page still builds
+    page = tree_page({"question": "Q"})
+    assert "use_extension_questions" in page
+    assert "KE questions" in page
 
 
 def test_tree_markup_links_answer_refs_to_citations():

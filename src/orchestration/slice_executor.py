@@ -217,8 +217,9 @@ def build_search_query(
     facets: list[str],
     cross_lingual_tokens: list[str],
 ) -> str:
-    parts = [concept, slice_label, *facets[:6], *cross_lingual_tokens[:4]]
-    return " ".join(part for part in parts if part).strip()
+    """Search string is the concept and slice only; extra concepts stay off the query."""
+    del facets, cross_lingual_tokens
+    return " ".join(part for part in (concept, slice_label) if part).strip()
 
 
 class SliceExecutionEngine:

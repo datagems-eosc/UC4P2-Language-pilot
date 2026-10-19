@@ -40,6 +40,7 @@ def memory_key(
     k: int,
     decompose_mode: str,
     until: str | None,
+    use_extension_questions: bool = False,
 ) -> str:
     payload = {
         "question": normalize_question(question),
@@ -47,6 +48,7 @@ def memory_key(
         "k": int(k),
         "decompose_mode": (decompose_mode or "").strip().lower(),
         "until": (until or "").strip(),
+        "use_extension_questions": bool(use_extension_questions),
     }
     digest = hashlib.sha256(
         json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")

@@ -228,6 +228,30 @@ def test_comparative_pipeline_retrieves_and_exports_benchmark():
     assert "coverture" in record.synthesized_answer
 
 
+def test_extension_questions_are_decomposed_and_retrieved_when_enabled():
+    client = ScriptedDisambiguation(
+        HistoricalComparativeConstraints.from_query(MARRIAGE).to_api_dict()
+    )
+    retrieval = ScriptedRetrieval()
+    pipeline = HistoricalQAOrchestrator(
+        disambiguation_client=client,
+        retriever=CrossDatasetMultiSliceRetriever(client=retrieval),
+        use_extension_questions=True,
+    )
+    state = pipeline.run(MARRIAGE, query_id="q-marriage-ke")
+    assert state.status == "ok"
+    assert state.use_extension_questions
+    assert any("definition" in task.lower() for task in state.sub_tasks)
+    assert any("differ across" in task.lower() for task in state.sub_tasks)
+    assert len(retrieval.queries) > 2
+    assert any("definition" in query.lower() for query in retrieval.queries)
+    hits = sum(len(items) for items in state.passages.values())
+    assert hits >= 2
+    assert state.output is not None
+    assert state.output.synthesized_answer
+    assert {item.slice_id for item in state.output.grounded_citations} == {"slice_1", "slice_2"}
+
+
 def test_cross_lingual_pipeline_keeps_both_languages():
     client = ScriptedDisambiguation(
         HistoricalComparativeConstraints.from_query(US_SOURCES).to_api_dict()
@@ -314,8 +338,8 @@ def test_search_query_uses_sub_question():
         ["coverture"],
         ["#1 How is marriage described in the 1800s?", "#2 How does it differ across #1?"],
     )
-    assert "How is marriage described in the 1800s?" in query
-    assert "coverture" in query
+    assert query == "How is marriage described in the 1800s?"
+    assert "coverture" not in query
 
 
 def test_retrieval_client_posts_search_endpoint(monkeypatch):

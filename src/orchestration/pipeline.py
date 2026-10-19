@@ -23,7 +23,8 @@ from src.evaluation.nlg import evaluate_against_ground_truth
 from src.knowledge_extension.expander import expand_knowledge, knowledge_extension_payload
 from src.knowledge_extension.subquestions import (
     generate_facet_lemma_subquestions,
-    subquestion_texts,
+    qdmr_from_extension_questions,
+    retrieval_jobs_from_extension,
 )
 from src.orchestration.slice_executor import RetrievalAPIError
 from src.retrieval.corpora import corpus_name_for_id, dataset_ids_for_slice
@@ -180,11 +181,13 @@ class HistoricalQAOrchestrator(dspy.Module):
         disambiguation_client: QueryDisambiguationClient | None = None,
         retriever: CrossDatasetMultiSliceRetriever | MockMultiSliceRetriever | None = None,
         decompose_mode: str = FEW_SHOT,
+        use_extension_questions: bool = False,
     ):
         super().__init__()
         self.disambiguation_client = disambiguation_client or QueryDisambiguationClient()
         self.retriever = retriever or CrossDatasetMultiSliceRetriever()
         self.decompose_mode = decompose_mode
+        self.use_extension_questions = bool(use_extension_questions)
 
     def resolve(self, question: str, query_id: str | None = None) -> PipelineState:
         identifier = query_id or _query_id(question)
@@ -302,6 +305,7 @@ class HistoricalQAOrchestrator(dspy.Module):
             intent.slices,
             dict(state.knowledge_extension),
         )
+        state.use_extension_questions = self.use_extension_questions
         state.status = "subquestions_generated"
         return state
 
@@ -309,10 +313,17 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         context = intent.target_concept or "the subject"
-        state.sub_tasks = decompose_question(
+        planned: list[str] = []
+        if self.use_extension_questions:
+            planned = qdmr_from_extension_questions(
+                state.generated_subquestions,
+                concept=context,
+            )
+        state.sub_tasks = planned or decompose_question(
             state.question, intent.slices, context, decompose_mode=self.decompose_mode
         )
         state.decompose_mode = self.decompose_mode
+        state.use_extension_questions = self.use_extension_questions
         state.status = "decomposed"
         return state
 
@@ -320,12 +331,20 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         expansion = dict(state.knowledge_extension)
-        retrieval_questions = subquestion_texts(state.generated_subquestions) + list(state.sub_tasks)
+        variants = _variants(expansion, intent.slices)
+        jobs = (
+            retrieval_jobs_from_extension(
+                state.generated_subquestions, intent.slices, variants
+            )
+            if self.use_extension_questions
+            else []
+        )
         passages, errors, queries = self.retriever.retrieve_all(
             intent.target_concept,
             intent.slices,
-            _variants(expansion, intent.slices),
-            retrieval_questions,
+            variants,
+            list(state.sub_tasks),
+            question_jobs=jobs or None,
         )
         state.passages = {
             slice_id: [item.model_dump() for item in items] for slice_id, items in passages.items()
@@ -345,7 +364,10 @@ class HistoricalQAOrchestrator(dspy.Module):
         client = getattr(self.retriever, "client", None)
         analyze = getattr(client, "corpus_analysis_search", None)
         if callable(analyze):
+            slice_ids = {item.slice_id for item in state.intent.slices} if state.intent else set()
             for slice_id, query in (state.search_queries or {}).items():
+                if slice_ids and slice_id not in slice_ids:
+                    continue
                 local = metrics.setdefault(slice_id, {"passage_count": 0})
                 slice_obj = None
                 if state.intent:

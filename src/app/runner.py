@@ -153,7 +153,8 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         qdmr = output.get("qdmr") or []
         numbered = ", ".join(f"#{item.get('step')}" for item in qdmr)
         mode = output.get("decompose_mode") or FEW_SHOT
-        return f"Produced {len(qdmr)} sub-questions ({numbered}) with {mode} decomposition."
+        extra = " from knowledge-extension questions" if output.get("use_extension_questions") else ""
+        return f"Produced {len(qdmr)} sub-questions ({numbered}) with {mode} decomposition{extra}."
     if name == "retrieve_slices":
         passages = output.get("passages") or {}
         errors = output.get("retrieval_errors") or {}
@@ -161,7 +162,12 @@ def _summarize(name: str, output: dict[str, Any]) -> str:
         if errors:
             failed = ", ".join(errors)
             return f"Retrieved {counts or 'no passages'}. Failed slices: {failed}."
-        return f"Retrieved {counts or 'no passages'}."
+        extra = ""
+        queries = output.get("search_queries") or {}
+        extra_n = sum(1 for key in queries if str(key).startswith("sq_"))
+        if extra_n:
+            extra = f" {extra_n} knowledge-extension search(es)."
+        return f"Retrieved {counts or 'no passages'}.{extra}"
     if name == "compute_features":
         metrics = output.get("feature_metrics") or {}
         remote = sum(
@@ -287,6 +293,7 @@ def _payload_from_events(
         "qdmr": merged.get("qdmr") or [],
         "generated_subquestions": merged.get("generated_subquestions") or [],
         "decompose_mode": merged.get("decompose_mode") or decompose_mode,
+        "use_extension_questions": bool(merged.get("use_extension_questions")),
         "search_queries": merged.get("search_queries") or {},
         "passages": merged.get("passages") or {},
         "retrieval_errors": merged.get("retrieval_errors") or {},
@@ -376,6 +383,7 @@ def iter_compare(
     include_trace: bool = False,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
+    use_extension_questions: bool = False,
     access_token: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield a growing ThematicExploration payload after each finished node."""
@@ -388,6 +396,7 @@ def iter_compare(
             until=until,
             k=k,
             decompose_mode=decompose_mode,
+            use_extension_questions=use_extension_questions,
             disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
             retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
         ):
@@ -439,6 +448,7 @@ def run_compare(
     include_trace: bool = False,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
+    use_extension_questions: bool = False,
     access_token: str | None = None,
 ) -> dict[str, Any]:
     last: dict[str, Any] = {}
@@ -449,6 +459,7 @@ def run_compare(
         include_trace=include_trace,
         k=k,
         decompose_mode=decompose_mode,
+        use_extension_questions=use_extension_questions,
         access_token=access_token,
     ):
         last = payload

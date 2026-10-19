@@ -25,6 +25,7 @@ class PipelineState(BaseModel):
     generated_subquestions: list[dict[str, str]] = Field(default_factory=list)
     sub_tasks: list[str] = Field(default_factory=list)
     decompose_mode: str = ""
+    use_extension_questions: bool = False
     nlg_evaluation: dict[str, Any] = Field(default_factory=dict)
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     retrieval_errors: dict[str, str] = Field(default_factory=dict)

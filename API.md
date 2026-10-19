@@ -23,6 +23,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `query_id` | Optional stable id (also used for gold / NLG match when it equals `Question_ID`) |
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
+| `use_extension_questions` | Default `false`. If `true`, decompose uses the knowledge-extension questions, each is retrieved, and the answer is grounded on those passages |
 | `include_trace` | `true` adds `raw_trace` |
 | `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `generate_subquestions`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `evaluate_answer`, `export_benchmark` |
 | `use_memory` | Default `true`. Reuse a stored result for the same question + options instead of re-running |
@@ -38,7 +39,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.22`**.
+Live version: **`0.1.23`**.
 
 ---
 
@@ -51,7 +52,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.22`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.23`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -137,7 +138,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
+- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Check **KE questions** to decompose and retrieve every knowledge-extension question (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
@@ -188,10 +189,10 @@ Runs the whole pipeline (or stops at `until`). Response includes `pipeline[]`, `
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/ThematicExploration`
 - Auth: `Authorization: Bearer …` (Keycloak, category D)
-- Body: `query`, optional `query_id`, `k`, `decompose_mode`, `until`, `include_trace`, `use_memory` (default `true`), `refresh` (default `false`)
+- Body: `query`, optional `query_id`, `k`, `decompose_mode`, `use_extension_questions` (default `false`), `until`, `include_trace`, `use_memory` (default `true`), `refresh` (default `false`)
 - Script: `scripts/dev/08-thematic-exploration.sh`
 - Until-retrieve script: `scripts/dev/08b-thematic-exploration-until-retrieve.sh`
-- Run memory: same question + `query_id` + `k` + `decompose_mode` + `until` returns the stored result (`memory.hit=true`) instead of re-running. Storage is JSON files under `RUN_MEMORY_DIR` (default `runs/memory/` locally, `/app/runs/memory/` in the pod). Pod disk is ephemeral unless a volume is mounted. Set `"refresh": true` to force a new pipeline run and overwrite storage. Set `"use_memory": false` to never read/write.
+- Run memory: same question + `query_id` + `k` + `decompose_mode` + `use_extension_questions` + `until` returns the stored result (`memory.hit=true`) instead of re-running. Storage is JSON files under `RUN_MEMORY_DIR` (default `runs/memory/` locally, `/app/runs/memory/` in the pod). Pod disk is ephemeral unless a volume is mounted. Set `"refresh": true` to force a new pipeline run and overwrite storage. Set `"use_memory": false` to never read/write.
 - Timeouts / step failures: HTTP 200 with `status` `timeout` or `error`, plus `failed_step`, `error`, and `pipeline[]` for every step completed before the failure. Soft-failed CDD corpus-analysis stays inside `compute_features` and does not abort the run.
 
 **Standard curl** (first run stores; second run is a memory hit)

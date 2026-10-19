@@ -18,8 +18,17 @@ def test_memory_key_stable_for_same_request():
     a = memory_key("How was Odin portrayed?", query_id="23", k=5, decompose_mode="few-shot", until=None)
     b = memory_key("how was   odin portrayed?", query_id="23", k=5, decompose_mode="few-shot", until=None)
     c = memory_key("How was Odin portrayed?", query_id="23", k=5, decompose_mode="few-shot", until="decompose")
+    d = memory_key(
+        "How was Odin portrayed?",
+        query_id="23",
+        k=5,
+        decompose_mode="few-shot",
+        until=None,
+        use_extension_questions=True,
+    )
     assert a == b
     assert a != c
+    assert a != d
 
 
 def test_save_and_load_roundtrip(tmp_path, monkeypatch):

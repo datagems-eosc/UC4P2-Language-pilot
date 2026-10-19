@@ -74,6 +74,7 @@ Optional fields:
 | `until` | Stop after a LangGraph node (`disambiguate`, `retrieve_slices`, …) |
 | `k` | Passages per slice (default 5) |
 | `decompose_mode` | Decomposition prompting: `predict`, `cot`, or `few-shot` (default) |
+| `use_extension_questions` | If true, decompose and retrieve every knowledge-extension question (default: one search per slice) |
 | `include_trace` | Include every node update |
 
 The response `pipeline` list is the audit trail: one object per step with `step`, `name`, `title`, `outcome`, `summary`, and `output`. Convenience fields (`synthesized_answer`, `passages`, …) still sit at the top level. Set `include_trace` if you also need the raw LangGraph updates as `raw_trace`.
@@ -116,7 +117,7 @@ Each comparison slice issues `POST /search/` (and `POST /corpus-analysis-search/
 | Diderot | Encyclopédie | French, historical | `d5c34990-9acf-4349-91d4-924f58565922` |
 | Wiki | Wikipedia | present-day | `1f6fba0c-9aea-4345-b5a3-457c924f9e0c` |
 
-The search string is the decomposed sub-question for that slice plus lexical variants. Auth uses a Keycloak password-grant token (`DG_USERNAME` / `DG_PASSWORD`) unless `CROSS_DATASET_DISCOVERY_TOKEN` is set.
+The search string is the decomposed sub-question for that slice (or the knowledge-extension question when that option is on). Extra lemmas and facets are not appended. Auth uses a Keycloak password-grant token (`DG_USERNAME` / `DG_PASSWORD`) unless `CROSS_DATASET_DISCOVERY_TOKEN` is set.
 
 `compute_features` then calls `POST /corpus-analysis-search/` on the same service (UC4P1-style features live in the result `metadata`). Local KWIC/collocations stay on the retrieved passages as a fallback if that call fails.
 

@@ -2,7 +2,8 @@
 
 Each pipeline stage is a node. ``stream_steps`` yields that node's update
 as soon as it finishes, so a run can be inspected one step at a time.
-Retrieval still calls Cross-Dataset Discovery, once per slice, in parallel.
+Retrieval calls Cross-Dataset Discovery once per slice, or once per
+knowledge-extension question when that option is on.
 """
 
 from __future__ import annotations
@@ -40,6 +41,7 @@ class PilotState(TypedDict, total=False):
     generated_subquestions: list[dict[str, str]]
     qdmr: list[dict[str, Any]]
     decompose_mode: str
+    use_extension_questions: bool
     search_queries: dict[str, str]
     passages: dict[str, list[dict[str, Any]]]
     retrieval_errors: dict[str, str]
@@ -63,10 +65,14 @@ def build_pilot_graph(
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
+    use_extension_questions: bool = False,
 ):
     retriever = CrossDatasetMultiSliceRetriever(client=retrieval_client, k=k)
     orchestrator = HistoricalQAOrchestrator(
-        disambiguation_client, retriever, decompose_mode=decompose_mode
+        disambiguation_client,
+        retriever,
+        decompose_mode=decompose_mode,
+        use_extension_questions=use_extension_questions,
     )
 
     def route(state: PilotState) -> dict[str, Any]:
@@ -99,6 +105,7 @@ def build_pilot_graph(
         return {
             "pipeline": _dump(updated),
             "generated_subquestions": updated.generated_subquestions,
+            "use_extension_questions": updated.use_extension_questions,
             "status": updated.status,
         }
 
@@ -112,6 +119,7 @@ def build_pilot_graph(
             "pipeline": _dump(updated),
             "qdmr": qdmr,
             "decompose_mode": updated.decompose_mode or decompose_mode,
+            "use_extension_questions": updated.use_extension_questions,
             "status": updated.status,
         }
 
@@ -215,6 +223,7 @@ def stream_steps(
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
+    use_extension_questions: bool = False,
 ) -> Iterator[dict[str, Any]]:
     """Yield ``{"step": name, "output": update}`` after each node."""
     compiled = build_pilot_graph(
@@ -222,6 +231,7 @@ def stream_steps(
         retrieval_client,
         k=k,
         decompose_mode=decompose_mode,
+        use_extension_questions=use_extension_questions,
     )
     initial: PilotState = {"question": question}
     if query_id:

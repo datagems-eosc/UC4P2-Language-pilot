@@ -41,6 +41,14 @@ class QueryRequest(BaseModel):
             "stored result. Use this to check consistency across runs."
         ),
     )
+    use_extension_questions: bool = Field(
+        default=False,
+        description=(
+            "If true, the decompose plan is the knowledge-extension questions, each "
+            "is retrieved, and the answer is grounded on those passages. Default is "
+            "one search per slice from the ordinary QDMR plan."
+        ),
+    )
 
     @field_validator("decompose_mode", mode="before")
     @classmethod
@@ -108,6 +116,7 @@ class ThematicExplorationResponse(BaseModel):
     qdmr: list[dict[str, Any]] = Field(default_factory=list)
     generated_subquestions: list[dict[str, str]] = Field(default_factory=list)
     decompose_mode: str = ""
+    use_extension_questions: bool = False
     search_queries: dict[str, str] = Field(default_factory=dict)
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     retrieval_errors: dict[str, str] = Field(default_factory=dict)

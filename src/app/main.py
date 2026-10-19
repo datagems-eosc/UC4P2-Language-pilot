@@ -76,7 +76,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.22",
+    version="0.1.23",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -174,7 +174,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.22",
+        "version": "0.1.23",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -277,6 +277,7 @@ def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
             k=k,
             decompose_mode=body.decompose_mode,
             until=until,
+            use_extension_questions=bool(body.use_extension_questions),
         ),
         "k": k,
         "request": {
@@ -286,6 +287,7 @@ def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
             "decompose_mode": body.decompose_mode,
             "until": until,
             "include_trace": body.include_trace,
+            "use_extension_questions": bool(body.use_extension_questions),
         },
         "use_memory": bool(getattr(body, "use_memory", True)) and memory_enabled(),
         "refresh": bool(getattr(body, "refresh", False)),
@@ -356,6 +358,7 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
         include_trace=body.include_trace,
         k=body.k or 5,
         decompose_mode=body.decompose_mode,
+        use_extension_questions=bool(body.use_extension_questions),
     )
     return ThematicExplorationResponse.model_validate(_finalize_payload(payload, body, until))
 
@@ -399,6 +402,7 @@ def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | 
         include_trace=body.include_trace,
         k=body.k or 5,
         decompose_mode=body.decompose_mode,
+        use_extension_questions=bool(body.use_extension_questions),
         access_token=access_token,
     ):
         payload = _decorate_payload(payload, body)

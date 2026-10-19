@@ -39,6 +39,8 @@ class RetrievedPassage(BaseModel):
     text: str
     dataset_id: str = ""
     similarity: Optional[float] = None
+    search_query: str = ""
+    subquestion_id: str = ""
 
 
 def _strip_step_prefix(instruction: str) -> str:
@@ -60,7 +62,8 @@ def search_query_for_slice(
     variants: list[str],
     sub_tasks: list[str] | None = None,
 ) -> str:
-    """Prefer the decomposed sub-question for this slice, plus lexical variants."""
+    """Use the decomposed sub-question for this slice, without extra lemmas."""
+    del variants
     matched = ""
     label = (slice_.label or "").strip().lower()
     language = (slice_.language or "").strip().lower()
@@ -76,9 +79,32 @@ def search_query_for_slice(
             matched = body
             break
     if matched:
-        parts = [matched, *variants[:4]]
-        return " ".join(part for part in parts if part).strip()
-    return build_search_query(concept, slice_.label, [], variants)
+        return matched
+    return build_search_query(concept, slice_.label, [], [])
+
+
+def _dedupe_passages(items: list[RetrievedPassage]) -> list[RetrievedPassage]:
+    seen: set[tuple[str, str, str]] = set()
+    unique: list[RetrievedPassage] = []
+    for item in items:
+        key = (item.slice_id, item.doc_id, item.text[:120])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return unique
+
+
+def _queries_from_jobs(jobs: list[dict], results: list[tuple[dict, list[RetrievedPassage] | str]]) -> dict[str, str]:
+    queries: dict[str, str] = {}
+    by_slice: dict[str, list[str]] = {}
+    for job, _result in results:
+        slice_id = job["slice"].slice_id
+        queries[str(job["id"])] = str(job["query"])
+        by_slice.setdefault(slice_id, []).append(str(job["query"]))
+    for slice_id, parts in by_slice.items():
+        queries[slice_id] = " ; ".join(parts)
+    return queries
 
 
 class MockMultiSliceRetriever:
@@ -109,10 +135,33 @@ class MockMultiSliceRetriever:
         slices: list[ComparisonSlice],
         variants_by_slice: dict[str, list[str]],
         sub_tasks: list[str] | None = None,
+        question_jobs: list[dict] | None = None,
     ) -> tuple[dict[str, list[RetrievedPassage]], dict[str, str], dict[str, str]]:
         passages: dict[str, list[RetrievedPassage]] = {}
         errors: dict[str, str] = {}
         queries: dict[str, str] = {}
+        if question_jobs:
+            results: list[tuple[dict, list[RetrievedPassage] | str]] = []
+            for job in question_jobs:
+                slice_ = job["slice"]
+                query = str(job["query"])
+                hit = RetrievedPassage(
+                    slice_id=slice_.slice_id,
+                    doc_id=f"{slice_.slice_id}-{job.get('id') or 'doc'}",
+                    text=(
+                        f"In {slice_.label}, {concept} is discussed through {query}. "
+                        f"The passage mentions {concept}."
+                    ),
+                    search_query=query,
+                    subquestion_id=str(job.get("id") or ""),
+                )
+                passages.setdefault(slice_.slice_id, []).append(hit)
+                results.append((job, [hit]))
+            return (
+                {key: _dedupe_passages(value) for key, value in passages.items()},
+                errors,
+                _queries_from_jobs(question_jobs, results),
+            )
         if not slices:
             return passages, errors, queries
         with ThreadPoolExecutor(max_workers=max(1, len(slices))) as pool:
@@ -139,7 +188,7 @@ class MockMultiSliceRetriever:
 
 
 class CrossDatasetMultiSliceRetriever:
-    """One Cross-Dataset Discovery search per slice, run concurrently."""
+    """Cross-Dataset Discovery search: one query per slice, or one per extension question."""
 
     def __init__(self, client: CrossDatasetDiscoveryClient | None = None, k: int = 5):
         self.client = client or CrossDatasetDiscoveryClient()
@@ -171,16 +220,72 @@ class CrossDatasetMultiSliceRetriever:
             )
         return passages
 
+    def retrieve_query(
+        self,
+        slice_: ComparisonSlice,
+        query: str,
+        *,
+        subquestion_id: str = "",
+    ) -> list[RetrievedPassage]:
+        dataset_ids = dataset_ids_for_slice(slice_)
+        payload = self.client.search(query, k=self.k, dataset_ids=dataset_ids)
+        passages: list[RetrievedPassage] = []
+        for item in payload.get("results") or []:
+            if not isinstance(item, dict):
+                continue
+            similarity = item.get("similarity")
+            passages.append(
+                RetrievedPassage(
+                    slice_id=slice_.slice_id,
+                    doc_id=str(item.get("object_id") or ""),
+                    text=str(item.get("content") or ""),
+                    dataset_id=str(item.get("dataset_id") or ""),
+                    similarity=float(similarity) if similarity is not None else None,
+                    search_query=query,
+                    subquestion_id=subquestion_id,
+                )
+            )
+        return passages
+
     def retrieve_all(
         self,
         concept: str,
         slices: list[ComparisonSlice],
         variants_by_slice: dict[str, list[str]],
         sub_tasks: list[str] | None = None,
+        question_jobs: list[dict] | None = None,
     ) -> tuple[dict[str, list[RetrievedPassage]], dict[str, str], dict[str, str]]:
         passages: dict[str, list[RetrievedPassage]] = {}
         errors: dict[str, str] = {}
         queries: dict[str, str] = {}
+        if question_jobs:
+            def _job(job: dict) -> tuple[dict, list[RetrievedPassage] | str]:
+                try:
+                    return job, self.retrieve_query(
+                        job["slice"],
+                        str(job["query"]),
+                        subquestion_id=str(job.get("id") or ""),
+                    )
+                except RetrievalAPIError as exc:
+                    return job, str(exc)
+
+            results: list[tuple[dict, list[RetrievedPassage] | str]] = []
+            with ThreadPoolExecutor(max_workers=max(1, min(6, len(question_jobs)))) as pool:
+                futures = [pool.submit(_job, job) for job in question_jobs]
+                for future in as_completed(futures):
+                    job, result = future.result()
+                    results.append((job, result))
+                    slice_id = job["slice"].slice_id
+                    if isinstance(result, str):
+                        errors[str(job.get("id") or slice_id)] = result
+                        passages.setdefault(slice_id, [])
+                    else:
+                        passages.setdefault(slice_id, []).extend(result)
+            return (
+                {key: _dedupe_passages(value) for key, value in passages.items()},
+                errors,
+                _queries_from_jobs(question_jobs, results),
+            )
         if not slices:
             return passages, errors, queries
 
