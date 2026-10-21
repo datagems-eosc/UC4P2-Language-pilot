@@ -25,6 +25,11 @@ from src.knowledge_extension.subquestions import (
     generate_facet_lemma_subquestions,
     retrieval_jobs_from_extension,
 )
+from src.orchestration.idd_client import (
+    InDatasetDiscoveryClient,
+    InDatasetDiscoveryError,
+    use_in_dataset_discovery,
+)
 from src.orchestration.slice_executor import RetrievalAPIError
 from src.retrieval.corpora import corpus_name_for_id, dataset_ids_for_slice
 from src.retrieval.multi_slice_retriever import (
@@ -36,6 +41,10 @@ from src.schemas.benchmark import BenchmarkOutput, Citation
 from src.schemas.concept import extract_concept
 from src.schemas.slice import ComparisonSlice, ParsedQueryIntent, parse_query_intent, slices_from_disambiguation
 from src.schemas.state import PipelineState
+
+
+def _slices_payload(slices: list[ComparisonSlice]) -> list[dict[str, Any]]:
+    return [item.model_dump() for item in slices]
 
 
 class GroundedSynthesizer(dspy.Signature):
@@ -181,12 +190,20 @@ class HistoricalQAOrchestrator(dspy.Module):
         retriever: CrossDatasetMultiSliceRetriever | MockMultiSliceRetriever | None = None,
         decompose_mode: str = FEW_SHOT,
         use_extension_questions: bool = False,
+        idd_client: InDatasetDiscoveryClient | None = None,
     ):
         super().__init__()
         self.disambiguation_client = disambiguation_client or QueryDisambiguationClient()
         self.retriever = retriever or CrossDatasetMultiSliceRetriever()
         self.decompose_mode = decompose_mode
         self.use_extension_questions = bool(use_extension_questions)
+        if idd_client is not None:
+            self.idd_client = idd_client
+        elif use_in_dataset_discovery():
+            self.idd_client = InDatasetDiscoveryClient()
+        else:
+            self.idd_client = None
+        self._idd_extend: dict[str, Any] | None = None
 
     def resolve(self, question: str, query_id: str | None = None) -> PipelineState:
         identifier = query_id or _query_id(question)
@@ -290,6 +307,24 @@ class HistoricalQAOrchestrator(dspy.Module):
     def extend(self, state: PipelineState) -> PipelineState:
         intent = state.intent
         assert intent is not None
+        if self.idd_client is not None:
+            try:
+                # Let IDD extract the concept (LLM-first); do not pass the local
+                # disambiguation concept, which can latch onto geo framing words.
+                remote = self.idd_client.extend_knowledge(
+                    state.question,
+                    slices=_slices_payload(intent.slices),
+                )
+                self._idd_extend = remote
+                concept = str(remote.get("concept") or "").strip()
+                if concept:
+                    intent.target_concept = concept
+                expansion = dict(remote.get("expansion") or {})
+                state.knowledge_extension = knowledge_extension_payload(expansion)
+                state.status = "expanded"
+                return state
+            except InDatasetDiscoveryError:
+                self._idd_extend = None
         expansion = expand_knowledge(state.question, intent.target_concept, intent.slices)
         state.knowledge_extension = knowledge_extension_payload(expansion)
         state.status = "expanded"
@@ -298,12 +333,22 @@ class HistoricalQAOrchestrator(dspy.Module):
     def generate_subquestions(self, state: PipelineState) -> PipelineState:
         intent = state.intent
         assert intent is not None
-        state.generated_subquestions = generate_facet_lemma_subquestions(
-            state.question,
-            intent.target_concept,
-            intent.slices,
-            dict(state.knowledge_extension),
-        )
+        cached = self._idd_extend or {}
+        remote_subs = cached.get("generated_subquestions")
+        if self.idd_client is not None and isinstance(remote_subs, list) and remote_subs:
+            state.generated_subquestions = [
+                {str(key): str(value) for key, value in item.items()}
+                if isinstance(item, dict)
+                else {"question": str(item)}
+                for item in remote_subs
+            ]
+        else:
+            state.generated_subquestions = generate_facet_lemma_subquestions(
+                state.question,
+                intent.target_concept,
+                intent.slices,
+                dict(state.knowledge_extension),
+            )
         state.use_extension_questions = self.use_extension_questions
         state.status = "subquestions_generated"
         return state
@@ -312,6 +357,28 @@ class HistoricalQAOrchestrator(dspy.Module):
         intent = state.intent
         assert intent is not None
         context = intent.target_concept or "the subject"
+        if self.idd_client is not None:
+            try:
+                remote = self.idd_client.decompose(
+                    state.question,
+                    slices=_slices_payload(intent.slices),
+                )
+                concept = str(remote.get("concept") or "").strip()
+                if concept:
+                    intent.target_concept = concept
+                    context = concept
+                qdmr = remote.get("qdmr") or []
+                state.sub_tasks = [
+                    str(item.get("instruction") or "").strip()
+                    for item in qdmr
+                    if isinstance(item, dict) and str(item.get("instruction") or "").strip()
+                ]
+                state.decompose_mode = "idd"
+                state.use_extension_questions = self.use_extension_questions
+                state.status = "decomposed"
+                return state
+            except InDatasetDiscoveryError:
+                pass
         state.sub_tasks = decompose_question(
             state.question, intent.slices, context, decompose_mode=self.decompose_mode
         )
@@ -442,6 +509,34 @@ class HistoricalQAOrchestrator(dspy.Module):
     def evaluate(self, state: PipelineState) -> PipelineState:
         answer = state.output.synthesized_answer if state.output is not None else ""
         concept = state.intent.target_concept if state.intent is not None else ""
+        if self.idd_client is not None:
+            try:
+                remote = self.idd_client.nlg_evaluate(
+                    state.question,
+                    answer,
+                    query_id=state.query_id,
+                )
+                state.nlg_evaluation = {
+                    "matched": bool(remote.get("matched")),
+                    "question_id": str(remote.get("question_id") or state.query_id or ""),
+                    "concept": str(remote.get("concept") or concept or ""),
+                    "gold_question": str(remote.get("gold_question") or ""),
+                    "gold_source": str(remote.get("gold_source") or ""),
+                    "match": str(remote.get("match") or ""),
+                    "ground_truth": str(remote.get("ground_truth") or ""),
+                    "metrics": dict(remote.get("metrics") or {}),
+                    "llm_judge": {"available": False, "reason": "NLG via in-dataset-discovery"},
+                    "summary": str(remote.get("summary") or ""),
+                    "source": "in-dataset-discovery",
+                }
+                if state.output is not None:
+                    state.output = state.output.model_copy(
+                        update={"nlg_evaluation": state.nlg_evaluation}
+                    )
+                state.status = "ok"
+                return state
+            except InDatasetDiscoveryError:
+                pass
         state.nlg_evaluation = evaluate_against_ground_truth(
             state.question,
             answer,

@@ -15,6 +15,7 @@ from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
 from src.constraints.comparative import QueryDisambiguationClient
+from src.orchestration.idd_client import InDatasetDiscoveryClient, use_in_dataset_discovery
 from src.decomposition.modes import FEW_SHOT
 from src.orchestration.pipeline import HistoricalQAOrchestrator
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
@@ -63,6 +64,7 @@ def _dump(pipeline: PipelineState) -> dict[str, Any]:
 def build_pilot_graph(
     disambiguation_client: QueryDisambiguationClient | None = None,
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
+    idd_client: InDatasetDiscoveryClient | None = None,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
@@ -73,6 +75,7 @@ def build_pilot_graph(
         retriever,
         decompose_mode=decompose_mode,
         use_extension_questions=use_extension_questions,
+        idd_client=idd_client,
     )
 
     def route(state: PilotState) -> dict[str, Any]:
@@ -98,7 +101,13 @@ def build_pilot_graph(
 
     def extend_knowledge(state: PilotState) -> dict[str, Any]:
         updated = orchestrator.extend(_load(state))
-        return {"pipeline": _dump(updated), "expansion": updated.knowledge_extension, "status": updated.status}
+        concept = updated.intent.target_concept if updated.intent is not None else ""
+        return {
+            "pipeline": _dump(updated),
+            "expansion": updated.knowledge_extension,
+            "concept": concept,
+            "status": updated.status,
+        }
 
     def generate_subquestions(state: PilotState) -> dict[str, Any]:
         updated = orchestrator.generate_subquestions(_load(state))
@@ -115,9 +124,11 @@ def build_pilot_graph(
             {"step": index, "instruction": task}
             for index, task in enumerate(updated.sub_tasks, start=1)
         ]
+        concept = updated.intent.target_concept if updated.intent is not None else ""
         return {
             "pipeline": _dump(updated),
             "qdmr": qdmr,
+            "concept": concept,
             "decompose_mode": updated.decompose_mode or decompose_mode,
             "use_extension_questions": updated.use_extension_questions,
             "status": updated.status,
@@ -221,6 +232,7 @@ def stream_steps(
     until: str | None = None,
     disambiguation_client: QueryDisambiguationClient | None = None,
     retrieval_client: CrossDatasetDiscoveryClient | None = None,
+    idd_client: InDatasetDiscoveryClient | None = None,
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
@@ -229,6 +241,7 @@ def stream_steps(
     compiled = build_pilot_graph(
         disambiguation_client,
         retrieval_client,
+        idd_client=idd_client,
         k=k,
         decompose_mode=decompose_mode,
         use_extension_questions=use_extension_questions,
