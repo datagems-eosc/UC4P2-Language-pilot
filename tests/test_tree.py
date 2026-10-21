@@ -107,6 +107,8 @@ def test_tree_endpoint_renders_posted_json(monkeypatch):
     assert "ThematicExploration/stream" in page.text
     assert "ThematicExploration/runs/" in page.text
     assert "function apiUrl" in page.text
+    assert "function absoluteUrl" in page.text
+    assert "check the DataGEMS VPN" in page.text
     assert "function pollJob" in page.text
     assert "function recoverRun" in page.text
     assert "finishWithoutStream" in page.text

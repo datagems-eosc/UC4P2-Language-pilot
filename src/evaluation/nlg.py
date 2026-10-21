@@ -302,11 +302,12 @@ def find_ground_truth(
     query_id: str | None = None,
     concept: str | None = None,
 ) -> dict[str, Any] | None:
-    """Match a gold row from ``data/*.json``.
+    """Match a gold row from ``data/*.json`` by exact id or exact question only.
 
-    Order: Question_ID, exact question text, same Concept (parent row for
-    comparative queries), then highest token overlap.
+    ``concept`` is ignored for matching so a nearby gold row is never scored
+    by accident. Soft concept/overlap fallbacks were removed on purpose.
     """
+    del concept
     records = _records()
     wanted_id = str(query_id or "").strip()
     if _is_benchmark_id(wanted_id):
@@ -322,34 +323,7 @@ def find_ground_truth(
                 matched = dict(item)
                 matched["_match"] = "question"
                 return matched
-    concept_name = (concept or "").strip()
-    if not concept_name:
-        mentioned = _concepts_mentioned(question, records)
-        if len(mentioned) == 1:
-            concept_name = mentioned[0]
-    pool = _concept_records(records, concept_name) if concept_name else list(records)
-    if not pool:
-        return None
-    if concept_name and _COMPARATIVE.search(question or ""):
-        parents = [item for item in pool if _is_parent(item)]
-        if len(parents) == 1:
-            matched = dict(parents[0])
-            matched["_match"] = "concept_parent"
-            return matched
-        if parents:
-            pool = parents
-    ranked = sorted(
-        pool,
-        key=lambda item: _overlap(question, str(item.get("Question") or "")),
-        reverse=True,
-    )
-    best = ranked[0]
-    score = _overlap(question, str(best.get("Question") or ""))
-    if not concept_name and score < 0.15:
-        return None
-    matched = dict(best)
-    matched["_match"] = "overlap" if score else "concept_parent"
-    return matched
+    return None
 
 
 def evaluate_against_ground_truth(

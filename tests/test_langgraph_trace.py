@@ -43,7 +43,7 @@ def test_comparative_trace_emits_each_step():
     events = list(
         stream_steps(
             MARRIAGE,
-            query_id="q-marriage",
+            query_id="9",
             disambiguation_client=client,
             retrieval_client=ScriptedRetrieval(),
         )
@@ -76,6 +76,7 @@ def test_comparative_trace_emits_each_step():
     assert "#1" in by_step["decompose"]["qdmr"][2]["instruction"]
     assert "metrics" in by_step["evaluate_answer"]["nlg_evaluation"]
     assert by_step["evaluate_answer"]["nlg_evaluation"]["matched"] is True
+    assert by_step["evaluate_answer"]["nlg_evaluation"]["match"] == "question_id"
     assert by_step["evaluate_answer"]["nlg_evaluation"]["question_id"] == "9"
     assert by_step["retrieve_slices"]["passages"]["slice_1"][0]["text_snippet"]
     assert by_step["retrieve_slices"]["passages"]["slice_2"][0]["text_snippet"]
@@ -83,7 +84,7 @@ def test_comparative_trace_emits_each_step():
     slice_metrics = by_step["compute_features"]["feature_metrics"]["slice_1"]
     assert any(lens in slice_metrics for lens in lenses)
     assert "coverture" in by_step["synthesize"]["synthesized_answer"]
-    assert by_step["export_benchmark"]["benchmark"]["query_id"] == "q-marriage"
+    assert by_step["export_benchmark"]["benchmark"]["query_id"] == "9"
     assert client.queries == [MARRIAGE]
 
 

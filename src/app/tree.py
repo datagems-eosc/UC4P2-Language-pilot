@@ -930,19 +930,47 @@ _PAGE = """<!DOCTYPE html>
       renderPayload(JSON.parse(await file.text()));
     });
 
-    async function mintAccessToken() {
-      const response = await fetch(apiUrl("tree/token"), { headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!response.ok) throw new Error("HTTP " + response.status + " from tree/token");
-      const payload = await response.json();
-      const token = payload && payload.access_token;
-      if (!token) throw new Error("no access_token in tree/token response");
-      return String(token);
-    }
-
     function apiUrl(suffix) {
       const base = location.pathname.replace(/\\/tree\\/?$/, "/");
       const prefix = base.endsWith("/") ? base : base + "/";
       return prefix + String(suffix || "").replace(/^\\//, "");
+    }
+
+    function absoluteUrl(suffix) {
+      return new URL(apiUrl(suffix), location.href).href;
+    }
+
+    async function mintAccessToken() {
+      const url = absoluteUrl("tree/token");
+      let lastError = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch(url, {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            const detail = payload && payload.detail ? String(payload.detail) : ("HTTP " + response.status);
+            throw new Error(detail + " from " + url);
+          }
+          const payload = await response.json();
+          const token = payload && payload.access_token;
+          if (!token) throw new Error("no access_token from " + url);
+          return String(token);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      const message = String(lastError && lastError.message ? lastError.message : lastError);
+      if (/failed to fetch|networkerror|load failed/i.test(message)) {
+        throw new Error(
+          "The browser could not reach " + url +
+          ". Hard-refresh this page, check the DataGEMS VPN, then open that URL in this same tab."
+        );
+      }
+      throw lastError;
     }
     const STREAM_URL = apiUrl("ThematicExploration/stream");
     const FALLBACK_URL = apiUrl("ThematicExploration");

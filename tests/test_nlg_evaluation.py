@@ -28,28 +28,40 @@ def test_benchmark_ground_truth_lookup_by_question():
     gold = "A larger city in Germany, capital of Saxony."
     result = evaluate_against_ground_truth(question, gold, query_id="1")
     assert result["matched"] is True
+    assert result["match"] == "question_id"
     assert result["metrics"]["exact_match"] == 1.0
     assert "llm_judge" in result
 
 
-def test_marriage_walkthrough_uses_benchmark_gold():
+def test_marriage_walkthrough_uses_exact_question_id():
+    result = evaluate_against_ground_truth(
+        "How does the definition of a valid marriage shift over time in the Western hemisphere?",
+        "an answer",
+        query_id="9",
+    )
+    assert result["matched"] is True
+    assert result["question_id"] == "9"
+    assert result["gold_source"] == "pilot2_benchmark_english.v1.json"
+    assert result["match"] == "question_id"
+    assert "valid marriage" in result["ground_truth"].lower() or "marriage" in result["ground_truth"].lower()
+
+
+def test_paraphrase_without_exact_id_does_not_match_neighbor_gold():
     result = evaluate_against_ground_truth(
         "How did a marriage look like in the 1800s compared to now?",
         "an answer",
         query_id="q-api",
         concept="marriage",
     )
-    assert result["matched"] is True
-    assert result["question_id"] == "9"
-    assert result["gold_source"] == "pilot2_benchmark_english.v1.json"
-    assert result["match"] == "concept_parent"
-    assert "lifelong contract" in result["ground_truth"]
+    assert result["matched"] is False
+    assert result["metrics"] == {}
 
 
-def test_defined_marriage_uses_the_child_gold_row():
+def test_defined_marriage_uses_exact_question_text():
     result = evaluate_against_ground_truth("How is marriage defined?", "placeholder")
     assert result["matched"] is True
     assert result["question_id"] == "10"
+    assert result["match"] == "question"
 
 
 def test_missing_ground_truth_is_reported():
