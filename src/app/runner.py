@@ -8,6 +8,7 @@ from typing import Any, Iterator
 
 from src.app.auth import caller_access_token
 from src.constraints.comparative import QueryDisambiguationClient
+from src.orchestration.idd_client import InDatasetDiscoveryClient, use_in_dataset_discovery
 from src.decomposition.modes import FEW_SHOT
 from src.orchestration.graph import stream_steps
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
@@ -398,6 +399,11 @@ def iter_compare(
             use_extension_questions=use_extension_questions,
             disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
             retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
+            idd_client=(
+                InDatasetDiscoveryClient(token=token)
+                if use_in_dataset_discovery()
+                else None
+            ),
         ):
             events.append(event)
             snapshot = _payload_from_events(
