@@ -181,7 +181,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.34",
+        "version": "0.1.35",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -441,7 +441,14 @@ def _slim_running_payload(payload: dict[str, Any], *, limit: int = 240) -> dict[
     return slimmed if isinstance(slimmed, dict) else dict(payload)
 
 
-def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | None):
+def _stream_pipeline(
+    body: QueryRequest,
+    until: str | None,
+    access_token: str | None,
+    *,
+    run_id: str | None = None,
+    job_id: str | None = None,
+):
     cached = _cached_payload(body, until)
     if cached is not None:
         yield cached
@@ -459,6 +466,8 @@ def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | 
         llm_model=meta["llm_model"],
         judge_llm_model=meta["judge_llm_model"],
         access_token=access_token,
+        run_id=run_id,
+        job_id=job_id,
     ):
         payload = _decorate_payload(payload, body)
         last = payload
@@ -474,11 +483,14 @@ def _start_stream_job(
     access_token: str | None,
 ) -> tuple[str, queue.Queue]:
     job_id = uuid.uuid4().hex
+    # Stream jobs use the same ID for job polling and execution tracking.
+    run_id = job_id
     updates: queue.Queue = queue.Queue()
     put_job(
         job_id,
         {
             "job_id": job_id,
+            "run_id": run_id,
             "status": "running",
             "question": body.query,
             "query_id": body.query_id or "",
@@ -488,9 +500,16 @@ def _start_stream_job(
 
     def worker() -> None:
         try:
-            for payload in _stream_pipeline(body, until, access_token):
+            for payload in _stream_pipeline(
+                body,
+                until,
+                access_token,
+                run_id=run_id,
+                job_id=job_id,
+            ):
                 payload = dict(payload)
                 payload["job_id"] = job_id
+                payload["run_id"] = payload.get("run_id") or run_id
                 put_job(job_id, payload)
                 updates.put(payload)
         except Exception as exc:  # noqa: BLE001 - last snapshot must stay pollable
@@ -498,6 +517,7 @@ def _start_stream_job(
             previous = get_job(job_id) or {}
             payload = {
                 "job_id": job_id,
+                "run_id": previous.get("run_id") or run_id,
                 "status": "error",
                 "error": str(exc),
                 "question": body.query,

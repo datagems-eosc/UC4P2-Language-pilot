@@ -105,6 +105,9 @@ def test_attach_execution_measures_adds_system_family():
             "llm_judge": {"available": False, "reason": "test"},
         },
         query_id="1",
+        run_id="abc123deadbeef",
+        llm_model="qwen3",
+        judge_llm_model="glm-5.3-flash",
     )
     timings = [
         {"name": "route", "title": "Route", "outcome": "ok", "duration_s": 0.01, "duration_ms": 10},
@@ -123,10 +126,13 @@ def test_attach_execution_measures_adds_system_family():
         evaluation_time_s=1.25,
         query_id="1",
         llm_model="qwen3",
+        judge_llm_model="glm-5.3-flash",
+        run_id="abc123deadbeef",
     )
     step_measure = next(m for m in report["measures"] if m["id"] == "uc4p2.execution_time")
     assert step_measure["family"] == "system"
     assert len(step_measure["observations"]) == 2
+    assert step_measure["observations"][0]["dimensions"]["run_id"] == "abc123deadbeef"
     assert step_measure["observations"][0]["calculation"]["elements"]
     total = next(m for m in report["measures"] if m["id"] == "uc4p2.execution_time_total")
     assert total["observations"][0]["value"] == 1.26
@@ -134,7 +140,7 @@ def test_attach_execution_measures_adds_system_family():
     assert evaluation["observations"][0]["value"] == 1.25
 
 
-def test_pipeline_trace_keeps_step_durations():
+def test_pipeline_trace_keeps_step_durations_and_run_identity():
     from src.app.runner import _attach_execution_timings, build_pipeline_trace
 
     events = [
@@ -163,12 +169,20 @@ def test_pipeline_trace_keeps_step_durations():
     payload = _attach_execution_timings(
         {
             "query_id": "1",
+            "question": "How is Dresden described?",
+            "run_id": "feedface00cafe",
             "llm_model": "qwen3",
+            "judge_llm_model": "glm-5.3-flash",
             "pipeline": trace,
             "nlg_evaluation": events[1]["output"]["nlg_evaluation"],
         }
     )
     assert payload["execution_time_s"] == 0.52
     assert payload["evaluation_time_s"] == 0.5
+    assert payload["run_id"] == "feedface00cafe"
+    assert payload["execution"]["llm_model"] == "qwen3"
+    assert payload["execution"]["judge_llm_model"] == "glm-5.3-flash"
     report = payload["nlg_evaluation"]["evaluation_report"]
+    assert report["execution"]["run_id"] == "feedface00cafe"
     assert any(m["id"] == "uc4p2.execution_time" for m in report["measures"])
+    assert payload["nlg_evaluation"]["run_id"] == "feedface00cafe"

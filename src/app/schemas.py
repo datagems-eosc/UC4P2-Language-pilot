@@ -121,6 +121,25 @@ class ThematicExplorationResponse(BaseModel):
     service: str = "UC4P2 Language Pilot"
     query_id: str = ""
     question: str
+    run_id: str = Field(
+        default="",
+        description=(
+            "Unique ID for this pipeline execution event. Use it to distinguish "
+            "multiple runs of the same question; pairs with llm_model / judge_llm_model "
+            "in ``execution`` and in evaluation_report observations."
+        ),
+    )
+    job_id: Optional[str] = Field(
+        default=None,
+        description="SSE / poll job id when streamed; equal to run_id for stream jobs.",
+    )
+    execution: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Execution identity: run_id, query_id, llm_model, judge_llm_model, "
+            "decompose_mode (and job_id when streamed)."
+        ),
+    )
     status: str = Field(
         description="ok, running (SSE only), clarification, partial, timeout, or error."
     )

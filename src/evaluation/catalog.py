@@ -27,10 +27,17 @@ _SECOND_UNIT = {"code": "second", "symbol": "s", "status": "declared"}
 def _dim() -> list[dict[str, Any]]:
     return [
         {
+            "id": "run_id",
+            "label": "Execution / run ID",
+            "type": "nominal",
+            "role": "category",
+            "required": True,
+        },
+        {
             "id": "query_id",
             "label": "Question / Subquestion ID",
             "type": "nominal",
-            "role": "category",
+            "role": "group",
             "required": True,
         },
         {
@@ -54,11 +61,25 @@ def _dim() -> list[dict[str, Any]]:
             "role": "group",
             "required": False,
         },
+        {
+            "id": "judge_llm_model",
+            "label": "Judge LLM",
+            "type": "nominal",
+            "role": "group",
+            "required": False,
+        },
     ]
 
 
 def _step_dim() -> list[dict[str, Any]]:
     return [
+        {
+            "id": "run_id",
+            "label": "Execution / run ID",
+            "type": "nominal",
+            "role": "group",
+            "required": True,
+        },
         {
             "id": "operator",
             "label": "Pipeline operator / step",
@@ -76,6 +97,13 @@ def _step_dim() -> list[dict[str, Any]]:
         {
             "id": "llm_model",
             "label": "Pipeline LLM",
+            "type": "nominal",
+            "role": "group",
+            "required": False,
+        },
+        {
+            "id": "judge_llm_model",
+            "label": "Judge LLM",
             "type": "nominal",
             "role": "group",
             "required": False,

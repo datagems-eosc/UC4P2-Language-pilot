@@ -41,10 +41,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -64,6 +71,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -111,10 +125,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -134,6 +155,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -181,10 +209,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -204,6 +239,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -251,10 +293,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -274,6 +323,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -321,10 +377,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -344,6 +407,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -391,10 +461,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -414,6 +491,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -461,10 +545,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -484,6 +575,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -531,10 +629,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -554,6 +659,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -601,10 +713,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -624,6 +743,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -671,10 +797,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -694,6 +827,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -741,10 +881,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -764,6 +911,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -811,10 +965,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -834,6 +995,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -881,10 +1049,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -904,6 +1079,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -951,10 +1133,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -974,6 +1163,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1021,10 +1217,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1044,6 +1247,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1091,10 +1301,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1114,6 +1331,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1161,10 +1385,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1184,6 +1415,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1231,10 +1469,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1254,6 +1499,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1301,10 +1553,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1324,6 +1583,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1371,10 +1637,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1394,6 +1667,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1441,10 +1721,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1464,6 +1751,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1511,10 +1805,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1534,6 +1835,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1581,10 +1889,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1604,6 +1919,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1652,6 +1974,13 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
           "id": "operator",
           "label": "Pipeline operator / step",
           "type": "nominal",
@@ -1668,6 +1997,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1714,10 +2050,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1737,6 +2080,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false
@@ -1784,10 +2134,17 @@
       },
       "dimensions": [
         {
+          "id": "run_id",
+          "label": "Execution / run ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
           "id": "query_id",
           "label": "Question / Subquestion ID",
           "type": "nominal",
-          "role": "category",
+          "role": "group",
           "required": true
         },
         {
@@ -1807,6 +2164,13 @@
         {
           "id": "llm_model",
           "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "judge_llm_model",
+          "label": "Judge LLM",
           "type": "nominal",
           "role": "group",
           "required": false

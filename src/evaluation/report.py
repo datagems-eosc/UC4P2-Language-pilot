@@ -16,6 +16,90 @@ from src.evaluation.details import judge_details, nlg_metrics_with_details
 from src.evaluation.nlg import strip_citation_marks
 
 
+def build_execution_identity(
+    *,
+    run_id: str,
+    query_id: str = "",
+    question: str = "",
+    llm_model: str = "",
+    judge_llm_model: str = "",
+    decompose_mode: str = "",
+    job_id: str = "",
+) -> dict[str, Any]:
+    """Stable identity for one pipeline execution (multi-run tracking)."""
+    identity = {
+        "run_id": run_id or "",
+        "query_id": query_id or "",
+        "question": question or "",
+        "llm_model": llm_model or "",
+        "judge_llm_model": judge_llm_model or "",
+        "decompose_mode": decompose_mode or "",
+    }
+    if job_id:
+        identity["job_id"] = job_id
+    return identity
+
+
+def stamp_run_identity(
+    report: dict[str, Any],
+    *,
+    execution: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach ``run_id`` / LLM identity onto evaluation provenance and observations."""
+    updated = dict(report)
+    run_id = str(execution.get("run_id") or "")
+    query_id = str(execution.get("query_id") or "")
+    llm_model = str(execution.get("llm_model") or "")
+    judge_llm_model = str(execution.get("judge_llm_model") or "")
+    short = run_id[:8] if run_id else "run"
+
+    evaluation = dict(updated.get("evaluation") or {})
+    provenance = dict(evaluation.get("provenance") or {})
+    run_meta = dict(provenance.get("run") or {})
+    run_meta.update(
+        {
+            "run_id": run_id,
+            "query_id": query_id or run_meta.get("query_id") or "",
+            "llm_model": llm_model or run_meta.get("llm_model") or "",
+            "judge_llm_model": judge_llm_model or run_meta.get("judge_llm_model") or "",
+            "decompose_mode": execution.get("decompose_mode")
+            or run_meta.get("decompose_mode")
+            or "",
+            "question": execution.get("question") or run_meta.get("question") or "",
+        }
+    )
+    if execution.get("job_id"):
+        run_meta["job_id"] = execution["job_id"]
+    provenance["run"] = run_meta
+    provenance["execution"] = dict(execution)
+    evaluation["provenance"] = provenance
+    evaluation["id"] = evaluation.get("id") or "uc4p2-language-pilot"
+    updated["evaluation"] = evaluation
+    updated["execution"] = dict(execution)
+
+    measures: list[dict[str, Any]] = []
+    for measure in list(updated.get("measures") or []):
+        item = dict(measure)
+        observations: list[dict[str, Any]] = []
+        for index, obs in enumerate(list(item.get("observations") or [])):
+            stamped = dict(obs)
+            dims = dict(stamped.get("dimensions") or {})
+            dims["run_id"] = run_id
+            dims["query_id"] = dims.get("query_id") or query_id
+            dims["llm_model"] = dims.get("llm_model") or llm_model
+            dims["judge_llm_model"] = judge_llm_model
+            stamped["dimensions"] = dims
+            base = str(stamped.get("id") or f"obs-{index}")
+            # Keep readable ids unique across repeated runs of the same question.
+            if run_id and run_id not in base:
+                stamped["id"] = f"{base}-{short}"
+            observations.append(stamped)
+        item["observations"] = observations
+        measures.append(item)
+    updated["measures"] = measures
+    return updated
+
+
 def build_evaluation_report(
     *,
     question: str,
@@ -88,14 +172,21 @@ def build_evaluation_report(
             else:
                 status = "ok"
 
+        short_run = (dimensions["run_id"] or "run")[:8]
         observation: dict[str, Any] = {
-            "id": f"{spec['id'].split('.')[-1]}-{dimensions['query_id'] or 'run'}",
+            "id": (
+                f"{spec['id'].split('.')[-1]}-"
+                f"{dimensions['query_id'] or 'qid'}-"
+                f"{short_run}"
+            ),
             "value": value,
             "dimensions": {
+                "run_id": dimensions["run_id"],
                 "query_id": dimensions["query_id"],
                 "operator": dimensions["operator"],
                 "gold_source": dimensions["gold_source"],
                 "llm_model": dimensions["llm_model"],
+                "judge_llm_model": dimensions["judge_llm_model"],
             },
             "status": status,
         }
@@ -174,6 +265,8 @@ def attach_execution_measures(
     evaluation_time_s: float | None,
     query_id: str = "",
     llm_model: str = "",
+    judge_llm_model: str = "",
+    run_id: str = "",
 ) -> dict[str, Any]:
     """Replace/add system execution-time measures on a StudentQuiz-shaped report."""
     updated = dict(report)
@@ -184,6 +277,13 @@ def attach_execution_measures(
         and str(measure.get("id") or "") != "uc4p2.evaluation_time"
     ]
     by_id = {spec["id"]: spec for spec in SYSTEM_MEASURE_SPECS}
+    short_run = (run_id or "run")[:8]
+    shared_dims = {
+        "run_id": run_id or "",
+        "query_id": query_id or "",
+        "llm_model": llm_model or "",
+        "judge_llm_model": judge_llm_model or "",
+    }
 
     step_spec = by_id["uc4p2.execution_time"]
     step_measure = _measure_from_spec(step_spec)
@@ -199,12 +299,11 @@ def attach_execution_measures(
             duration_ms = round(duration_s * 1000, 1)
         step_observations.append(
             {
-                "id": f"execution_time-{name}-{query_id or 'run'}",
+                "id": f"execution_time-{name}-{query_id or 'qid'}-{short_run}",
                 "value": duration_s,
                 "dimensions": {
+                    **shared_dims,
                     "operator": name,
-                    "query_id": query_id or "",
-                    "llm_model": llm_model or "",
                 },
                 "status": "ok",
                 "calculation": {
@@ -220,6 +319,11 @@ def attach_execution_measures(
                             "id": "outcome",
                             "label": "Step outcome",
                             "value": item.get("outcome"),
+                        },
+                        {
+                            "id": "run_id",
+                            "label": "Execution run ID",
+                            "value": run_id or "",
                         },
                         {
                             "id": "duration_s",
@@ -245,17 +349,21 @@ def attach_execution_measures(
     if execution_time_s is not None:
         total_measure["observations"] = [
             {
-                "id": f"execution_time_total-{query_id or 'run'}",
+                "id": f"execution_time_total-{query_id or 'qid'}-{short_run}",
                 "value": round(float(execution_time_s), 4),
                 "dimensions": {
-                    "query_id": query_id or "",
+                    **shared_dims,
                     "operator": "pipeline",
-                    "llm_model": llm_model or "",
                 },
                 "status": "ok",
                 "calculation": {
                     "formula": total_spec["definition"]["formula"],
                     "elements": [
+                        {
+                            "id": "run_id",
+                            "label": "Execution run ID",
+                            "value": run_id or "",
+                        },
                         {
                             "id": "step_count",
                             "label": "Timed steps",
@@ -286,17 +394,21 @@ def attach_execution_measures(
     if evaluation_time_s is not None:
         eval_measure["observations"] = [
             {
-                "id": f"evaluation_time-{query_id or 'run'}",
+                "id": f"evaluation_time-{query_id or 'qid'}-{short_run}",
                 "value": round(float(evaluation_time_s), 4),
                 "dimensions": {
-                    "query_id": query_id or "",
+                    **shared_dims,
                     "operator": "evaluate_answer",
-                    "llm_model": llm_model or "",
                 },
                 "status": "ok",
                 "calculation": {
                     "formula": eval_spec["definition"]["formula"],
                     "elements": [
+                        {
+                            "id": "run_id",
+                            "label": "Execution run ID",
+                            "value": run_id or "",
+                        },
                         {
                             "id": "operator",
                             "label": "Pipeline step",
@@ -313,6 +425,16 @@ def attach_execution_measures(
                             "label": "Included work",
                             "value": "NLG metrics + optional LLM-as-judge",
                         },
+                        {
+                            "id": "llm_model",
+                            "label": "Pipeline LLM",
+                            "value": llm_model or "",
+                        },
+                        {
+                            "id": "judge_llm_model",
+                            "label": "Judge LLM",
+                            "value": judge_llm_model or "",
+                        },
                     ],
                 },
             }
@@ -320,12 +442,11 @@ def attach_execution_measures(
     else:
         eval_measure["observations"] = [
             {
-                "id": f"evaluation_time-{query_id or 'run'}",
+                "id": f"evaluation_time-{query_id or 'qid'}-{short_run}",
                 "value": None,
                 "dimensions": {
-                    "query_id": query_id or "",
+                    **shared_dims,
                     "operator": "evaluate_answer",
-                    "llm_model": llm_model or "",
                 },
                 "status": "missing",
                 "calculation": {
@@ -344,6 +465,12 @@ def attach_execution_measures(
 
     provenance = dict(updated.get("evaluation") or {})
     run_meta = dict((provenance.get("provenance") or {}).get("run") or {})
+    if run_id:
+        run_meta["run_id"] = run_id
+    if llm_model:
+        run_meta["llm_model"] = llm_model
+    if judge_llm_model:
+        run_meta["judge_llm_model"] = judge_llm_model
     if execution_time_s is not None:
         run_meta["execution_time_s"] = round(float(execution_time_s), 4)
     if evaluation_time_s is not None:

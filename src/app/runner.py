@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import uuid
 from typing import Any, Iterator
 
 from src.app.auth import caller_access_token
@@ -14,6 +15,11 @@ from src.orchestration.graph import stream_steps
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
 
 logger = logging.getLogger(__name__)
+
+
+def new_run_id() -> str:
+    """Unique ID for one pipeline execution event."""
+    return uuid.uuid4().hex
 
 _TASK_NAME = re.compile(r"During task with name '([^']+)'")
 
@@ -286,7 +292,11 @@ def _step_timings(pipeline: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
     """Add run-level timing fields and fold them into evaluation_report."""
-    from src.evaluation.report import attach_execution_measures
+    from src.evaluation.report import (
+        attach_execution_measures,
+        build_execution_identity,
+        stamp_run_identity,
+    )
 
     pipeline = list(result.get("pipeline") or [])
     timings = _step_timings(pipeline)
@@ -303,6 +313,19 @@ def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
     result["execution_time_s"] = total_s
     result["evaluation_time_s"] = eval_s
 
+    run_id = str(result.get("run_id") or "").strip() or new_run_id()
+    result["run_id"] = run_id
+    execution = build_execution_identity(
+        run_id=run_id,
+        query_id=str(result.get("query_id") or ""),
+        question=str(result.get("question") or ""),
+        llm_model=str(result.get("llm_model") or ""),
+        judge_llm_model=str(result.get("judge_llm_model") or ""),
+        decompose_mode=str(result.get("decompose_mode") or ""),
+        job_id=str(result.get("job_id") or ""),
+    )
+    result["execution"] = execution
+
     nlg = dict(result.get("nlg_evaluation") or {})
     if not nlg:
         return result
@@ -310,16 +333,21 @@ def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
         nlg["execution_time_s"] = eval_s
     nlg["step_timings"] = timings
     nlg["pipeline_execution_time_s"] = total_s
+    nlg["run_id"] = run_id
+    nlg["execution"] = execution
     report = nlg.get("evaluation_report")
     if isinstance(report, dict):
-        nlg["evaluation_report"] = attach_execution_measures(
+        report = attach_execution_measures(
             report,
             step_timings=timings,
             execution_time_s=total_s,
             evaluation_time_s=eval_s,
             query_id=str(result.get("query_id") or nlg.get("question_id") or ""),
             llm_model=str(result.get("llm_model") or ""),
+            judge_llm_model=str(result.get("judge_llm_model") or ""),
+            run_id=run_id,
         )
+        nlg["evaluation_report"] = stamp_run_identity(report, execution=execution)
     result["nlg_evaluation"] = nlg
     return result
 
@@ -344,6 +372,8 @@ def _payload_from_events(
     include_trace: bool,
     llm_model: str = "",
     judge_llm_model: str = "",
+    run_id: str = "",
+    job_id: str = "",
 ) -> dict[str, Any]:
     merged: dict[str, Any] = {"question": question}
     names: list[str] = []
@@ -356,6 +386,8 @@ def _payload_from_events(
     result: dict[str, Any] = {
         "question": question,
         "query_id": merged.get("query_id") or query_id or "",
+        "run_id": run_id or "",
+        "job_id": job_id or "",
         "status": _overall_status(pipeline, merged),
         "last_step": names[-1] if names else "",
         "result": pipeline[-1] if pipeline else None,
@@ -467,6 +499,8 @@ def iter_compare(
     llm_model: str | None = None,
     judge_llm_model: str | None = None,
     access_token: str | None = None,
+    run_id: str | None = None,
+    job_id: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield a growing ThematicExploration payload after each finished node."""
     from src.llm import default_judge_model, default_pipeline_model, normalize_model_name
@@ -474,6 +508,8 @@ def iter_compare(
     resolved_llm = normalize_model_name(llm_model, fallback=default_pipeline_model())
     resolved_judge = normalize_model_name(judge_llm_model, fallback=default_judge_model())
     token = access_token if access_token is not None else caller_access_token()
+    resolved_run_id = (run_id or "").strip() or new_run_id()
+    resolved_job_id = (job_id or "").strip()
     events: list[dict[str, Any]] = []
     try:
         for event in stream_steps(
@@ -502,6 +538,8 @@ def iter_compare(
                 include_trace=False,
                 llm_model=resolved_llm,
                 judge_llm_model=resolved_judge,
+                run_id=resolved_run_id,
+                job_id=resolved_job_id,
             )
             if not _is_complete(snapshot.get("pipeline") or [], until):
                 snapshot["status"] = "running"
@@ -524,6 +562,8 @@ def iter_compare(
             include_trace=include_trace,
             llm_model=resolved_llm,
             judge_llm_model=resolved_judge,
+            run_id=resolved_run_id,
+            job_id=resolved_job_id,
         )
         yield _attach_failure(result, exc)
         return
@@ -536,6 +576,8 @@ def iter_compare(
             include_trace=include_trace,
             llm_model=resolved_llm,
             judge_llm_model=resolved_judge,
+            run_id=resolved_run_id,
+            job_id=resolved_job_id,
         )
 
 
@@ -551,6 +593,8 @@ def run_compare(
     llm_model: str | None = None,
     judge_llm_model: str | None = None,
     access_token: str | None = None,
+    run_id: str | None = None,
+    job_id: str | None = None,
 ) -> dict[str, Any]:
     last: dict[str, Any] = {}
     for payload in iter_compare(
@@ -564,6 +608,8 @@ def run_compare(
         llm_model=llm_model,
         judge_llm_model=judge_llm_model,
         access_token=access_token,
+        run_id=run_id,
+        job_id=job_id,
     ):
         last = payload
     return last

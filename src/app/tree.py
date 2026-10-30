@@ -691,7 +691,7 @@ _PAGE = """<!DOCTYPE html>
   <script>
     const EMBEDDED = __EMBEDDED__;
     let latestPayload = null;
-    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","execution_time_s","evaluation_time_s","step_timings","concept","comparison_type","clarification","constraint_errors","slices"];
+    const OVERVIEW = ["service","run_id","job_id","execution","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","execution_time_s","evaluation_time_s","step_timings","concept","comparison_type","clarification","constraint_errors","slices"];
     const ENDING = ["synthesized_answer","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
@@ -1137,7 +1137,11 @@ _PAGE = """<!DOCTYPE html>
       const nlg = (payload && payload.nlg_evaluation) || {};
       const run = (bundle.evaluation && bundle.evaluation.provenance && bundle.evaluation.provenance.run) || {};
       const matched = !!(nlg.matched || run.matched);
+      const execution = (payload && payload.execution) || nlg.execution || {};
       const meta = [
+        ["run_id", run.run_id || execution.run_id || payload.run_id || nlg.run_id || "–"],
+        ["llm_model", run.llm_model || execution.llm_model || payload.llm_model || "–"],
+        ["judge_llm_model", run.judge_llm_model || execution.judge_llm_model || payload.judge_llm_model || "–"],
         ["matched", matched ? "yes" : "no"],
         ["question_id", run.query_id || nlg.question_id || payload.query_id || "–"],
         ["match", nlg.match || "–"],
@@ -1218,11 +1222,15 @@ _PAGE = """<!DOCTYPE html>
         const qid = String(
           (run && run.query_id) || latestPayload.query_id || "run"
         ).replace(/[^\\w.-]+/g, "_");
-        downloadJson("uc4p2-evaluation-" + qid + ".json", bundle);
+        const rid = String(
+          (run && run.run_id) || latestPayload.run_id || "exec"
+        ).replace(/[^\\w.-]+/g, "_").slice(0, 12);
+        downloadJson("uc4p2-evaluation-" + qid + "-" + rid + ".json", bundle);
       }
       if (event.target.id === "download-run" && latestPayload) {
         const qid = String(latestPayload.query_id || "run").replace(/[^\\w.-]+/g, "_");
-        downloadJson("uc4p2-thematic-exploration-" + qid + ".json", latestPayload);
+        const rid = String(latestPayload.run_id || "exec").replace(/[^\\w.-]+/g, "_").slice(0, 12);
+        downloadJson("uc4p2-thematic-exploration-" + qid + "-" + rid + ".json", latestPayload);
       }
     });
 
