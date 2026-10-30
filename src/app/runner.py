@@ -266,6 +266,8 @@ def _payload_from_events(
     query_id: str | None,
     decompose_mode: str,
     include_trace: bool,
+    llm_model: str = "",
+    judge_llm_model: str = "",
 ) -> dict[str, Any]:
     merged: dict[str, Any] = {"question": question}
     names: list[str] = []
@@ -294,6 +296,8 @@ def _payload_from_events(
         "generated_subquestions": merged.get("generated_subquestions") or [],
         "decompose_mode": merged.get("decompose_mode") or decompose_mode,
         "use_extension_questions": bool(merged.get("use_extension_questions")),
+        "llm_model": llm_model,
+        "judge_llm_model": judge_llm_model,
         "search_queries": merged.get("search_queries") or {},
         "passages": merged.get("passages") or {},
         "retrieval_errors": merged.get("retrieval_errors") or {},
@@ -384,9 +388,15 @@ def iter_compare(
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
     access_token: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield a growing ThematicExploration payload after each finished node."""
+    from src.llm import default_judge_model, default_pipeline_model, normalize_model_name
+
+    resolved_llm = normalize_model_name(llm_model, fallback=default_pipeline_model())
+    resolved_judge = normalize_model_name(judge_llm_model, fallback=default_judge_model())
     token = access_token if access_token is not None else caller_access_token()
     events: list[dict[str, Any]] = []
     try:
@@ -397,6 +407,8 @@ def iter_compare(
             k=k,
             decompose_mode=decompose_mode,
             use_extension_questions=use_extension_questions,
+            llm_model=resolved_llm,
+            judge_llm_model=resolved_judge,
             disambiguation_client=QueryDisambiguationClient(token=token) if token else None,
             retrieval_client=CrossDatasetDiscoveryClient(token=token) if token else None,
             idd_client=(
@@ -412,6 +424,8 @@ def iter_compare(
                 query_id=query_id,
                 decompose_mode=decompose_mode,
                 include_trace=False,
+                llm_model=resolved_llm,
+                judge_llm_model=resolved_judge,
             )
             if not _is_complete(snapshot.get("pipeline") or [], until):
                 snapshot["status"] = "running"
@@ -432,6 +446,8 @@ def iter_compare(
             query_id=query_id,
             decompose_mode=decompose_mode,
             include_trace=include_trace,
+            llm_model=resolved_llm,
+            judge_llm_model=resolved_judge,
         )
         yield _attach_failure(result, exc)
         return
@@ -442,6 +458,8 @@ def iter_compare(
             query_id=query_id,
             decompose_mode=decompose_mode,
             include_trace=include_trace,
+            llm_model=resolved_llm,
+            judge_llm_model=resolved_judge,
         )
 
 
@@ -454,6 +472,8 @@ def run_compare(
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
     access_token: str | None = None,
 ) -> dict[str, Any]:
     last: dict[str, Any] = {}
@@ -465,6 +485,8 @@ def run_compare(
         k=k,
         decompose_mode=decompose_mode,
         use_extension_questions=use_extension_questions,
+        llm_model=llm_model,
+        judge_llm_model=judge_llm_model,
         access_token=access_token,
     ):
         last = payload

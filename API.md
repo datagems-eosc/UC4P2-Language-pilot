@@ -45,6 +45,8 @@ Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `query_id` | Optional stable id (also used for gold / NLG match when it equals `Question_ID`) |
 | `k` | Passages per slice, 1–20, default 5 |
 | `decompose_mode` | `predict`, `cot`, or `few-shot` (default) |
+| `llm_model` | Scayle model for the main pipeline (default `SCAYLE_MODEL_NAME` / `qwen3`). See `GET /llm/options` |
+| `judge_llm_model` | Scayle model for LLM-as-judge (default `JUDGE_LLM_MODEL` / `glm-5.3-flash`; should differ from `llm_model`) |
 | `use_extension_questions` | Default `false`. If `true`, each knowledge-extension question is retrieved as its own search. Decomposition still uses the original question |
 | `include_trace` | `true` adds `raw_trace` |
 | `until` | Stop after a node (full run only): `route`, `disambiguate`, `extend_knowledge`, `generate_subquestions`, `decompose`, `retrieve_slices`, `compute_features`, `synthesize`, `evaluate_answer`, `export_benchmark` |
@@ -61,7 +63,7 @@ Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.30`**.
+Live version: **`0.1.31`**.
 
 ---
 
@@ -74,7 +76,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.30`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.31`), docs path, `tree` / `tree_token` / stream, step list, default LLM models
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**

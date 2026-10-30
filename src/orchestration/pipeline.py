@@ -191,12 +191,16 @@ class HistoricalQAOrchestrator(dspy.Module):
         decompose_mode: str = FEW_SHOT,
         use_extension_questions: bool = False,
         idd_client: InDatasetDiscoveryClient | None = None,
+        llm_model: str | None = None,
+        judge_llm_model: str | None = None,
     ):
         super().__init__()
         self.disambiguation_client = disambiguation_client or QueryDisambiguationClient()
         self.retriever = retriever or CrossDatasetMultiSliceRetriever()
         self.decompose_mode = decompose_mode
         self.use_extension_questions = bool(use_extension_questions)
+        self.llm_model = (llm_model or "").strip() or None
+        self.judge_llm_model = (judge_llm_model or "").strip() or None
         if idd_client is not None:
             self.idd_client = idd_client
         elif use_in_dataset_discovery():
@@ -518,6 +522,8 @@ class HistoricalQAOrchestrator(dspy.Module):
             answer,
             query_id=state.query_id,
             concept=concept,
+            llm_model=self.llm_model,
+            judge_llm_model=self.judge_llm_model,
         )
         if state.output is not None:
             state.output = state.output.model_copy(

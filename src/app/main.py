@@ -34,7 +34,13 @@ from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
 from src.evaluation.nlg import list_data_questions
-from src.llm import configure_lm_from_env
+from src.llm import (
+    configure_lm_from_env,
+    default_judge_model,
+    default_pipeline_model,
+    normalize_model_name,
+    scayle_model_choices,
+)
 from src.oidc import OIDCTokenError, cached_oidc_access_token, fetch_oidc_access_token
 
 logging.basicConfig(level=logging.INFO)
@@ -76,7 +82,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.30",
+    version="0.1.31",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -174,7 +180,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.30",
+        "version": "0.1.31",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -182,14 +188,31 @@ async def root() -> dict[str, Any]:
         "tree": "GET /tree",
         "tree_token": "GET /tree/token",
         "tree_questions": "GET /tree/questions",
+        "llm_options": "GET /llm/options",
         "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
+        "default_llm_model": default_pipeline_model(),
+        "default_judge_llm_model": default_judge_model(),
     }
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.get("/llm/options", summary="Default and available Scayle LLM models", tags=["ThematicExploration"])
+async def llm_options() -> dict[str, Any]:
+    """Models for ``llm_model`` (pipeline) and ``judge_llm_model`` (judge)."""
+    return {
+        "default_llm_model": default_pipeline_model(),
+        "default_judge_llm_model": default_judge_model(),
+        "models": scayle_model_choices(),
+        "note": (
+            "Pass llm_model / judge_llm_model on ThematicExploration and /steps/* bodies. "
+            "Judge should differ from the pipeline model."
+        ),
+    }
 
 
 def _jwt_exp(token: str) -> float | None:
@@ -270,6 +293,10 @@ async def tree_from_json(
 
 def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
     k = body.k or 5
+    llm_model = normalize_model_name(body.llm_model, fallback=default_pipeline_model())
+    judge_llm_model = normalize_model_name(
+        body.judge_llm_model, fallback=default_judge_model()
+    )
     return {
         "key": memory_key(
             body.query,
@@ -278,8 +305,12 @@ def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
             decompose_mode=body.decompose_mode,
             until=until,
             use_extension_questions=bool(body.use_extension_questions),
+            llm_model=llm_model,
+            judge_llm_model=judge_llm_model,
         ),
         "k": k,
+        "llm_model": llm_model,
+        "judge_llm_model": judge_llm_model,
         "request": {
             "query": body.query,
             "query_id": body.query_id,
@@ -288,6 +319,8 @@ def _request_meta(body: QueryRequest, until: str | None) -> dict[str, Any]:
             "until": until,
             "include_trace": body.include_trace,
             "use_extension_questions": bool(body.use_extension_questions),
+            "llm_model": llm_model,
+            "judge_llm_model": judge_llm_model,
         },
         "use_memory": bool(getattr(body, "use_memory", True)) and memory_enabled(),
         "refresh": bool(getattr(body, "refresh", False)),
@@ -351,6 +384,7 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
     cached = _cached_payload(body, until)
     if cached is not None:
         return ThematicExplorationResponse.model_validate(cached)
+    meta = _request_meta(body, until)
     payload = run_compare(
         body.query,
         query_id=body.query_id,
@@ -359,6 +393,8 @@ def _run_pipeline(body: QueryRequest, until: str | None = None) -> ThematicExplo
         k=body.k or 5,
         decompose_mode=body.decompose_mode,
         use_extension_questions=bool(body.use_extension_questions),
+        llm_model=meta["llm_model"],
+        judge_llm_model=meta["judge_llm_model"],
     )
     return ThematicExplorationResponse.model_validate(_finalize_payload(payload, body, until))
 
@@ -394,6 +430,7 @@ def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | 
     if cached is not None:
         yield cached
         return
+    meta = _request_meta(body, until)
     last: dict[str, Any] | None = None
     for payload in iter_compare(
         body.query,
@@ -403,6 +440,8 @@ def _stream_pipeline(body: QueryRequest, until: str | None, access_token: str | 
         k=body.k or 5,
         decompose_mode=body.decompose_mode,
         use_extension_questions=bool(body.use_extension_questions),
+        llm_model=meta["llm_model"],
+        judge_llm_model=meta["judge_llm_model"],
         access_token=access_token,
     ):
         payload = _decorate_payload(payload, body)

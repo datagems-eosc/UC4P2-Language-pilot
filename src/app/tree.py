@@ -21,6 +21,8 @@ _OVERVIEW_KEYS = (
     "error",
     "decompose_mode",
     "use_extension_questions",
+    "llm_model",
+    "judge_llm_model",
     "concept",
     "comparison_type",
     "clarification",
@@ -606,6 +608,12 @@ _PAGE = """<!DOCTYPE html>
         <option value="predict">predict</option>
         <option value="cot">cot</option>
       </select>
+      <select id="llm_model" title="Pipeline Scayle LLM (llm_model)">
+        <option value="qwen3">pipeline: qwen3</option>
+      </select>
+      <select id="judge_llm_model" title="Judge Scayle LLM (judge_llm_model)">
+        <option value="glm-5.3-flash">judge: glm-5.3-flash</option>
+      </select>
       <label class="file" title="Decompose, retrieve, and answer from every knowledge-extension question">
         <input type="checkbox" id="use_extension_questions" style="display:inline;margin-right:6px"/>KE questions
       </label>
@@ -644,7 +652,7 @@ _PAGE = """<!DOCTYPE html>
   <script>
     const EMBEDDED = __EMBEDDED__;
     let latestPayload = null;
-    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","concept","comparison_type","clarification","constraint_errors","slices"];
+    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","concept","comparison_type","clarification","constraint_errors","slices"];
     const ENDING = ["synthesized_answer","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
@@ -1337,6 +1345,8 @@ _PAGE = """<!DOCTYPE html>
         query: document.getElementById("query").value,
         query_id: selectedId || undefined,
         decompose_mode: document.getElementById("decompose_mode").value,
+        llm_model: document.getElementById("llm_model").value || undefined,
+        judge_llm_model: document.getElementById("judge_llm_model").value || undefined,
         use_extension_questions: !!document.getElementById("use_extension_questions").checked,
         use_memory: true,
         refresh: !!document.getElementById("refresh").checked,
@@ -1459,14 +1469,33 @@ _PAGE = """<!DOCTYPE html>
       applyQuestionFilter();
     });
 
+    function fillModelSelect(selectId, models, selected) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const choices = (models && models.length) ? models : [selected || "qwen3"];
+      const current = selected || choices[0];
+      select.innerHTML = choices.map(name => {
+        const mark = name === current ? " selected" : "";
+        return '<option value="' + escapeHtml(name) + '"' + mark + ">" + escapeHtml(name) + "</option>";
+      }).join("");
+    }
+
     (async () => {
       const root = document.getElementById("question-list");
       try {
-        const response = await fetch(apiUrl("tree/questions"), { headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const payload = await response.json();
+        const [questionsResponse, llmResponse] = await Promise.all([
+          fetch(apiUrl("tree/questions"), { headers: { Accept: "application/json" } }),
+          fetch(apiUrl("llm/options"), { headers: { Accept: "application/json" } }),
+        ]);
+        if (!questionsResponse.ok) throw new Error("HTTP " + questionsResponse.status);
+        const payload = await questionsResponse.json();
         catalog = Array.isArray(payload.questions) ? payload.questions : [];
         applyQuestionFilter();
+        if (llmResponse.ok) {
+          const llm = await llmResponse.json();
+          fillModelSelect("llm_model", llm.models, llm.default_llm_model);
+          fillModelSelect("judge_llm_model", llm.models, llm.default_judge_llm_model);
+        }
       } catch (error) {
         root.innerHTML = '<p class="drawer-empty">' +
           escapeHtml(String(error && error.message ? error.message : error)) + "</p>";

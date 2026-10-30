@@ -11,11 +11,18 @@ import os
 import re
 from typing import Any
 
-from src.llm import chat_completion, credentials_present_for, pipeline_lm_identity
+from src.llm import (
+    DEFAULT_JUDGE_MODEL,
+    chat_completion,
+    credentials_present_for,
+    default_judge_model,
+    default_pipeline_model,
+    normalize_model_name,
+    pipeline_lm_identity,
+)
 
 _JSON = re.compile(r"\{.*\}", re.S)
 _VERDICTS = {"supported", "partial", "contradicted", "insufficient"}
-DEFAULT_SCAYLE_JUDGE_MODEL = "glm-5.3-flash"
 FALLBACK_SCAYLE_JUDGE_MODEL = "kimi-k2.6"
 
 
@@ -31,24 +38,27 @@ def _same_model(left: str, right: str) -> bool:
     return bool(left) and _norm_model(left) == _norm_model(right)
 
 
-def resolve_judge_target() -> tuple[str, str] | None:
+def resolve_judge_target(
+    *,
+    pipeline_model: str | None = None,
+    judge_model: str | None = None,
+) -> tuple[str, str] | None:
     """Scayle + a model that is not the pipeline model."""
     if not credentials_present_for("scayle"):
         return None
-    _, pipeline_model = pipeline_lm_identity()
-    requested = (
-        os.getenv("JUDGE_LLM_MODEL", "").strip()
-        or os.getenv("SCAYLE_JUDGE_MODEL_NAME", "").strip()
-        or DEFAULT_SCAYLE_JUDGE_MODEL
-    )
+    if pipeline_model:
+        pipeline = normalize_model_name(pipeline_model, fallback=default_pipeline_model())
+    else:
+        _, pipeline = pipeline_lm_identity()
+    requested = normalize_model_name(judge_model, fallback=default_judge_model())
     model = requested
-    if _same_model(model, pipeline_model):
+    if _same_model(model, pipeline):
         model = (
             FALLBACK_SCAYLE_JUDGE_MODEL
-            if _same_model(model, DEFAULT_SCAYLE_JUDGE_MODEL)
-            else DEFAULT_SCAYLE_JUDGE_MODEL
+            if _same_model(model, DEFAULT_JUDGE_MODEL)
+            else DEFAULT_JUDGE_MODEL
         )
-    if _same_model(model, pipeline_model):
+    if _same_model(model, pipeline):
         return None
     return "scayle", model
 
@@ -90,27 +100,42 @@ def judge_synthesized_answer(
     question: str,
     gold: str,
     answer: str,
+    *,
+    pipeline_model: str | None = None,
+    judge_model: str | None = None,
 ) -> dict[str, Any]:
     """Score the pipeline answer against gold with a second Scayle model."""
     if _disabled():
         return {"available": False, "reason": "JUDGE_DISABLED is set."}
-    pipeline_provider, pipeline_model = pipeline_lm_identity()
+    if pipeline_model:
+        pipeline_provider, pipeline_name = "scayle", normalize_model_name(
+            pipeline_model, fallback=default_pipeline_model()
+        )
+        # Prefer live DSPy identity when it matches the requested pipeline model.
+        live_provider, live_model = pipeline_lm_identity()
+        if _same_model(live_model, pipeline_name):
+            pipeline_provider, pipeline_name = live_provider, live_model
+    else:
+        pipeline_provider, pipeline_name = pipeline_lm_identity()
     if not credentials_present_for("scayle"):
         return {
             "available": False,
             "reason": "Scayle credentials are required for the judge (SCAYLE_USERNAME / SCAYLE_PASSWORD).",
-            "pipeline_lm": f"{pipeline_provider}:{pipeline_model}",
+            "pipeline_lm": f"{pipeline_provider}:{pipeline_name}",
         }
-    target = resolve_judge_target()
+    target = resolve_judge_target(
+        pipeline_model=pipeline_name,
+        judge_model=judge_model,
+    )
     if target is None:
         return {
             "available": False,
             "reason": (
                 "Judge stays on Scayle but needs another model than "
-                f"{pipeline_provider}:{pipeline_model}. Set JUDGE_LLM_MODEL "
-                f"(default {DEFAULT_SCAYLE_JUDGE_MODEL})."
+                f"{pipeline_provider}:{pipeline_name}. Set judge_llm_model "
+                f"(default {DEFAULT_JUDGE_MODEL})."
             ),
-            "pipeline_lm": f"{pipeline_provider}:{pipeline_model}",
+            "pipeline_lm": f"{pipeline_provider}:{pipeline_name}",
         }
     provider, model = target
     prompt = (
@@ -144,7 +169,7 @@ def judge_synthesized_answer(
             "available": False,
             "reason": str(exc),
             "judge_lm": f"{provider}:{model}",
-            "pipeline_lm": f"{pipeline_provider}:{pipeline_model}",
+            "pipeline_lm": f"{pipeline_provider}:{pipeline_name}",
         }
     parsed = _parse_judgment(raw)
     if parsed is None:
@@ -152,14 +177,14 @@ def judge_synthesized_answer(
             "available": False,
             "reason": "Judge LLM did not return valid JSON.",
             "judge_lm": f"{provider}:{model}",
-            "pipeline_lm": f"{pipeline_provider}:{pipeline_model}",
+            "pipeline_lm": f"{pipeline_provider}:{pipeline_name}",
             "raw": (raw or "")[:500],
         }
     parsed.update(
         {
             "available": True,
             "judge_lm": f"{provider}:{model}",
-            "pipeline_lm": f"{pipeline_provider}:{pipeline_model}",
+            "pipeline_lm": f"{pipeline_provider}:{pipeline_name}",
         }
     )
     return parsed

@@ -41,6 +41,8 @@ def memory_key(
     decompose_mode: str,
     until: str | None,
     use_extension_questions: bool = False,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
 ) -> str:
     payload = {
         "question": normalize_question(question),
@@ -49,6 +51,8 @@ def memory_key(
         "decompose_mode": (decompose_mode or "").strip().lower(),
         "until": (until or "").strip(),
         "use_extension_questions": bool(use_extension_questions),
+        "llm_model": (llm_model or "").strip(),
+        "judge_llm_model": (judge_llm_model or "").strip(),
     }
     digest = hashlib.sha256(
         json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")

@@ -298,15 +298,73 @@ def selected_model(provider: str | None = None) -> str:
     return _scayle_model()
 
 
-def configure_lm_from_env() -> bool:
+DEFAULT_JUDGE_MODEL = "glm-5.3-flash"
+_DEFAULT_SCAYLE_CHOICES = (
+    "qwen3",
+    "glm-5.3-flash",
+    "kimi-k2.6",
+)
+
+
+def default_pipeline_model() -> str:
+    """Default Scayle/pipeline model (``SCAYLE_MODEL_NAME`` / ``LLM_MODEL`` / ``qwen3``)."""
+    return selected_model()
+
+
+def default_judge_model() -> str:
+    """Default Scayle judge model (``JUDGE_LLM_MODEL`` / ``glm-5.3-flash``)."""
+    return (
+        os.getenv("JUDGE_LLM_MODEL", "").strip()
+        or os.getenv("SCAYLE_JUDGE_MODEL_NAME", "").strip()
+        or DEFAULT_JUDGE_MODEL
+    )
+
+
+def scayle_model_choices() -> list[str]:
+    """Models offered in the tree UI / API docs (env ``SCAYLE_MODEL_CHOICES``)."""
+    raw = os.getenv("SCAYLE_MODEL_CHOICES", "").strip()
+    if raw:
+        choices = [part.strip() for part in raw.split(",") if part.strip()]
+    else:
+        choices = list(_DEFAULT_SCAYLE_CHOICES)
+    for name in (default_pipeline_model(), default_judge_model()):
+        if name and name not in choices:
+            choices.append(name)
+    return choices
+
+
+def normalize_model_name(value: str | None, *, fallback: str) -> str:
+    cleaned = (value or "").strip()
+    return cleaned or fallback
+
+
+def make_pipeline_lm(model: str | None = None, *, provider: str | None = None) -> ProviderChatLM:
+    """Build a DSPy LM for the pipeline (provider defaults to ``LLM_PROVIDER``)."""
+    _load_local_env()
+    name = (provider or _provider()).strip().lower()
+    name = _PROVIDER_ALIASES.get(name, name)
+    resolved = normalize_model_name(model, fallback=selected_model(name))
+    return ProviderChatLM(model=resolved, provider=name)
+
+
+def configure_lm_from_env(*, model: str | None = None) -> bool:
     """Configure DSPy from ``LLM_PROVIDER`` (scayle, ollama, openai, or gemini)."""
     _load_local_env()
     if not llm_credentials_present():
         return False
     provider = _provider()
-    model = selected_model(provider)
-    dspy.configure(lm=ProviderChatLM(model=model, provider=provider))
+    resolved = normalize_model_name(model, fallback=selected_model(provider))
+    dspy.configure(lm=ProviderChatLM(model=resolved, provider=provider))
     return True
+
+
+def pipeline_lm_context(model: str | None = None):
+    """Context manager that scopes the pipeline DSPy LM for one request."""
+    if not llm_credentials_present():
+        from contextlib import nullcontext
+
+        return nullcontext()
+    return dspy.context(lm=make_pipeline_lm(model))
 
 
 def configure_refinement_lm(*, prefer: str | None = None, force: bool = False) -> str:

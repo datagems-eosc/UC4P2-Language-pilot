@@ -49,6 +49,23 @@ class QueryRequest(BaseModel):
             "one search per slice from the QDMR plan."
         ),
     )
+    llm_model: Optional[str] = Field(
+        default=None,
+        description=(
+            "Scayle (or configured provider) model for the main pipeline "
+            "(synthesize / local extend / local decompose). Default: "
+            "SCAYLE_MODEL_NAME / LLM_MODEL / qwen3."
+        ),
+        examples=["qwen3", "glm-5.3-flash", "kimi-k2.6"],
+    )
+    judge_llm_model: Optional[str] = Field(
+        default=None,
+        description=(
+            "Scayle model for LLM-as-judge (must differ from llm_model). "
+            "Default: JUDGE_LLM_MODEL / glm-5.3-flash."
+        ),
+        examples=["glm-5.3-flash", "kimi-k2.6", "qwen3"],
+    )
 
     @field_validator("decompose_mode", mode="before")
     @classmethod
@@ -57,6 +74,14 @@ class QueryRequest(BaseModel):
             return normalize_decompose_mode(value)
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
+
+    @field_validator("llm_model", "judge_llm_model", mode="before")
+    @classmethod
+    def _optional_model(cls, value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
 
 
 class ThematicExplorationRequest(QueryRequest):
@@ -117,6 +142,8 @@ class ThematicExplorationResponse(BaseModel):
     generated_subquestions: list[dict[str, str]] = Field(default_factory=list)
     decompose_mode: str = ""
     use_extension_questions: bool = False
+    llm_model: str = ""
+    judge_llm_model: str = ""
     search_queries: dict[str, str] = Field(default_factory=dict)
     passages: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     retrieval_errors: dict[str, str] = Field(default_factory=dict)

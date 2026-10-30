@@ -393,6 +393,9 @@ def evaluate_against_ground_truth(
     answer: str,
     query_id: str | None = None,
     concept: str | None = None,
+    *,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
 ) -> dict[str, Any]:
     """Score ``answer`` against gold ``Ground_Truth`` in ``data/*.json``."""
     record = find_ground_truth(question, query_id, concept=concept)
@@ -412,6 +415,8 @@ def evaluate_against_ground_truth(
         question=question,
         gold=gold,
         answer=strip_citation_marks(answer),
+        pipeline_model=llm_model,
+        judge_model=judge_llm_model,
     )
     summary = (
         f"NLG vs {record.get('_source_file')} Question_ID {question_id} "

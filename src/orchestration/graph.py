@@ -68,6 +68,8 @@ def build_pilot_graph(
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
 ):
     retriever = CrossDatasetMultiSliceRetriever(client=retrieval_client, k=k)
     orchestrator = HistoricalQAOrchestrator(
@@ -76,6 +78,8 @@ def build_pilot_graph(
         decompose_mode=decompose_mode,
         use_extension_questions=use_extension_questions,
         idd_client=idd_client,
+        llm_model=llm_model,
+        judge_llm_model=judge_llm_model,
     )
 
     def route(state: PilotState) -> dict[str, Any]:
@@ -236,8 +240,12 @@ def stream_steps(
     k: int = 5,
     decompose_mode: str = FEW_SHOT,
     use_extension_questions: bool = False,
+    llm_model: str | None = None,
+    judge_llm_model: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield ``{"step": name, "output": update}`` after each node."""
+    from src.llm import pipeline_lm_context
+
     compiled = build_pilot_graph(
         disambiguation_client,
         retrieval_client,
@@ -245,16 +253,19 @@ def stream_steps(
         k=k,
         decompose_mode=decompose_mode,
         use_extension_questions=use_extension_questions,
+        llm_model=llm_model,
+        judge_llm_model=judge_llm_model,
     )
     initial: PilotState = {"question": question}
     if query_id:
         initial["query_id"] = query_id
-    for update in compiled.stream(initial, stream_mode="updates"):
-        for name, output in update.items():
-            event = {"step": name, "output": output}
-            yield event
-            if until and name == until:
-                return
+    with pipeline_lm_context(llm_model):
+        for update in compiled.stream(initial, stream_mode="updates"):
+            for name, output in update.items():
+                event = {"step": name, "output": output}
+                yield event
+                if until and name == until:
+                    return
 
 
 def main() -> None:

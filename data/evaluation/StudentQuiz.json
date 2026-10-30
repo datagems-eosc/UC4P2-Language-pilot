@@ -1,0 +1,542 @@
+{
+  "schemaVersion": "1.0",
+  "evaluation": {
+    "id": "student-quiz",
+    "projectId": "student_quiz",
+    "label": "Student Quiz",
+    "provenance": {
+      "sourceFile": "src/data/legacy/StudentQuiz.json",
+      "note": "All 27 original observations preserved. Units absent from the original source remain unknown; percentages are retained as declared."
+    }
+  },
+  "measures": [
+    {
+      "id": "student_quiz.execution_time",
+      "family": "system",
+      "label": "Execution time",
+      "description": "Time reported by method. The source does not specify the unit or timed operation.",
+      "definition": {
+        "key": "student_quiz.execution_time",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "unknown"
+      },
+      "scale": null,
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "method",
+          "label": "Method",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "execution_time-1",
+          "value": 7.2,
+          "dimensions": {
+            "method": "MOO"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "execution_time-2",
+          "value": 2.7,
+          "dimensions": {
+            "method": "MOEG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "execution_time-3",
+          "value": 0.3,
+          "dimensions": {
+            "method": "MOAG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "execution_time-4",
+          "value": 3.2,
+          "dimensions": {
+            "method": "MOAE"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "method",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "Time"
+      }
+    },
+    {
+      "id": "student_quiz.precision",
+      "family": "data",
+      "label": "Precision",
+      "description": "Reported precision by model. The original scale and calculation protocol need confirmation.",
+      "definition": {
+        "key": "student_quiz.precision",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "unknown"
+      },
+      "scale": null,
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "model",
+          "label": "Model",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "category",
+          "label": "Model category",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "precision-1",
+          "value": 5.2,
+          "dimensions": {
+            "model": "KNN",
+            "category": "Recommendation Based"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "precision-2",
+          "value": 1,
+          "dimensions": {
+            "model": "BKT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "precision-3",
+          "value": 8.8,
+          "dimensions": {
+            "model": "IRT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "precision-4",
+          "value": 5.2,
+          "dimensions": {
+            "model": "DKT",
+            "category": "Deep Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "precision-5",
+          "value": 9.2,
+          "dimensions": {
+            "model": "MOO",
+            "category": "Ours"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "model",
+        "y": "value",
+        "color": "category"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "Precision"
+      }
+    },
+    {
+      "id": "student_quiz.recall",
+      "family": "data",
+      "label": "Recall",
+      "description": "Reported recall by model. The original scale and calculation protocol need confirmation.",
+      "definition": {
+        "key": "student_quiz.recall",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "unknown"
+      },
+      "scale": null,
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "model",
+          "label": "Model",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "category",
+          "label": "Model category",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "recall-1",
+          "value": 1.128,
+          "dimensions": {
+            "model": "KNN",
+            "category": "Recommendation Based"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "recall-2",
+          "value": 0.232,
+          "dimensions": {
+            "model": "BKT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "recall-3",
+          "value": 1.734,
+          "dimensions": {
+            "model": "IRT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "recall-4",
+          "value": 1.123,
+          "dimensions": {
+            "model": "DKT",
+            "category": "Deep Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "recall-5",
+          "value": 2.074,
+          "dimensions": {
+            "model": "MOO",
+            "category": "Ours"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "model",
+        "y": "value",
+        "color": "category"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "Recall"
+      }
+    },
+    {
+      "id": "student_quiz.f_score",
+      "family": "data",
+      "label": "F-Score",
+      "description": "Reported F-score by model. The score variant and scale need confirmation.",
+      "definition": {
+        "key": "student_quiz.f_score",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "unknown"
+      },
+      "scale": null,
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "model",
+          "label": "Model",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "category",
+          "label": "Model category",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "f_score-1",
+          "value": 1.854,
+          "dimensions": {
+            "model": "KNN",
+            "category": "Recommendation Based"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "f_score-2",
+          "value": 0.376,
+          "dimensions": {
+            "model": "BKT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "f_score-3",
+          "value": 2.897,
+          "dimensions": {
+            "model": "IRT",
+            "category": "Traditional Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "f_score-4",
+          "value": 1.847,
+          "dimensions": {
+            "model": "DKT",
+            "category": "Deep Knowledge Tracing"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "f_score-5",
+          "value": 3.385,
+          "dimensions": {
+            "model": "MOO",
+            "category": "Ours"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "model",
+        "y": "value",
+        "color": "category"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "F-Score"
+      }
+    },
+    {
+      "id": "student_quiz.mastery",
+      "family": "human",
+      "label": "Mastery",
+      "description": "Reported mastery percentage by method. The scoring protocol and population were not supplied.",
+      "definition": {
+        "key": "student_quiz.mastery",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "percent",
+        "symbol": "%",
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 100
+      },
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "method",
+          "label": "Method",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "mastery-1",
+          "value": 92,
+          "dimensions": {
+            "method": "MOO"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "mastery-2",
+          "value": 57,
+          "dimensions": {
+            "method": "MOEG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "mastery-3",
+          "value": 52,
+          "dimensions": {
+            "method": "MOAG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "mastery-4",
+          "value": 100,
+          "dimensions": {
+            "method": "MOAE"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "method",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "Mastery (%)"
+      }
+    },
+    {
+      "id": "student_quiz.skill_gain",
+      "family": "human",
+      "label": "Skill gain",
+      "description": "Reported skill gain percentage. The source does not establish whether this is relative gain or a change in percentage points.",
+      "definition": {
+        "key": "student_quiz.skill_gain",
+        "version": null,
+        "status": "unknown"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "percent",
+        "symbol": "%",
+        "status": "declared"
+      },
+      "scale": null,
+      "objective": "unknown",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "method",
+          "label": "Method",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        }
+      ],
+      "observations": [
+        {
+          "id": "skill_gain-1",
+          "value": 38,
+          "dimensions": {
+            "method": "MOO"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "skill_gain-2",
+          "value": 33,
+          "dimensions": {
+            "method": "MOEG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "skill_gain-3",
+          "value": 22,
+          "dimensions": {
+            "method": "MOAG"
+          },
+          "status": "ok"
+        },
+        {
+          "id": "skill_gain-4",
+          "value": 40,
+          "dimensions": {
+            "method": "MOAE"
+          },
+          "status": "ok"
+        }
+      ],
+      "visualization": {
+        "preferred": "bar",
+        "x": "method",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/data/legacy/StudentQuiz.json",
+        "sourceMeasure": "Skill Gain (%)"
+      }
+    }
+  ]
+}
