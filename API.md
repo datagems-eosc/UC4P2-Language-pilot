@@ -4,6 +4,16 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 
 **Access token.** Protected POSTs require a DataGEMS AAI JWT, same as [dg-app-api](https://github.com/datagems-eosc/dg-app-api). Each standard curl below fetches the token inline with `jq`. Scope is `openid datagems offline_access` (not `cross-dataset-discovery-api`). Health and catalog GETs stay public.
 
+**Architecture (after refactor).** The language pilot orchestrates; portable pieces live in shared services:
+
+| Pilot step | Upstream API |
+|------------|--------------|
+| `disambiguate` | `POST /query-disambiguation/query_disambiguation/language` (section F) |
+| `extend_knowledge` / `generate_subquestions` / `decompose` / `evaluate_answer` | `POST /in-dataset-discovery/{extendKnowledge,decompose,nlgEvaluate}` (section G) |
+| `retrieve_slices` / `compute_features` | Cross-Dataset Discovery `POST /search/` and `POST /corpus-analysis-search/` (section E) |
+
+Env: `QUERY_DISAMBIGUATION_URL`, `USE_IN_DATASET_DISCOVERY=1`, `IN_DATASET_DISCOVERY_URL`. On QD/IDD outage the pilot keeps a local fallback.
+
 **Example question:** `How did a marriage look like in the 1800s compared to now?`
 
 **Language corpora**
@@ -39,7 +49,7 @@ Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.24`**.
+Live version: **`0.1.26`**.
 
 ---
 
@@ -52,7 +62,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.24`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.26`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -379,7 +389,8 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguate`
 - Stops after: `disambiguate`
-- Look at: `slices` — 1800s (Knowledge Project) vs present (Wikipedia)
+- Upstream: query-disambiguation `POST /query_disambiguation/language` (section F). Summary includes `Source: query-disambiguation-api` when remote succeeds.
+- Look at: `comparison_type` (`temporal` / `cross_lingual` / `descriptive`), `concept`, `slices` (corpus ids + years). Descriptive one-period questions keep a single slice.
 - Script: `scripts/dev/12-steps-disambiguate.sh`
 
 **Standard curl**
@@ -403,7 +414,8 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguat
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/extend-knowledge`
 - Stops after: `extend_knowledge`
-- Look at: facets, feature lenses, per-slice lemmas (`slice_1`, `slice_2`)
+- Upstream: in-dataset-discovery `POST /extendKnowledge` when `USE_IN_DATASET_DISCOVERY=1` (section G). Concept is extracted on IDD (LLM-first); the pilot does not pass a local concept override.
+- Look at: facets, feature lenses, per-slice lemmas (`slice_1`, `slice_2`), updated `concept`
 - Script: `scripts/dev/13-steps-extend-knowledge.sh`
 
 **Standard curl**
@@ -452,7 +464,8 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/generate-su
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/decompose`
 - Stops after: `decompose`
-- Look at: `qdmr` sub-questions; `decompose_mode`
+- Upstream: in-dataset-discovery `POST /decompose` when `USE_IN_DATASET_DISCOVERY=1` (section G). Local QDMR (`decompose_mode`) is the fallback.
+- Look at: `qdmr` sub-questions; `decompose_mode` (`idd` when remote)
 - Script: `scripts/dev/14-steps-decompose.sh`
 
 **Standard curl**
@@ -552,7 +565,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/evaluate`
 - Stops after: `evaluate_answer`
-- Looks up `Ground_Truth` in `data/*.json` (Pilot 2: `pilot2_benchmark_english.v1.json`) by `Question_ID`, exact question, concept (parent row for comparative queries), or overlap
+- Upstream: in-dataset-discovery `POST /nlgEvaluate` when `USE_IN_DATASET_DISCOVERY=1` (section G). Gold match is **exact** `Question_ID` or question text only (no fuzzy overlap).
 - Look at: `nlg_evaluation.metrics` (BLEU, ROUGE, token F1, METEOR) and `nlg_evaluation.llm_judge` (separate LLM, not the synthesizer)
 - The marriage walkthrough matches Question_ID `9`. Judge stays on Scayle but uses another model (`JUDGE_LLM_MODEL`, default `glm-5.3-flash` vs pipeline `qwen3`)
 - Script: `scripts/dev/17b-steps-evaluate.sh`
@@ -769,7 +782,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/corpus-a
 
 ## F. Query-disambiguation
 
-Used by language-pilot `disambiguate`. On the cluster the pod calls the in-namespace service; from a laptop use the public ingress. If this 404s, the pilot falls back to local slice parsing.
+Used by language-pilot `disambiguate`. Live image **`v0.1.14`** (language gate parity: descriptive, default temporal pair, `corpus_id`, rich concepts). On the cluster the pod calls the in-namespace service; from a laptop use the public ingress. If unreachable, the pilot falls back to local slice parsing.
 
 ### F1. Language disambiguation
 
@@ -777,8 +790,10 @@ Used by language-pilot `disambiguate`. On the cluster the pod calls the in-names
 
 - Method / URL: `POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language`
 - Auth: `Authorization: Bearer …`
-- Body: `query`
+- Body: `{ "query": "…" }`
+- Returns: `proceed`, `comparison_type`, `target_concepts`, `slices[]` (`label`, years, `language`, `corpus_id`), optional `clarification` / `constraint_errors`
 - Script: `scripts/dev/23-query-disambiguation-language.sh`
+- Health: `GET https://datagems-dev.scayle.es/query-disambiguation/health`
 
 **Standard curl**
 
@@ -795,9 +810,83 @@ curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disam
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
 
+Descriptive (single period):
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How can the climate of Berlin in the 19th century be described?"}'
+```
+
 ---
 
-## G. Britannica vs Wikipedia (same search, two corpora)
+## G. In-dataset-discovery (question tools)
+
+Used by language-pilot `extend_knowledge`, `decompose`, and `evaluate_answer` when `USE_IN_DATASET_DISCOVERY=1`. Live image **`v1.7.1`**. Tools live under `src/agents/tools/` in [in-dataset-discovery](https://github.com/datagems-eosc/in-dataset-discovery); router: `src/app/routers/language.py`.
+
+| Method / path | Pilot step | Body |
+|---------------|------------|------|
+| `POST /decompose` | `decompose` | `question`, optional `concept`, `slices` |
+| `POST /extendKnowledge` | `extend_knowledge` | `question`, optional `concept`, `slices` |
+| `POST /nlgEvaluate` | `evaluate_answer` | `question`, `answer`, optional `query_id`, `ground_truth` |
+
+Base: `https://datagems-dev.scayle.es/in-dataset-discovery`. Health: `GET …/health`. Auth: Bearer (same Keycloak token as the pilot).
+
+### G1. Decompose
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/decompose \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How did a marriage look like in the 1800s compared to now?"}'
+```
+
+### G2. Extend knowledge
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/extendKnowledge \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How did a marriage look like in the 1800s compared to now?"}'
+```
+
+### G3. NLG evaluate
+
+```bash
+curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate \
+  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
+        --header 'Content-Type: application/x-www-form-urlencoded' \
+        --data-urlencode 'grant_type=password' \
+        --data-urlencode 'client_id=swagger-client' \
+        --data-urlencode 'username=dg-user-1' \
+        --data-urlencode 'password=dg-user-1' \
+        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How did a marriage look like in the 1800s compared to now?", "answer": "…", "query_id": "9"}'
+```
+
+---
+
+## H. Britannica vs Wikipedia (same search, two corpora)
 
 Same `POST /search/`, token, `k`, and `hybrid`. Only `query` and `dataset_ids` change. Language-pilot retrieve uses this pair: slice_1 → Knowledge Project, slice_2 → Wikipedia (often empty).
 
