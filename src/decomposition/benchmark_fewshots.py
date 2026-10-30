@@ -14,7 +14,7 @@ import dspy
 
 from src.schemas.slice import ComparisonSlice
 
-_BENCHMARK = Path(__file__).resolve().parents[2] / "data" / "pilot2_benchmark_english.v1.json"
+_BENCHMARK = Path(__file__).resolve().parents[2] / "data" / "pilot2_benchmark_english.v2.json"
 
 
 def benchmark_path() -> Path:
@@ -31,16 +31,37 @@ def load_benchmark(path: Path | None = None) -> list[dict]:
     return payload
 
 
+def _years_from_sources(sources: list) -> list[int]:
+    years: list[int] = []
+    for source in sources or []:
+        date = str((source or {}).get("date") or "")
+        if date.isdigit():
+            year = int(date)
+            if year not in years:
+                years.append(year)
+    years.sort()
+    return years
+
+
 def _years(parent: dict, by_id: dict[str, dict]) -> list[int]:
     years: list[int] = []
+    nested = parent.get("Subquestions") or []
+    if nested:
+        for child in nested:
+            years.extend(_years_from_sources(child.get("source_metadata") or []))
+        # unique preserve order
+        seen: set[int] = set()
+        ordered: list[int] = []
+        for year in years:
+            if year not in seen:
+                seen.add(year)
+                ordered.append(year)
+        return ordered
     for child_id in parent.get("Subquestion_IDs") or []:
         child = by_id.get(str(child_id)) or {}
-        for source in child.get("source_metadata") or []:
-            date = str(source.get("date") or "")
-            if date.isdigit():
-                year = int(date)
-                if year not in years:
-                    years.append(year)
+        for year in _years_from_sources(child.get("source_metadata") or []):
+            if year not in years:
+                years.append(year)
     years.sort()
     return years
 
@@ -77,8 +98,23 @@ def iter_decompositions(records: list[dict] | None = None):
     records = records if records is not None else load_benchmark()
     by_id = {str(item["Question_ID"]): item for item in records}
     for parent in records:
+        nested = parent.get("Subquestions") or []
         child_ids = parent.get("Subquestion_IDs") or []
-        if len(child_ids) < 2:
+        if nested:
+            subquestions = [
+                str(child.get("Question") or "").strip()
+                for child in nested
+                if str(child.get("Question") or "").strip()
+            ]
+        elif len(child_ids) >= 2:
+            subquestions = [
+                str((by_id.get(str(child_id)) or {}).get("Question") or "").strip()
+                for child_id in child_ids
+            ]
+            subquestions = [item for item in subquestions if item]
+        else:
+            continue
+        if len(subquestions) < 2:
             continue
         question = str(parent.get("Question") or "")
         if re.search(r"\b(weather|climate)\b", question, re.I):
@@ -86,11 +122,6 @@ def iter_decompositions(records: list[dict] | None = None):
         years = _years(parent, by_id)
         if len(years) < 2:
             continue
-        subquestions = [
-            str((by_id.get(str(child_id)) or {}).get("Question") or "").strip()
-            for child_id in child_ids
-        ]
-        subquestions = [item for item in subquestions if item]
         concept = str(parent.get("Concept") or "").strip()
         yield {
             "question_id": str(parent["Question_ID"]),

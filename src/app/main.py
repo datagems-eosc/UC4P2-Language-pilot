@@ -248,7 +248,7 @@ async def tree_token() -> dict[str, Any]:
     tags=["ThematicExploration"],
 )
 async def tree_questions() -> dict[str, Any]:
-    """Public catalog from ``data/*.json`` so the tree UI can pick a question."""
+    """Public catalog of v2 benchmark parents so the tree UI can pick a question."""
     questions = list(list_data_questions())
     return {"count": len(questions), "questions": questions}
 

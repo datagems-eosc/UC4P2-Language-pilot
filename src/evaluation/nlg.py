@@ -172,7 +172,6 @@ def nlg_metrics(hypothesis: str, reference: str) -> dict[str, float]:
     return scores
 
 
-_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 _STOP = {
     "how",
     "did",
@@ -218,40 +217,80 @@ _COMPARATIVE = re.compile(
 )
 
 
+def _gold_rows_from_benchmark(path: Path) -> list[dict[str, Any]]:
+    """Parent gold by ``Question_ID`` plus nested rows for exact-question match only."""
+    rows: list[dict[str, Any]] = []
+    for item in load_benchmark(path):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("Question") or "").strip()
+        ground = str(item.get("Ground_Truth") or "").strip()
+        if question and ground:
+            row = {
+                "Question_ID": str(item.get("Question_ID") or ""),
+                "Question": question,
+                "Concept": str(item.get("Concept") or "").strip(),
+                "Ground_Truth": ground,
+                "_source_file": path.name,
+                "_id_match": True,
+            }
+            rows.append(row)
+        for child in item.get("Subquestions") or []:
+            if not isinstance(child, dict):
+                continue
+            child_q = str(child.get("Question") or "").strip()
+            child_gt = str(child.get("Ground_Truth") or "").strip()
+            if not child_q or not child_gt:
+                continue
+            # Nested Subquestion_ID values collide across parents — match by text only.
+            rows.append(
+                {
+                    "Question_ID": "",
+                    "Question": child_q,
+                    "Concept": str(child.get("Concept") or item.get("Concept") or "").strip(),
+                    "Ground_Truth": child_gt,
+                    "_source_file": path.name,
+                    "_id_match": False,
+                }
+            )
+    return rows
+
+
 @lru_cache(maxsize=1)
 def _records() -> tuple[dict[str, Any], ...]:
-    """Every gold row from JSON files in ``data/`` (Pilot 2 benchmark today)."""
-    rows: list[dict[str, Any]] = []
-    for path in sorted(_DATA_DIR.glob("*.json")):
-        for item in load_benchmark(path):
-            if not isinstance(item, dict) or not item.get("Ground_Truth"):
-                continue
-            row = dict(item)
-            row["_source_file"] = path.name
-            rows.append(row)
-    return tuple(rows)
+    """Gold from the Pilot 2 v2 benchmark (``benchmark_path()``)."""
+    from src.decomposition.benchmark_fewshots import benchmark_path
+
+    path = benchmark_path()
+    if not path.is_file():
+        return tuple()
+    return tuple(_gold_rows_from_benchmark(path))
 
 
 @lru_cache(maxsize=1)
 def list_data_questions() -> tuple[dict[str, Any], ...]:
-    """Question catalog from ``data/*.json`` for the tree drawer."""
+    """Parent questions from the v2 benchmark for the tree drawer."""
+    from src.decomposition.benchmark_fewshots import benchmark_path
+
+    path = benchmark_path()
+    if not path.is_file():
+        return tuple()
     rows: list[dict[str, Any]] = []
-    for path in sorted(_DATA_DIR.glob("*.json")):
-        for item in load_benchmark(path):
-            if not isinstance(item, dict):
-                continue
-            question = str(item.get("Question") or "").strip()
-            if not question:
-                continue
-            rows.append(
-                {
-                    "query_id": str(item.get("Question_ID") or ""),
-                    "question": question,
-                    "concept": str(item.get("Concept") or "").strip(),
-                    "source": path.name,
-                    "parent": bool(item.get("Subquestion_IDs")),
-                }
-            )
+    for item in load_benchmark(path):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("Question") or "").strip()
+        if not question:
+            continue
+        rows.append(
+            {
+                "query_id": str(item.get("Question_ID") or ""),
+                "question": question,
+                "concept": str(item.get("Concept") or "").strip(),
+                "source": path.name,
+                "parent": bool(item.get("Subquestions") or item.get("Subquestion_IDs")),
+            }
+        )
     return tuple(rows)
 
 
@@ -312,6 +351,8 @@ def find_ground_truth(
     wanted_id = str(query_id or "").strip()
     if _is_benchmark_id(wanted_id):
         for item in records:
+            if not item.get("_id_match", True):
+                continue
             if str(item.get("Question_ID") or "") == wanted_id:
                 matched = dict(item)
                 matched["_match"] = "question_id"
