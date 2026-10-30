@@ -492,6 +492,17 @@ class HistoricalQAOrchestrator(dspy.Module):
                     query_id=state.query_id,
                 )
                 if remote.get("matched"):
+                    from src.evaluation.details import nlg_metrics_with_details
+                    from src.evaluation.report import build_evaluation_report
+
+                    gold = str(remote.get("ground_truth") or "")
+                    metrics = dict(remote.get("metrics") or {})
+                    metric_details: dict = {}
+                    if gold:
+                        computed = nlg_metrics_with_details(answer, gold)
+                        metric_details = computed["details"]
+                        for key, value in computed["metrics"].items():
+                            metrics.setdefault(key, value)
                     state.nlg_evaluation = {
                         "matched": True,
                         "question_id": str(remote.get("question_id") or state.query_id or ""),
@@ -499,8 +510,9 @@ class HistoricalQAOrchestrator(dspy.Module):
                         "gold_question": str(remote.get("gold_question") or ""),
                         "gold_source": str(remote.get("gold_source") or ""),
                         "match": str(remote.get("match") or ""),
-                        "ground_truth": str(remote.get("ground_truth") or ""),
-                        "metrics": dict(remote.get("metrics") or {}),
+                        "ground_truth": gold,
+                        "metrics": metrics,
+                        "metric_details": metric_details,
                         "llm_judge": {
                             "available": False,
                             "reason": "NLG via in-dataset-discovery",
@@ -508,6 +520,15 @@ class HistoricalQAOrchestrator(dspy.Module):
                         "summary": str(remote.get("summary") or ""),
                         "source": "in-dataset-discovery",
                     }
+                    state.nlg_evaluation["evaluation_report"] = build_evaluation_report(
+                        question=state.question,
+                        answer=answer,
+                        nlg_evaluation=state.nlg_evaluation,
+                        query_id=str(state.nlg_evaluation.get("question_id") or ""),
+                        decompose_mode=getattr(state, "decompose_mode", "") or "",
+                        llm_model=self.llm_model or "",
+                        judge_llm_model=self.judge_llm_model or "",
+                    )
                     if state.output is not None:
                         state.output = state.output.model_copy(
                             update={"nlg_evaluation": state.nlg_evaluation}
@@ -524,6 +545,7 @@ class HistoricalQAOrchestrator(dspy.Module):
             concept=concept,
             llm_model=self.llm_model,
             judge_llm_model=self.judge_llm_model,
+            decompose_mode=getattr(state, "decompose_mode", None),
         )
         if state.output is not None:
             state.output = state.output.model_copy(

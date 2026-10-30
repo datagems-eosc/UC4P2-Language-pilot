@@ -235,17 +235,93 @@ def build_pipeline_trace(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         name = str(event.get("step") or f"step_{index}")
         raw = event.get("output") if isinstance(event.get("output"), dict) else {}
         public = _strip_internal(raw)
-        trace.append(
+        duration_s = event.get("duration_s")
+        duration_ms = event.get("duration_ms")
+        try:
+            duration_s = float(duration_s) if duration_s is not None else None
+        except (TypeError, ValueError):
+            duration_s = None
+        try:
+            duration_ms = float(duration_ms) if duration_ms is not None else None
+        except (TypeError, ValueError):
+            duration_ms = None
+        if duration_ms is None and duration_s is not None:
+            duration_ms = round(duration_s * 1000, 1)
+        entry: dict[str, Any] = {
+            "step": index,
+            "name": name,
+            "title": _STEP_TITLES.get(name, name.replace("_", " ").title()),
+            "outcome": _outcome(name, public),
+            "summary": _summarize(name, public),
+            "output": public,
+        }
+        if duration_s is not None:
+            entry["duration_s"] = round(duration_s, 4)
+        if duration_ms is not None:
+            entry["duration_ms"] = round(duration_ms, 1)
+        trace.append(entry)
+    return trace
+
+
+def _step_timings(pipeline: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    timings: list[dict[str, Any]] = []
+    for item in pipeline:
+        if not isinstance(item, dict):
+            continue
+        duration_s = item.get("duration_s")
+        if duration_s is None:
+            continue
+        timings.append(
             {
-                "step": index,
-                "name": name,
-                "title": _STEP_TITLES.get(name, name.replace("_", " ").title()),
-                "outcome": _outcome(name, public),
-                "summary": _summarize(name, public),
-                "output": public,
+                "step": item.get("step"),
+                "name": item.get("name"),
+                "title": item.get("title"),
+                "outcome": item.get("outcome"),
+                "duration_s": duration_s,
+                "duration_ms": item.get("duration_ms"),
             }
         )
-    return trace
+    return timings
+
+
+def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
+    """Add run-level timing fields and fold them into evaluation_report."""
+    from src.evaluation.report import attach_execution_measures
+
+    pipeline = list(result.get("pipeline") or [])
+    timings = _step_timings(pipeline)
+    total_s = round(sum(float(item["duration_s"]) for item in timings), 4) if timings else None
+    eval_s = next(
+        (
+            float(item["duration_s"])
+            for item in timings
+            if item.get("name") == "evaluate_answer"
+        ),
+        None,
+    )
+    result["step_timings"] = timings
+    result["execution_time_s"] = total_s
+    result["evaluation_time_s"] = eval_s
+
+    nlg = dict(result.get("nlg_evaluation") or {})
+    if not nlg:
+        return result
+    if eval_s is not None:
+        nlg["execution_time_s"] = eval_s
+    nlg["step_timings"] = timings
+    nlg["pipeline_execution_time_s"] = total_s
+    report = nlg.get("evaluation_report")
+    if isinstance(report, dict):
+        nlg["evaluation_report"] = attach_execution_measures(
+            report,
+            step_timings=timings,
+            execution_time_s=total_s,
+            evaluation_time_s=eval_s,
+            query_id=str(result.get("query_id") or nlg.get("question_id") or ""),
+            llm_model=str(result.get("llm_model") or ""),
+        )
+    result["nlg_evaluation"] = nlg
+    return result
 
 
 def _overall_status(pipeline: list[dict[str, Any]], merged: dict[str, Any]) -> str:
@@ -309,7 +385,7 @@ def _payload_from_events(
     }
     if include_trace:
         result["raw_trace"] = events
-    return result
+    return _attach_execution_timings(result)
 
 
 def _attach_failure(

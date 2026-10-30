@@ -106,6 +106,14 @@ class PipelineStep(BaseModel):
     title: str
     outcome: str
     summary: str
+    duration_s: Optional[float] = Field(
+        default=None,
+        description="Wall-clock seconds spent in this pipeline node.",
+    )
+    duration_ms: Optional[float] = Field(
+        default=None,
+        description="Wall-clock milliseconds spent in this pipeline node.",
+    )
     output: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -153,6 +161,18 @@ class ThematicExplorationResponse(BaseModel):
     nlg_evaluation: dict[str, Any] = Field(default_factory=dict)
     benchmark: Optional[dict[str, Any]] = None
     steps: list[str] = Field(default_factory=list)
+    step_timings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Per-step wall-clock timings: name, title, duration_s, duration_ms.",
+    )
+    execution_time_s: Optional[float] = Field(
+        default=None,
+        description="Sum of per-step wall-clock durations for the run (seconds).",
+    )
+    evaluation_time_s: Optional[float] = Field(
+        default=None,
+        description="Wall-clock seconds for the evaluate_answer step (NLG + judge).",
+    )
     raw_trace: Optional[list[dict[str, Any]]] = None
     memory: Optional[dict[str, Any]] = Field(
         default=None,

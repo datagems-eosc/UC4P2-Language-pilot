@@ -9,6 +9,7 @@ knowledge-extension question when that option is on.
 from __future__ import annotations
 
 import json
+import time
 from typing import Any, Iterator
 
 from langgraph.graph import END, START, StateGraph
@@ -259,10 +260,21 @@ def stream_steps(
     initial: PilotState = {"question": question}
     if query_id:
         initial["query_id"] = query_id
+    started = time.perf_counter()
+    previous = started
     with pipeline_lm_context(llm_model):
         for update in compiled.stream(initial, stream_mode="updates"):
             for name, output in update.items():
-                event = {"step": name, "output": output}
+                now = time.perf_counter()
+                duration_s = round(now - previous, 4)
+                event = {
+                    "step": name,
+                    "output": output,
+                    "duration_s": duration_s,
+                    "duration_ms": round(duration_s * 1000, 1),
+                    "elapsed_s": round(now - started, 4),
+                }
+                previous = now
                 yield event
                 if until and name == until:
                     return

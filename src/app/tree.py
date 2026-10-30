@@ -208,6 +208,8 @@ def _enrich_step(step: dict[str, Any], slice_labels: dict[str, str]) -> dict[str
         "name": step.get("name"),
         "title": step.get("title"),
         "outcome": step.get("outcome"),
+        "duration_s": step.get("duration_s"),
+        "duration_ms": step.get("duration_ms"),
         "summary": step.get("summary"),
     }
     if name == "route":
@@ -354,9 +356,11 @@ def _node_html(key: str, value: Any, *, open_node: bool = False, citations: list
             f'<span class="badge">{html.escape(key)}</span> {title} '
             f"<code>{name}</code> <span class=\"outcome {outcome}\">{outcome}</span>"
         )
+        if value.get("duration_s") is not None:
+            summary += f'<span class="hint">{html.escape(str(value["duration_s"]))}s</span>'
         if value.get("summary"):
             summary += f'<span class="hint">{html.escape(str(value["summary"]))}</span>'
-        skip = {"step", "name", "title", "outcome", "summary"}
+        skip = {"step", "name", "title", "outcome", "summary", "duration_s", "duration_ms"}
         open_children = {
             "decomposed_questions",
             "generated_subquestions",
@@ -528,9 +532,15 @@ _PAGE = """<!DOCTYPE html>
     .eval-meta strong { color: var(--ink); font-weight: 650; }
     .eval-gt { white-space: pre-wrap; background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
     .eval-metrics { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    .eval-metrics th, .eval-metrics td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .eval-metrics th, .eval-metrics td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .eval-metrics th { color: var(--muted); font-weight: 600; }
     .eval-metrics td.num { font-variant-numeric: tabular-nums; color: #1d4ed8; }
+    .eval-metrics details { margin: 0; }
+    .eval-metrics summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+    .eval-elements { margin: 6px 0 0; padding: 8px 10px; background: #f8fafc; border-radius: 6px; font-size: .82rem; }
+    .eval-elements dt { font-weight: 650; color: var(--ink); margin-top: 6px; }
+    .eval-elements dd { margin: 2px 0 0; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+    .eval-formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; color: var(--muted); }
     .answer-block {
       background: var(--card); border: 1px solid var(--line); border-radius: 8px;
       padding: 12px 14px; margin: 10px 0;
@@ -638,7 +648,7 @@ _PAGE = """<!DOCTYPE html>
       <div class="result-tabs" id="result-tabs" role="tablist">
         <button type="button" class="tab active" data-tab="pipeline" role="tab" aria-selected="true">Pipeline</button>
         <button type="button" class="tab" data-tab="evaluation" id="tab-evaluation" role="tab" aria-selected="false" disabled>Evaluation</button>
-        <button type="button" class="download" id="download-eval" disabled title="Download nlg_evaluation JSON">Download evaluation</button>
+        <button type="button" class="download" id="download-eval" disabled title="Download StudentQuiz-compatible evaluation JSON">Download evaluation</button>
         <button type="button" class="download" id="download-run" disabled title="Download full ThematicExploration JSON">Download full run</button>
       </div>
       <div id="panel-pipeline" class="tab-panel" role="tabpanel">
@@ -652,7 +662,7 @@ _PAGE = """<!DOCTYPE html>
   <script>
     const EMBEDDED = __EMBEDDED__;
     let latestPayload = null;
-    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","concept","comparison_type","clarification","constraint_errors","slices"];
+    const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","execution_time_s","evaluation_time_s","step_timings","concept","comparison_type","clarification","constraint_errors","slices"];
     const ENDING = ["synthesized_answer","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
@@ -924,8 +934,11 @@ _PAGE = """<!DOCTYPE html>
         const title = escapeHtml(value.title || value.name || key);
         const name = escapeHtml(value.name || "");
         let summary = '<span class="badge">' + escapeHtml(key) + "</span> " + title + " <code>" + name + "</code> <span class=\\"outcome " + outcome + "\\">" + outcome + "</span>";
+        if (value.duration_s !== null && value.duration_s !== undefined) {
+          summary += '<span class="hint">' + escapeHtml(value.duration_s) + "s</span>";
+        }
         if (value.summary) summary += '<span class="hint">' + escapeHtml(value.summary) + "</span>";
-        const skip = new Set(["step", "name", "title", "outcome", "summary"]);
+        const skip = new Set(["step", "name", "title", "outcome", "summary", "duration_s", "duration_ms"]);
         const stepCitations = Array.isArray(value.citations) ? value.citations : citations;
         const children = Object.keys(value)
           .filter(child => !skip.has(child))
@@ -950,15 +963,69 @@ _PAGE = """<!DOCTYPE html>
     function evaluationBundle(payload) {
       const nlg = payload && payload.nlg_evaluation;
       if (!nlg || typeof nlg !== "object") return null;
+      if (nlg.evaluation_report && typeof nlg.evaluation_report === "object") {
+        return nlg.evaluation_report;
+      }
       return {
-        service: payload.service || "UC4P2 Language Pilot",
-        query_id: payload.query_id || "",
-        question: payload.question || "",
-        status: payload.status || "",
-        decompose_mode: payload.decompose_mode || "",
-        synthesized_answer: payload.synthesized_answer || "",
+        schemaVersion: "1.0",
+        evaluation: {
+          id: "uc4p2-language-pilot",
+          projectId: "uc4p2_language_pilot",
+          label: "UC4P2 Language Pilot",
+          provenance: {
+            note: "Fallback bundle without calculation elements (older run).",
+            run: {
+              query_id: payload.query_id || nlg.question_id || "",
+              question: payload.question || "",
+              matched: !!nlg.matched,
+            },
+          },
+        },
+        measures: [],
         nlg_evaluation: nlg,
       };
+    }
+
+    function formatElementValue(value) {
+      if (value === null || value === undefined) return "–";
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+      }
+      try { return JSON.stringify(value); } catch (_) { return String(value); }
+    }
+
+    function metricRowsFromReport(report) {
+      const measures = report && Array.isArray(report.measures) ? report.measures : [];
+      if (!measures.length) return "<p class=\\"empty\\">No measures in evaluation report.</p>";
+      const rows = measures.map(measure => {
+        const obs = (measure.observations && measure.observations[0]) || {};
+        const value = obs.value;
+        const cell = typeof value === "number"
+          ? '<td class="num">' + escapeHtml(value) + "</td>"
+          : "<td>" + escapeHtml(value == null ? "–" : value) + "</td>";
+        const calc = obs.calculation || {};
+        const formula = calc.formula
+          ? '<div class="eval-formula">' + escapeHtml(calc.formula) + "</div>"
+          : "";
+        const elements = Array.isArray(calc.elements) ? calc.elements : [];
+        const elementHtml = elements.length
+          ? "<details><summary>calculation elements (" + elements.length + ")</summary>" +
+            '<dl class="eval-elements">' +
+            elements.map(el => {
+              const label = el.label || el.id || "element";
+              return "<dt>" + escapeHtml(label) + "</dt><dd>" +
+                escapeHtml(formatElementValue(el.value)) + "</dd>";
+            }).join("") +
+            "</dl></details>"
+          : '<span class="empty">No calculation elements</span>';
+        return "<tr><th>" + escapeHtml(measure.label || measure.id) +
+          "<div class=\\"eval-formula\\">" + escapeHtml(measure.family || "") +
+          (measure.description ? " — " + escapeHtml(measure.description) : "") +
+          "</div>" + formula + "</th>" + cell +
+          "<td>" + elementHtml + "</td></tr>";
+      }).join("");
+      return '<table class="eval-metrics"><thead><tr><th>Measure</th><th>Value</th><th>How calculated</th></tr></thead><tbody>' +
+        rows + "</tbody></table>";
     }
 
     function metricRows(metrics) {
@@ -1013,24 +1080,33 @@ _PAGE = """<!DOCTYPE html>
       }
       if (tab) tab.disabled = false;
       if (downloadEval) downloadEval.disabled = false;
-      const nlg = bundle.nlg_evaluation;
-      const matched = !!nlg.matched;
+      const nlg = (payload && payload.nlg_evaluation) || {};
+      const run = (bundle.evaluation && bundle.evaluation.provenance && bundle.evaluation.provenance.run) || {};
+      const matched = !!(nlg.matched || run.matched);
       const meta = [
         ["matched", matched ? "yes" : "no"],
-        ["question_id", nlg.question_id || bundle.query_id || "–"],
+        ["question_id", run.query_id || nlg.question_id || payload.query_id || "–"],
         ["match", nlg.match || "–"],
-        ["gold_source", nlg.gold_source || "–"],
-        ["source", nlg.source || "local"],
+        ["gold_source", run.gold_source || nlg.gold_source || "–"],
+        ["source", run.source || nlg.source || "local"],
+        ["schema", bundle.schemaVersion || "1.0"],
+        ["evaluation_time_s", run.evaluation_time_s ?? nlg.execution_time_s ?? payload.evaluation_time_s ?? "–"],
+        ["pipeline_time_s", run.execution_time_s ?? nlg.pipeline_execution_time_s ?? payload.execution_time_s ?? "–"],
       ].map(pair => "<span><strong>" + escapeHtml(pair[0]) + "</strong> " + escapeHtml(pair[1]) + "</span>").join("");
-      const gt = nlg.ground_truth
-        ? '<h3>Ground truth</h3><div class="eval-gt">' + escapeHtml(nlg.ground_truth) + "</div>"
+      const gtText = (bundle.measures && bundle.measures[0] && bundle.measures[0].provenance && bundle.measures[0].provenance.ground_truth)
+        || nlg.ground_truth || "";
+      const gt = gtText
+        ? '<h3>Ground truth</h3><div class="eval-gt">' + escapeHtml(gtText) + "</div>"
         : '<p class="empty">No ground_truth matched for this question / query_id.</p>';
       const summary = nlg.summary
         ? '<p class="eval-meta">' + escapeHtml(nlg.summary) + "</p>"
         : "";
+      const metricsHtml = Array.isArray(bundle.measures) && bundle.measures.length
+        ? metricRowsFromReport(bundle)
+        : metricRows(nlg.metrics);
       evalView.innerHTML =
         '<div class="eval-card"><h3>NLG evaluation</h3><div class="eval-meta">' + meta +
-        "</div>" + summary + gt + "<h3>Metrics</h3>" + metricRows(nlg.metrics) + "</div>" +
+        "</div>" + summary + gt + "<h3>Measures</h3>" + metricsHtml + "</div>" +
         judgeBlock(nlg.llm_judge);
       if (matched && payload && payload.status !== "running") {
         selectTab("evaluation");
@@ -1073,7 +1149,10 @@ _PAGE = """<!DOCTYPE html>
       if (event.target.id === "download-eval" && latestPayload) {
         const bundle = evaluationBundle(latestPayload);
         if (!bundle) return;
-        const qid = String(bundle.query_id || "run").replace(/[^\\w.-]+/g, "_");
+        const run = bundle.evaluation && bundle.evaluation.provenance && bundle.evaluation.provenance.run;
+        const qid = String(
+          (run && run.query_id) || latestPayload.query_id || "run"
+        ).replace(/[^\\w.-]+/g, "_");
         downloadJson("uc4p2-evaluation-" + qid + ".json", bundle);
       }
       if (event.target.id === "download-run" && latestPayload) {

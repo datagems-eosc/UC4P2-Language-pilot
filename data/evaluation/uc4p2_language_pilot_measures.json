@@ -1,0 +1,1827 @@
+{
+  "schemaVersion": "1.0",
+  "evaluation": {
+    "id": "uc4p2-language-pilot",
+    "projectId": "uc4p2_language_pilot",
+    "label": "UC4P2 Language Pilot",
+    "provenance": {
+      "sourceFile": "src/evaluation/nlg.py",
+      "note": "Measures mirror data/evaluation/StudentQuiz.json (schemaVersion 1.0). Each observation may include calculation.elements with the inputs used to produce the value for that run."
+    }
+  },
+  "measures": [
+    {
+      "id": "uc4p2.exact_match",
+      "family": "data",
+      "label": "Exact match",
+      "description": "Binary equality of the synthesized answer and ground truth after stripping [ref_N] citation marks, lowercasing, and dropping punctuation.",
+      "definition": {
+        "key": "uc4p2.exact_match",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "1 if normalize(strip_citations(hyp)) == normalize(ref) else 0"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "exact_match"
+      }
+    },
+    {
+      "id": "uc4p2.token_precision",
+      "family": "data",
+      "label": "Token precision",
+      "description": "Bag-of-tokens precision of hypothesis unigrams against the reference.",
+      "definition": {
+        "key": "uc4p2.token_precision",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "overlap / |hyp_tokens|  (clipped multiset overlap)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "token_precision"
+      }
+    },
+    {
+      "id": "uc4p2.token_recall",
+      "family": "data",
+      "label": "Token recall",
+      "description": "Bag-of-tokens recall of hypothesis unigrams against the reference.",
+      "definition": {
+        "key": "uc4p2.token_recall",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "overlap / |ref_tokens|  (clipped multiset overlap)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "token_recall"
+      }
+    },
+    {
+      "id": "uc4p2.token_f1",
+      "family": "data",
+      "label": "Token F1",
+      "description": "Harmonic mean of token precision and token recall.",
+      "definition": {
+        "key": "uc4p2.token_f1",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "2 * P * R / (P + R)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "token_f1"
+      }
+    },
+    {
+      "id": "uc4p2.bleu",
+      "family": "data",
+      "label": "BLEU",
+      "description": "Sentence BLEU with uniform weights over 1\u20134 gram clipped precision and a brevity penalty.",
+      "definition": {
+        "key": "uc4p2.bleu",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "BP * exp(mean(log p_n)) for n=1..4; BP = exp(1 - |ref|/|hyp|) if |hyp| < |ref| else 1"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "bleu"
+      }
+    },
+    {
+      "id": "uc4p2.bleu_1",
+      "family": "data",
+      "label": "BLEU-1 precision",
+      "description": "Clipped unigram precision component of BLEU.",
+      "definition": {
+        "key": "uc4p2.bleu_1",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_overlap(1-grams) / |hyp 1-grams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "bleu_1"
+      }
+    },
+    {
+      "id": "uc4p2.bleu_2",
+      "family": "data",
+      "label": "BLEU-2 precision",
+      "description": "Clipped bigram precision component of BLEU.",
+      "definition": {
+        "key": "uc4p2.bleu_2",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_overlap(2-grams) / |hyp 2-grams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "bleu_2"
+      }
+    },
+    {
+      "id": "uc4p2.bleu_3",
+      "family": "data",
+      "label": "BLEU-3 precision",
+      "description": "Clipped trigram precision component of BLEU.",
+      "definition": {
+        "key": "uc4p2.bleu_3",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_overlap(3-grams) / |hyp 3-grams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "bleu_3"
+      }
+    },
+    {
+      "id": "uc4p2.bleu_4",
+      "family": "data",
+      "label": "BLEU-4 precision",
+      "description": "Clipped 4-gram precision component of BLEU.",
+      "definition": {
+        "key": "uc4p2.bleu_4",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_overlap(4-grams) / |hyp 4-grams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "bleu_4"
+      }
+    },
+    {
+      "id": "uc4p2.brevity_penalty",
+      "family": "data",
+      "label": "BLEU brevity penalty",
+      "description": "BLEU brevity penalty applied to the geometric mean of n-gram precisions.",
+      "definition": {
+        "key": "uc4p2.brevity_penalty",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "1 if |hyp| >= |ref| else exp(1 - |ref|/|hyp|)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "brevity_penalty"
+      }
+    },
+    {
+      "id": "uc4p2.rouge1_f1",
+      "family": "data",
+      "label": "ROUGE-1 F1",
+      "description": "Unigram ROUGE F1 between hypothesis and reference.",
+      "definition": {
+        "key": "uc4p2.rouge1_f1",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "F1 of clipped unigram overlap (P = overlap/|hyp|, R = overlap/|ref|)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge1_f1"
+      }
+    },
+    {
+      "id": "uc4p2.rouge1_precision",
+      "family": "data",
+      "label": "ROUGE-1 precision",
+      "description": "Unigram ROUGE precision.",
+      "definition": {
+        "key": "uc4p2.rouge1_precision",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_unigram_overlap / |hyp_unigrams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge1_precision"
+      }
+    },
+    {
+      "id": "uc4p2.rouge1_recall",
+      "family": "data",
+      "label": "ROUGE-1 recall",
+      "description": "Unigram ROUGE recall.",
+      "definition": {
+        "key": "uc4p2.rouge1_recall",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_unigram_overlap / |ref_unigrams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge1_recall"
+      }
+    },
+    {
+      "id": "uc4p2.rouge2_f1",
+      "family": "data",
+      "label": "ROUGE-2 F1",
+      "description": "Bigram ROUGE F1 between hypothesis and reference.",
+      "definition": {
+        "key": "uc4p2.rouge2_f1",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "F1 of clipped bigram overlap"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge2_f1"
+      }
+    },
+    {
+      "id": "uc4p2.rouge2_precision",
+      "family": "data",
+      "label": "ROUGE-2 precision",
+      "description": "Bigram ROUGE precision.",
+      "definition": {
+        "key": "uc4p2.rouge2_precision",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_bigram_overlap / |hyp_bigrams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge2_precision"
+      }
+    },
+    {
+      "id": "uc4p2.rouge2_recall",
+      "family": "data",
+      "label": "ROUGE-2 recall",
+      "description": "Bigram ROUGE recall.",
+      "definition": {
+        "key": "uc4p2.rouge2_recall",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "clipped_bigram_overlap / |ref_bigrams|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rouge2_recall"
+      }
+    },
+    {
+      "id": "uc4p2.rougeL_f1",
+      "family": "data",
+      "label": "ROUGE-L F1",
+      "description": "Longest common subsequence F1 between hypothesis and reference tokens.",
+      "definition": {
+        "key": "uc4p2.rougeL_f1",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "F1 with P = LCS/|hyp|, R = LCS/|ref|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rougeL_f1"
+      }
+    },
+    {
+      "id": "uc4p2.rougeL_precision",
+      "family": "data",
+      "label": "ROUGE-L precision",
+      "description": "LCS precision component of ROUGE-L.",
+      "definition": {
+        "key": "uc4p2.rougeL_precision",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "LCS_length / |hyp_tokens|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rougeL_precision"
+      }
+    },
+    {
+      "id": "uc4p2.rougeL_recall",
+      "family": "data",
+      "label": "ROUGE-L recall",
+      "description": "LCS recall component of ROUGE-L.",
+      "definition": {
+        "key": "uc4p2.rougeL_recall",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "LCS_length / |ref_tokens|"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "rougeL_recall"
+      }
+    },
+    {
+      "id": "uc4p2.meteor",
+      "family": "data",
+      "label": "METEOR (unigram)",
+      "description": "Simplified METEOR: unigram harmonic mean with a fragmentation penalty. No synonym/stemming module.",
+      "definition": {
+        "key": "uc4p2.meteor",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "Fmean * (1 - 0.5 * (chunks/matches)^3); Fmean = 2PR/(P+R)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "ratio",
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/nlg.py",
+        "sourceMeasure": "meteor"
+      }
+    },
+    {
+      "id": "uc4p2.judge_score",
+      "family": "human",
+      "label": "LLM-as-judge overall score",
+      "description": "Overall quality of the system answer vs gold, scored 1\u20135 by a second Scayle model (not the synthesizer).",
+      "definition": {
+        "key": "uc4p2.judge_score",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "Integer 1\u20135 from judge LLM JSON field `score`"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 1,
+        "max": 5
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/judge.py",
+        "sourceMeasure": "judge.score"
+      }
+    },
+    {
+      "id": "uc4p2.judge_faithfulness",
+      "family": "human",
+      "label": "LLM-as-judge faithfulness",
+      "description": "1\u20135: system answer does not contradict the gold answer.",
+      "definition": {
+        "key": "uc4p2.judge_faithfulness",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "Integer 1\u20135 from judge LLM JSON field `faithfulness`"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 1,
+        "max": 5
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/judge.py",
+        "sourceMeasure": "judge.faithfulness"
+      }
+    },
+    {
+      "id": "uc4p2.judge_coverage",
+      "family": "human",
+      "label": "LLM-as-judge coverage",
+      "description": "1\u20135: gold facts present in the system answer.",
+      "definition": {
+        "key": "uc4p2.judge_coverage",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "Integer 1\u20135 from judge LLM JSON field `coverage`"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": null,
+        "symbol": null,
+        "status": "declared"
+      },
+      "scale": {
+        "min": 1,
+        "max": 5
+      },
+      "objective": "maximize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/evaluation/judge.py",
+        "sourceMeasure": "judge.coverage"
+      }
+    },
+    {
+      "id": "uc4p2.execution_time",
+      "family": "system",
+      "label": "Step execution time",
+      "description": "Wall-clock seconds spent inside each LangGraph pipeline operator (route, disambiguate, \u2026, evaluate_answer, export_benchmark).",
+      "definition": {
+        "key": "uc4p2.execution_time",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "time.perf_counter() delta from previous step yield to this step yield"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "second",
+        "symbol": "s",
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": null
+      },
+      "objective": "minimize",
+      "aggregation": {
+        "default": "sum",
+        "allowed": [
+          "none",
+          "sum",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "operator",
+          "label": "Pipeline operator / step",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "operator",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/orchestration/graph.py",
+        "sourceMeasure": "duration_s"
+      }
+    },
+    {
+      "id": "uc4p2.execution_time_total",
+      "family": "system",
+      "label": "Total pipeline execution time",
+      "description": "Sum of per-step wall-clock durations for the completed run.",
+      "definition": {
+        "key": "uc4p2.execution_time_total",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "sum(duration_s for each completed pipeline step)"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "second",
+        "symbol": "s",
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": null
+      },
+      "objective": "minimize",
+      "aggregation": {
+        "default": "none",
+        "allowed": [
+          "none"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/app/runner.py",
+        "sourceMeasure": "execution_time_s"
+      }
+    },
+    {
+      "id": "uc4p2.evaluation_time",
+      "family": "system",
+      "label": "Evaluation execution time",
+      "description": "Wall-clock seconds for the evaluate_answer operator (NLG metrics + optional LLM-as-judge).",
+      "definition": {
+        "key": "uc4p2.evaluation_time",
+        "version": "1.0",
+        "status": "defined",
+        "formula": "duration_s of pipeline step evaluate_answer"
+      },
+      "valueType": "number",
+      "unit": {
+        "code": "second",
+        "symbol": "s",
+        "status": "declared"
+      },
+      "scale": {
+        "min": 0,
+        "max": null
+      },
+      "objective": "minimize",
+      "aggregation": {
+        "default": "mean",
+        "allowed": [
+          "none",
+          "mean"
+        ]
+      },
+      "dimensions": [
+        {
+          "id": "query_id",
+          "label": "Question / Subquestion ID",
+          "type": "nominal",
+          "role": "category",
+          "required": true
+        },
+        {
+          "id": "operator",
+          "label": "Pipeline operator",
+          "type": "nominal",
+          "role": "group",
+          "required": true
+        },
+        {
+          "id": "gold_source",
+          "label": "Gold source",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        },
+        {
+          "id": "llm_model",
+          "label": "Pipeline LLM",
+          "type": "nominal",
+          "role": "group",
+          "required": false
+        }
+      ],
+      "observations": [],
+      "visualization": {
+        "preferred": "bar",
+        "x": "query_id",
+        "y": "value"
+      },
+      "provenance": {
+        "sourceFile": "src/app/runner.py",
+        "sourceMeasure": "evaluation_time_s"
+      }
+    }
+  ]
+}

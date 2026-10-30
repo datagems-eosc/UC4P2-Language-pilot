@@ -396,20 +396,36 @@ def evaluate_against_ground_truth(
     *,
     llm_model: str | None = None,
     judge_llm_model: str | None = None,
+    decompose_mode: str | None = None,
 ) -> dict[str, Any]:
     """Score ``answer`` against gold ``Ground_Truth`` in ``data/*.json``."""
+    from src.evaluation.details import nlg_metrics_with_details
+    from src.evaluation.report import build_evaluation_report
+
     record = find_ground_truth(question, query_id, concept=concept)
     if record is None:
-        return {
+        empty = {
             "matched": False,
             "question_id": query_id or "",
             "ground_truth": "",
             "metrics": {},
+            "metric_details": {},
             "llm_judge": {"available": False, "reason": "No gold answer to judge against."},
             "summary": "No Ground_Truth in data/*.json matched this question, query_id, or concept.",
         }
+        empty["evaluation_report"] = build_evaluation_report(
+            question=question,
+            answer=answer,
+            nlg_evaluation=empty,
+            query_id=query_id or "",
+            decompose_mode=decompose_mode or "",
+            llm_model=llm_model or "",
+            judge_llm_model=judge_llm_model or "",
+        )
+        return empty
     gold = str(record.get("Ground_Truth") or "")
-    metrics = nlg_metrics(answer, gold)
+    computed = nlg_metrics_with_details(answer, gold)
+    metrics = computed["metrics"]
     question_id = str(record.get("Question_ID") or "")
     judge = judge_synthesized_answer(
         question=question,
@@ -428,7 +444,7 @@ def evaluate_against_ground_truth(
             f" LLM-as-judge {judge.get('judge_lm')} "
             f"score {judge.get('score')}/5 ({judge.get('verdict')})."
         )
-    return {
+    result = {
         "matched": True,
         "question_id": question_id,
         "concept": str(record.get("Concept") or ""),
@@ -437,6 +453,18 @@ def evaluate_against_ground_truth(
         "match": str(record.get("_match") or ""),
         "ground_truth": gold,
         "metrics": metrics,
+        "metric_details": computed["details"],
         "llm_judge": judge,
         "summary": summary,
+        "source": "local",
     }
+    result["evaluation_report"] = build_evaluation_report(
+        question=question,
+        answer=answer,
+        nlg_evaluation=result,
+        query_id=question_id,
+        decompose_mode=decompose_mode or "",
+        llm_model=llm_model or "",
+        judge_llm_model=judge_llm_model or "",
+    )
+    return result

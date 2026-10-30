@@ -61,7 +61,7 @@ Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `pipeline[]` | Ordered steps with `outcome`, `summary`, and `output` (decomposed questions, passages, etc.) |
 | `memory` | `{ hit, key, stored_at, path }` — `hit: true` when served from run memory |
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
-| `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
+| `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge; includes StudentQuiz-shaped `evaluation_report` with per-metric `calculation.elements` |
 
 Live version: **`0.1.31`**.
 
@@ -162,7 +162,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: left **Questions** drawer lists every row from `data/pilot2_benchmark_english.v2.json` (`Question_ID` / `Subquestion_ID` `0`–`35`; nested children indented). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step. After evaluate finishes, an **Evaluation** tab shows `ground_truth`, NLG metrics, and LLM-as-judge, with **Download evaluation** / **Download full run** JSON.
+- UI: left **Questions** drawer lists every row from `data/pilot2_benchmark_english.v2.json` (`Question_ID` / `Subquestion_ID` `0`–`35`; nested children indented). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step. After evaluate finishes, an **Evaluation** tab shows `ground_truth`, measures (formula + calculation elements), and LLM-as-judge. **Download evaluation** exports StudentQuiz-compatible JSON (`schemaVersion` / `evaluation` / `measures`); **Download full run** keeps the full ThematicExploration payload. Catalog-only: `GET /evaluation/measures` (also `data/evaluation/uc4p2_language_pilot_measures.json`).
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
@@ -557,7 +557,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
 - Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/steps/evaluate`
 - Stops after: `evaluate_answer`
 - Upstream: in-dataset-discovery `POST /nlgEvaluate` when `USE_IN_DATASET_DISCOVERY=1` (section G). Gold match is **exact** `Question_ID` or question text only (no fuzzy overlap).
-- Look at: `nlg_evaluation.metrics` (BLEU, ROUGE, token F1, METEOR) and `nlg_evaluation.llm_judge` (separate LLM, not the synthesizer)
+- Look at: `nlg_evaluation.metrics` (BLEU, ROUGE, token F1, METEOR), `nlg_evaluation.metric_details` (elements per score), `nlg_evaluation.evaluation_report` (StudentQuiz-shaped measures with `calculation.formula` + `calculation.elements`, including system `uc4p2.execution_time` / `execution_time_total` / `evaluation_time`), and `nlg_evaluation.llm_judge` (separate LLM, not the synthesizer). Run-level: `pipeline[].duration_s`, `step_timings`, `execution_time_s`, `evaluation_time_s`.
 - Gold match for this walkthrough: `query_id` **`9`** (v2 parent). Judge stays on Scayle but uses another model (`JUDGE_LLM_MODEL`, default `glm-5.3-flash` vs pipeline `qwen3`)
 - Script: `scripts/dev/17b-steps-evaluate.sh`
 

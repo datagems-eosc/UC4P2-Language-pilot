@@ -33,6 +33,7 @@ from src.app.run_memory import (
 from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
+from src.evaluation.catalog import empty_measure_catalog
 from src.evaluation.nlg import list_data_questions
 from src.llm import (
     configure_lm_from_env,
@@ -180,7 +181,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.31",
+        "version": "0.1.32",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -189,6 +190,7 @@ async def root() -> dict[str, Any]:
         "tree_token": "GET /tree/token",
         "tree_questions": "GET /tree/questions",
         "llm_options": "GET /llm/options",
+        "evaluation_measures": "GET /evaluation/measures",
         "compare": "POST /compare (alias)",
         "steps": [item["path"] for item in PIPELINE_STEPS],
         "default_llm_model": default_pipeline_model(),
@@ -213,6 +215,20 @@ async def llm_options() -> dict[str, Any]:
             "Judge should differ from the pipeline model."
         ),
     }
+
+
+@app.get(
+    "/evaluation/measures",
+    summary="StudentQuiz-compatible measure catalog",
+    tags=["ThematicExploration"],
+)
+async def evaluation_measures() -> dict[str, Any]:
+    """Measure definitions (family, formula, unit, scale) with empty observations.
+
+    Per-run downloads from the tree UI / ``nlg_evaluation.evaluation_report`` fill
+    observations with values and ``calculation.elements``.
+    """
+    return empty_measure_catalog()
 
 
 def _jwt_exp(token: str) -> float | None:
