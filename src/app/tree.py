@@ -531,16 +531,45 @@ _PAGE = """<!DOCTYPE html>
     .eval-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 10px; font-size: .9rem; color: var(--muted); }
     .eval-meta strong { color: var(--ink); font-weight: 650; }
     .eval-gt { white-space: pre-wrap; background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
+    .eval-pair { display: grid; gap: 10px; margin: 8px 0 14px; }
+    @media (min-width: 900px) { .eval-pair { grid-template-columns: 1fr 1fr; } }
+    .eval-pair h4 { margin: 0 0 6px; font-size: .85rem; color: var(--muted); font-weight: 650; }
+    .eval-measure {
+      border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+      margin: 0 0 10px; overflow: hidden;
+    }
+    .eval-measure > summary {
+      list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px 14px;
+      align-items: baseline; padding: 10px 12px; background: #f8fafc;
+    }
+    .eval-measure > summary::-webkit-details-marker { display: none; }
+    .eval-measure-name { font-weight: 700; color: var(--ink); }
+    .eval-measure-family {
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--muted); font-weight: 700;
+    }
+    .eval-measure-value {
+      margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 750;
+      color: #1d4ed8; font-size: 1.05rem;
+    }
+    .eval-measure-body { padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+    .eval-desc { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
+    .eval-formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem;
+      color: #334155; background: #f1f5f9; border-radius: 6px; padding: 8px 10px; margin: 0 0 10px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .eval-elements-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .eval-elements-table th, .eval-elements-table td {
+      text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top;
+    }
+    .eval-elements-table th { color: var(--muted); font-weight: 650; width: 32%; }
+    .eval-elements-table td { white-space: pre-wrap; word-break: break-word; font-variant-numeric: tabular-nums; }
+    .eval-obs-title { margin: 12px 0 6px; font-size: .9rem; font-weight: 650; }
     .eval-metrics { width: 100%; border-collapse: collapse; font-size: .9rem; }
     .eval-metrics th, .eval-metrics td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .eval-metrics th { color: var(--muted); font-weight: 600; }
     .eval-metrics td.num { font-variant-numeric: tabular-nums; color: #1d4ed8; }
-    .eval-metrics details { margin: 0; }
-    .eval-metrics summary { cursor: pointer; color: var(--accent); font-weight: 600; }
-    .eval-elements { margin: 6px 0 0; padding: 8px 10px; background: #f8fafc; border-radius: 6px; font-size: .82rem; }
-    .eval-elements dt { font-weight: 650; color: var(--ink); margin-top: 6px; }
-    .eval-elements dd { margin: 2px 0 0; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
-    .eval-formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; color: var(--muted); }
     .answer-block {
       background: var(--card); border: 1px solid var(--line); border-radius: 8px;
       padding: 12px 14px; margin: 10px 0;
@@ -991,41 +1020,81 @@ _PAGE = """<!DOCTYPE html>
       if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
         return String(value);
       }
-      try { return JSON.stringify(value); } catch (_) { return String(value); }
+      try { return JSON.stringify(value, null, 2); } catch (_) { return String(value); }
     }
 
-    function metricRowsFromReport(report) {
+    function openByDefault(measureId) {
+      const id = String(measureId || "");
+      return (
+        id === "uc4p2.rougeL_f1" ||
+        id === "uc4p2.token_f1" ||
+        id === "uc4p2.bleu" ||
+        id === "uc4p2.meteor" ||
+        id === "uc4p2.exact_match" ||
+        id === "uc4p2.evaluation_time" ||
+        id === "uc4p2.execution_time_total" ||
+        id === "uc4p2.judge_score"
+      );
+    }
+
+    function elementsTable(elements) {
+      if (!elements || !elements.length) {
+        return '<p class="empty">No calculation elements for this observation.</p>';
+      }
+      const rows = elements.map(el => {
+        const label = el.label || el.id || "element";
+        const unit = el.unit ? ' <em>(' + escapeHtml(el.unit) + ")</em>" : "";
+        return "<tr><th>" + escapeHtml(label) +
+          (el.id ? ' <code>' + escapeHtml(el.id) + "</code>" : "") +
+          "</th><td>" + escapeHtml(formatElementValue(el.value)) + unit + "</td></tr>";
+      }).join("");
+      return '<table class="eval-elements-table"><thead><tr><th>Element</th><th>Value for this use-case</th></tr></thead><tbody>' +
+        rows + "</tbody></table>";
+    }
+
+    function observationBlock(obs, index, total) {
+      const calc = (obs && obs.calculation) || {};
+      const formula = calc.formula
+        ? '<div class="eval-formula"><strong>Formula:</strong> ' + escapeHtml(calc.formula) + "</div>"
+        : "";
+      const dims = obs && obs.dimensions ? obs.dimensions : {};
+      const dimBits = Object.keys(dims).map(key =>
+        "<span><strong>" + escapeHtml(key) + "</strong> " + escapeHtml(dims[key]) + "</span>"
+      ).join("");
+      const title = total > 1
+        ? '<div class="eval-obs-title">Observation ' + (index + 1) +
+          (dims.operator ? " · " + escapeHtml(dims.operator) : "") +
+          " → <span class=\\"num\\">" + escapeHtml(obs.value == null ? "–" : obs.value) + "</span></div>"
+        : "";
+      return title +
+        (dimBits ? '<div class="eval-meta">' + dimBits + "</div>" : "") +
+        formula +
+        elementsTable(calc.elements || []);
+    }
+
+    function measureCards(report) {
       const measures = report && Array.isArray(report.measures) ? report.measures : [];
       if (!measures.length) return "<p class=\\"empty\\">No measures in evaluation report.</p>";
-      const rows = measures.map(measure => {
-        const obs = (measure.observations && measure.observations[0]) || {};
-        const value = obs.value;
-        const cell = typeof value === "number"
-          ? '<td class="num">' + escapeHtml(value) + "</td>"
-          : "<td>" + escapeHtml(value == null ? "–" : value) + "</td>";
-        const calc = obs.calculation || {};
-        const formula = calc.formula
-          ? '<div class="eval-formula">' + escapeHtml(calc.formula) + "</div>"
+      return measures.map(measure => {
+        const observations = Array.isArray(measure.observations) ? measure.observations : [];
+        const primary = observations[0] || {};
+        const value = observations.length === 1
+          ? primary.value
+          : (observations.length ? observations.length + " observations" : "–");
+        const opened = openByDefault(measure.id) ? " open" : "";
+        const body = observations.length
+          ? observations.map((obs, index) => observationBlock(obs, index, observations.length)).join("")
+          : '<p class="empty">No observation for this use-case yet.</p>';
+        const desc = measure.description
+          ? '<p class="eval-desc">' + escapeHtml(measure.description) + "</p>"
           : "";
-        const elements = Array.isArray(calc.elements) ? calc.elements : [];
-        const elementHtml = elements.length
-          ? "<details><summary>calculation elements (" + elements.length + ")</summary>" +
-            '<dl class="eval-elements">' +
-            elements.map(el => {
-              const label = el.label || el.id || "element";
-              return "<dt>" + escapeHtml(label) + "</dt><dd>" +
-                escapeHtml(formatElementValue(el.value)) + "</dd>";
-            }).join("") +
-            "</dl></details>"
-          : '<span class="empty">No calculation elements</span>';
-        return "<tr><th>" + escapeHtml(measure.label || measure.id) +
-          "<div class=\\"eval-formula\\">" + escapeHtml(measure.family || "") +
-          (measure.description ? " — " + escapeHtml(measure.description) : "") +
-          "</div>" + formula + "</th>" + cell +
-          "<td>" + elementHtml + "</td></tr>";
+        return '<details class="eval-measure"' + opened + ">" +
+          "<summary><span class=\\"eval-measure-family\\">" + escapeHtml(measure.family || "") +
+          "</span><span class=\\"eval-measure-name\\">" + escapeHtml(measure.label || measure.id) +
+          "</span><span class=\\"eval-measure-value\\">" + escapeHtml(value == null ? "–" : value) +
+          "</span></summary><div class=\\"eval-measure-body\\">" + desc + body +
+          "</div></details>";
       }).join("");
-      return '<table class="eval-metrics"><thead><tr><th>Measure</th><th>Value</th><th>How calculated</th></tr></thead><tbody>' +
-        rows + "</tbody></table>";
     }
 
     function metricRows(metrics) {
@@ -1095,18 +1164,29 @@ _PAGE = """<!DOCTYPE html>
       ].map(pair => "<span><strong>" + escapeHtml(pair[0]) + "</strong> " + escapeHtml(pair[1]) + "</span>").join("");
       const gtText = (bundle.measures && bundle.measures[0] && bundle.measures[0].provenance && bundle.measures[0].provenance.ground_truth)
         || nlg.ground_truth || "";
-      const gt = gtText
-        ? '<h3>Ground truth</h3><div class="eval-gt">' + escapeHtml(gtText) + "</div>"
-        : '<p class="empty">No ground_truth matched for this question / query_id.</p>';
+      const answerText = (bundle.measures && bundle.measures[0] && bundle.measures[0].provenance && bundle.measures[0].provenance.synthesized_answer)
+        || (payload && payload.synthesized_answer) || "";
+      const pair = '<div class="eval-pair">' +
+        '<div><h4>System answer (this use-case)</h4><div class="eval-gt">' +
+        escapeHtml(answerText || "–") + "</div></div>" +
+        "<div><h4>Ground truth</h4><div class=\\"eval-gt\\">" +
+        escapeHtml(gtText || "No ground_truth matched for this question / query_id.") +
+        "</div></div></div>";
       const summary = nlg.summary
         ? '<p class="eval-meta">' + escapeHtml(nlg.summary) + "</p>"
         : "";
       const metricsHtml = Array.isArray(bundle.measures) && bundle.measures.length
-        ? metricRowsFromReport(bundle)
+        ? measureCards(bundle)
         : metricRows(nlg.metrics);
       evalView.innerHTML =
-        '<div class="eval-card"><h3>NLG evaluation</h3><div class="eval-meta">' + meta +
-        "</div>" + summary + gt + "<h3>Measures</h3>" + metricsHtml + "</div>" +
+        '<div class="eval-card"><h3>NLG evaluation for this use-case</h3><div class="eval-meta">' + meta +
+        "</div>" + summary + pair +
+        "<h3>Measures — score, formula, and element values</h3>" +
+        '<p class="eval-desc">Open a measure to see exactly how the score was computed for this run ' +
+        "(hypothesis tokens, reference tokens, overlaps, P/R/F1, timings, …). " +
+        "<strong>Download evaluation</strong> exports the same StudentQuiz JSON with full " +
+        "<code>calculation.elements</code>.</p>" +
+        metricsHtml + "</div>" +
         judgeBlock(nlg.llm_judge);
       if (matched && payload && payload.status !== "running") {
         selectTab("evaluation");
