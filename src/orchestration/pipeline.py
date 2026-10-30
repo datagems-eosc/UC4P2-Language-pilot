@@ -206,6 +206,7 @@ class HistoricalQAOrchestrator(dspy.Module):
         self._idd_extend: dict[str, Any] | None = None
 
     def resolve(self, question: str, query_id: str | None = None) -> PipelineState:
+        """Trust the query-disambiguation language API; local gate only on outage."""
         identifier = query_id or _query_id(question)
         try:
             remote = self.disambiguation_client.disambiguate_language(question)
@@ -230,38 +231,8 @@ class HistoricalQAOrchestrator(dspy.Module):
                 disambiguation_source="local-fallback",
                 disambiguation={"proceed": True, "fallback_reason": str(exc)},
             )
-        local_intent, local_errors = parse_query_intent(question)
-        if local_intent is not None and local_intent.dimension == "descriptive":
-            merged = dict(remote)
-            merged["proceed"] = True
-            merged["comparison_type"] = "descriptive"
-            merged["fallback_reason"] = (
-                "Single-period question; kept one indexed archive slice."
-            )
-            return PipelineState(
-                question=question,
-                query_id=identifier,
-                status="disambiguated",
-                intent=local_intent,
-                disambiguation=merged,
-                disambiguation_source="local-fallback",
-            )
         if not remote.get("proceed"):
-            if local_intent is not None:
-                merged = dict(remote)
-                merged["proceed"] = True
-                merged["fallback_reason"] = (
-                    "No explicit time period in the query; slices defaulted to indexed corpus eras."
-                )
-                return PipelineState(
-                    question=question,
-                    query_id=identifier,
-                    status="disambiguated",
-                    intent=local_intent,
-                    disambiguation=merged,
-                    disambiguation_source="local-fallback",
-                )
-            errors = list(remote.get("constraint_errors") or local_errors)
+            errors = list(remote.get("constraint_errors") or [])
             return PipelineState(
                 question=question,
                 query_id=identifier,
@@ -273,28 +244,28 @@ class HistoricalQAOrchestrator(dspy.Module):
             )
         slices = slices_from_disambiguation(remote)
         if not slices:
-            if local_intent is None:
-                return PipelineState(
-                    question=question,
-                    query_id=identifier,
-                    status="clarification",
-                    disambiguation=remote,
-                    disambiguation_source=source,
-                    clarification=_clarification(local_errors),
-                    constraint_errors=local_errors,
-                )
-            intent = local_intent
-        else:
-            concepts = list(remote.get("target_concepts") or [])
-            local_concept = local_intent.target_concept if local_intent is not None else ""
-            intent = ParsedQueryIntent(
-                original_query=question,
-                target_concept=str(
-                    (concepts[0] if concepts else "") or local_concept or extract_concept(question)
+            return PipelineState(
+                question=question,
+                query_id=identifier,
+                status="clarification",
+                disambiguation=remote,
+                disambiguation_source=source,
+                clarification=_clarification(
+                    ["No indexed archive slice matched the named period or language."]
                 ),
-                dimension=_dimension_name(remote.get("comparison_type")),
-                slices=slices,
+                constraint_errors=[
+                    "No indexed archive slice matched the named period or language."
+                ],
             )
+        concepts = list(remote.get("target_concepts") or [])
+        intent = ParsedQueryIntent(
+            original_query=question,
+            target_concept=str(
+                (concepts[0] if concepts else "") or extract_concept(question)
+            ),
+            dimension=_dimension_name(remote.get("comparison_type")),
+            slices=slices,
+        )
         return PipelineState(
             question=question,
             query_id=identifier,
