@@ -29,7 +29,7 @@ _OVERVIEW_KEYS = (
     "memory",
 )
 
-_END_KEYS = ("synthesized_answer", "nlg_evaluation", "grounded_citations")
+_END_KEYS = ("synthesized_answer", "grounded_citations")
 
 _TEXT_LIMIT = 600
 _REF = re.compile(r"\[(ref_\d+)\]")
@@ -500,6 +500,35 @@ _PAGE = """<!DOCTYPE html>
     .progress { background: #eff6ff; border-color: #bfdbfe; color: var(--accent); margin-bottom: 12px; }
     .progress.done { background: var(--ok-bg); border-color: #bbf7d0; color: var(--ok); }
     .progress.fail { background: #fee2e2; border-color: #fecaca; color: var(--fail); }
+    .result-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+    }
+    .result-tabs .tab {
+      background: transparent; border: 1px solid var(--line); color: var(--muted);
+      border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .result-tabs .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .result-tabs .tab:disabled { opacity: .45; cursor: not-allowed; }
+    .result-tabs .download {
+      margin-left: auto; background: var(--card); border: 1px solid var(--line);
+      border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; font-weight: 600;
+      color: var(--accent);
+    }
+    .result-tabs .download:disabled { opacity: .45; cursor: not-allowed; }
+    .tab-panel[hidden] { display: none !important; }
+    .eval-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+      padding: 14px 16px; margin: 0 0 12px;
+    }
+    .eval-card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .eval-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 10px; font-size: .9rem; color: var(--muted); }
+    .eval-meta strong { color: var(--ink); font-weight: 650; }
+    .eval-gt { white-space: pre-wrap; background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
+    .eval-metrics { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .eval-metrics th, .eval-metrics td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .eval-metrics th { color: var(--muted); font-weight: 600; }
+    .eval-metrics td.num { font-variant-numeric: tabular-nums; color: #1d4ed8; }
     .answer-block {
       background: var(--card); border: 1px solid var(--line); border-radius: 8px;
       padding: 12px 14px; margin: 10px 0;
@@ -598,13 +627,25 @@ _PAGE = """<!DOCTYPE html>
     <main>
       __ERROR__
       <p id="progress" class="progress" hidden></p>
-      <div id="view">__TREE__</div>
+      <div class="result-tabs" id="result-tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="pipeline" role="tab" aria-selected="true">Pipeline</button>
+        <button type="button" class="tab" data-tab="evaluation" id="tab-evaluation" role="tab" aria-selected="false" disabled>Evaluation</button>
+        <button type="button" class="download" id="download-eval" disabled title="Download nlg_evaluation JSON">Download evaluation</button>
+        <button type="button" class="download" id="download-run" disabled title="Download full ThematicExploration JSON">Download full run</button>
+      </div>
+      <div id="panel-pipeline" class="tab-panel" role="tabpanel">
+        <div id="view">__TREE__</div>
+      </div>
+      <div id="panel-evaluation" class="tab-panel" role="tabpanel" hidden>
+        <div id="eval-view"><p class="empty">Evaluation appears here after the evaluate step finishes.</p></div>
+      </div>
     </main>
   </div>
   <script>
     const EMBEDDED = __EMBEDDED__;
+    let latestPayload = null;
     const OVERVIEW = ["service","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","concept","comparison_type","clarification","constraint_errors","slices"];
-    const ENDING = ["synthesized_answer","nlg_evaluation","grounded_citations"];
+    const ENDING = ["synthesized_answer","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
       "d84d1a2e-127d-4393-91d0-afb7e4fd9c68": "19th C. Knowledge Project (Britannica)",
@@ -888,18 +929,150 @@ _PAGE = """<!DOCTYPE html>
       return "<details" + opened + "><summary>" + label(key, value) + "</summary><div class=\\"kids\\">" + children + "</div></details>";
     }
 
+    function downloadJson(filename, data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function evaluationBundle(payload) {
+      const nlg = payload && payload.nlg_evaluation;
+      if (!nlg || typeof nlg !== "object") return null;
+      return {
+        service: payload.service || "UC4P2 Language Pilot",
+        query_id: payload.query_id || "",
+        question: payload.question || "",
+        status: payload.status || "",
+        decompose_mode: payload.decompose_mode || "",
+        synthesized_answer: payload.synthesized_answer || "",
+        nlg_evaluation: nlg,
+      };
+    }
+
+    function metricRows(metrics) {
+      if (!metrics || typeof metrics !== "object") return "";
+      const keys = Object.keys(metrics);
+      if (!keys.length) return "<p class=\\"empty\\">No numeric metrics.</p>";
+      const rows = keys.map(key => {
+        const value = metrics[key];
+        const cell = typeof value === "number"
+          ? '<td class="num">' + escapeHtml(value) + "</td>"
+          : "<td>" + escapeHtml(value) + "</td>";
+        return "<tr><th>" + escapeHtml(key) + "</th>" + cell + "</tr>";
+      }).join("");
+      return '<table class="eval-metrics"><tbody>' + rows + "</tbody></table>";
+    }
+
+    function judgeBlock(judge) {
+      if (!judge || typeof judge !== "object") return "";
+      if (!judge.available) {
+        return '<div class="eval-card"><h3>LLM-as-judge</h3><p class="empty">' +
+          escapeHtml(judge.reason || "Not available.") + "</p></div>";
+      }
+      const bits = [
+        ["score", judge.score],
+        ["faithfulness", judge.faithfulness],
+        ["coverage", judge.coverage],
+        ["verdict", judge.verdict],
+        ["judge_lm", judge.judge_lm],
+        ["pipeline_lm", judge.pipeline_lm],
+      ].filter(pair => pair[1] !== null && pair[1] !== undefined && pair[1] !== "");
+      const meta = bits.map(pair => "<span><strong>" + escapeHtml(pair[0]) + "</strong> " +
+        escapeHtml(pair[1]) + "</span>").join("");
+      const rationale = judge.rationale
+        ? '<p class="eval-gt">' + escapeHtml(judge.rationale) + "</p>"
+        : "";
+      return '<div class="eval-card"><h3>LLM-as-judge</h3><div class="eval-meta">' + meta +
+        "</div>" + rationale + "</div>";
+    }
+
+    function renderEvaluation(payload) {
+      const evalView = document.getElementById("eval-view");
+      const tab = document.getElementById("tab-evaluation");
+      const downloadEval = document.getElementById("download-eval");
+      const downloadRun = document.getElementById("download-run");
+      const bundle = evaluationBundle(payload);
+      if (downloadRun) downloadRun.disabled = !(payload && typeof payload === "object");
+      if (!bundle) {
+        if (tab) tab.disabled = true;
+        if (downloadEval) downloadEval.disabled = true;
+        evalView.innerHTML = '<p class="empty">Evaluation appears here after the evaluate step finishes.</p>';
+        return;
+      }
+      if (tab) tab.disabled = false;
+      if (downloadEval) downloadEval.disabled = false;
+      const nlg = bundle.nlg_evaluation;
+      const matched = !!nlg.matched;
+      const meta = [
+        ["matched", matched ? "yes" : "no"],
+        ["question_id", nlg.question_id || bundle.query_id || "–"],
+        ["match", nlg.match || "–"],
+        ["gold_source", nlg.gold_source || "–"],
+        ["source", nlg.source || "local"],
+      ].map(pair => "<span><strong>" + escapeHtml(pair[0]) + "</strong> " + escapeHtml(pair[1]) + "</span>").join("");
+      const gt = nlg.ground_truth
+        ? '<h3>Ground truth</h3><div class="eval-gt">' + escapeHtml(nlg.ground_truth) + "</div>"
+        : '<p class="empty">No ground_truth matched for this question / query_id.</p>';
+      const summary = nlg.summary
+        ? '<p class="eval-meta">' + escapeHtml(nlg.summary) + "</p>"
+        : "";
+      evalView.innerHTML =
+        '<div class="eval-card"><h3>NLG evaluation</h3><div class="eval-meta">' + meta +
+        "</div>" + summary + gt + "<h3>Metrics</h3>" + metricRows(nlg.metrics) + "</div>" +
+        judgeBlock(nlg.llm_judge);
+      if (matched && payload && payload.status !== "running") {
+        selectTab("evaluation");
+      }
+    }
+
+    function selectTab(name) {
+      const tabs = document.querySelectorAll(".result-tabs .tab");
+      tabs.forEach(button => {
+        const active = button.getAttribute("data-tab") === name;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      document.getElementById("panel-pipeline").hidden = name !== "pipeline";
+      document.getElementById("panel-evaluation").hidden = name !== "evaluation";
+    }
+
     function renderPayload(payload) {
+      latestPayload = payload;
       const ordered = presentationTree(payload);
       const view = document.getElementById("view");
       if (!ordered || typeof ordered !== "object") {
         view.innerHTML = "<p class=\\"empty\\">Nothing to show.</p>";
+        renderEvaluation(payload);
         return;
       }
       const citations = Array.isArray(ordered.grounded_citations) ? ordered.grounded_citations : [];
       const openKeys = new Set(["pipeline", "question", "status", "synthesized_answer", "slices", "grounded_citations"]);
       view.innerHTML = '<div class="tree">' + Object.keys(ordered).map(key => nodeHtml(key, ordered[key], openKeys.has(key), citations)).join("") + "</div>";
+      renderEvaluation(payload);
     }
     window.renderPayload = renderPayload;
+
+    document.getElementById("result-tabs").addEventListener("click", (event) => {
+      const tab = event.target.closest(".tab");
+      if (tab && !tab.disabled) {
+        selectTab(tab.getAttribute("data-tab"));
+        return;
+      }
+      if (event.target.id === "download-eval" && latestPayload) {
+        const bundle = evaluationBundle(latestPayload);
+        if (!bundle) return;
+        const qid = String(bundle.query_id || "run").replace(/[^\\w.-]+/g, "_");
+        downloadJson("uc4p2-evaluation-" + qid + ".json", bundle);
+      }
+      if (event.target.id === "download-run" && latestPayload) {
+        const qid = String(latestPayload.query_id || "run").replace(/[^\\w.-]+/g, "_");
+        downloadJson("uc4p2-thematic-exploration-" + qid + ".json", latestPayload);
+      }
+    });
 
     const view = document.getElementById("view");
     view.addEventListener("click", (event) => {
@@ -1139,6 +1312,13 @@ _PAGE = """<!DOCTYPE html>
       const view = document.getElementById("view");
       const runButton = event.submitter || document.querySelector("#run-form button[type=submit]");
       view.innerHTML = "";
+      document.getElementById("eval-view").innerHTML =
+        '<p class="empty">Evaluation appears here after the evaluate step finishes.</p>';
+      document.getElementById("tab-evaluation").disabled = true;
+      document.getElementById("download-eval").disabled = true;
+      document.getElementById("download-run").disabled = true;
+      selectTab("pipeline");
+      latestPayload = null;
       setProgress("Getting access token…", "");
       if (runButton) runButton.disabled = true;
       let token = "";

@@ -61,7 +61,7 @@ Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.29`**.
+Live version: **`0.1.30`**.
 
 ---
 
@@ -74,7 +74,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.29`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.30`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**
@@ -160,7 +160,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: left **Questions** drawer lists every row from `data/pilot2_benchmark_english.v2.json` (`Question_ID` / `Subquestion_ID` `0`–`35`; nested children indented). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
+- UI: left **Questions** drawer lists every row from `data/pilot2_benchmark_english.v2.json` (`Question_ID` / `Subquestion_ID` `0`–`35`; nested children indented). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step. After evaluate finishes, an **Evaluation** tab shows `ground_truth`, NLG metrics, and LLM-as-judge, with **Download evaluation** / **Download full run** JSON.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 

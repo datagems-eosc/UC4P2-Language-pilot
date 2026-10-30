@@ -279,6 +279,14 @@ def test_tree_token_refreshes_expired_jwt(monkeypatch):
     assert calls["n"] == 2
 
 
+def test_tree_page_has_evaluation_tab_and_download():
+    page = tree_page()
+    assert 'data-tab="evaluation"' in page
+    assert "Download evaluation" in page
+    assert "Download full run" in page
+    assert 'id="eval-view"' in page
+
+
 def test_tree_questions_lists_benchmark_rows():
     from fastapi.testclient import TestClient
     from src.app.main import app
