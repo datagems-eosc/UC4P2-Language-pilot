@@ -6,6 +6,7 @@ from src.constraints.comparative import (
     HistoricalComparativeConstraints,
     QueryDisambiguationClient,
 )
+from src.orchestration.idd_client import InDatasetDiscoveryError
 from src.orchestration.pipeline import HistoricalQAOrchestrator
 from src.orchestration.slice_executor import CrossDatasetDiscoveryClient
 from src.retrieval.multi_slice_retriever import CrossDatasetMultiSliceRetriever
@@ -379,6 +380,12 @@ def test_retrieval_client_posts_search_endpoint(monkeypatch):
 
 
 class UnmatchedIddClient:
+    def extend_knowledge(self, question, *, concept=None, slices=None):
+        raise InDatasetDiscoveryError("extend not used in this test")
+
+    def decompose(self, question, *, concept=None, slices=None):
+        raise InDatasetDiscoveryError("decompose not used in this test")
+
     def nlg_evaluate(self, question, answer, *, query_id=None, ground_truth=None):
         return {
             "matched": False,
