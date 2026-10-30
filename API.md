@@ -890,7 +890,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate
 
 Same `POST /search/`, token, `k`, and `hybrid`. Only `query` and `dataset_ids` change. Language-pilot retrieve uses this pair: slice_1 → Knowledge Project, slice_2 → Wikipedia (often empty).
 
-### G1. 19th C. Knowledge Project (Britannica)
+### H1. 19th C. Knowledge Project (Britannica)
 
 Dataset `d84d1a2e-127d-4393-91d0-afb7e4fd9c68`. Usually returns hits.
 
@@ -907,7 +907,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ 
   -d '{"query": "What is the definition of a marriage in the 1800s? wedding nuptials matrimony", "k": 5, "search_mode": "hybrid", "dataset_ids": ["d84d1a2e-127d-4393-91d0-afb7e4fd9c68"]}'
 ```
 
-### G2. Wikipedia (present, often empty)
+### H2. Wikipedia (present, often empty)
 
 Dataset `1f6fba0c-9aea-4345-b5a3-457c924f9e0c`. Often `results: []`.
 
