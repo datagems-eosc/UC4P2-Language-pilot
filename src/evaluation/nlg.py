@@ -218,7 +218,7 @@ _COMPARATIVE = re.compile(
 
 
 def _gold_rows_from_benchmark(path: Path) -> list[dict[str, Any]]:
-    """Parent gold by ``Question_ID`` plus nested rows for exact-question match only."""
+    """Parent and nested subquestion gold; v2 ``Subquestion_ID`` values are globally unique."""
     rows: list[dict[str, Any]] = []
     for item in load_benchmark(path):
         if not isinstance(item, dict):
@@ -226,15 +226,17 @@ def _gold_rows_from_benchmark(path: Path) -> list[dict[str, Any]]:
         question = str(item.get("Question") or "").strip()
         ground = str(item.get("Ground_Truth") or "").strip()
         if question and ground:
-            row = {
-                "Question_ID": str(item.get("Question_ID") or ""),
-                "Question": question,
-                "Concept": str(item.get("Concept") or "").strip(),
-                "Ground_Truth": ground,
-                "_source_file": path.name,
-                "_id_match": True,
-            }
-            rows.append(row)
+            rows.append(
+                {
+                    "Question_ID": str(item.get("Question_ID") or ""),
+                    "Question": question,
+                    "Concept": str(item.get("Concept") or "").strip(),
+                    "Ground_Truth": ground,
+                    "_source_file": path.name,
+                    "_id_match": True,
+                }
+            )
+        parent_concept = str(item.get("Concept") or "").strip()
         for child in item.get("Subquestions") or []:
             if not isinstance(child, dict):
                 continue
@@ -242,15 +244,15 @@ def _gold_rows_from_benchmark(path: Path) -> list[dict[str, Any]]:
             child_gt = str(child.get("Ground_Truth") or "").strip()
             if not child_q or not child_gt:
                 continue
-            # Nested Subquestion_ID values collide across parents — match by text only.
+            child_id = str(child.get("Subquestion_ID") or child.get("Question_ID") or "").strip()
             rows.append(
                 {
-                    "Question_ID": "",
+                    "Question_ID": child_id,
                     "Question": child_q,
-                    "Concept": str(child.get("Concept") or item.get("Concept") or "").strip(),
+                    "Concept": str(child.get("Concept") or parent_concept).strip(),
                     "Ground_Truth": child_gt,
                     "_source_file": path.name,
-                    "_id_match": False,
+                    "_id_match": bool(child_id),
                 }
             )
     return rows
@@ -269,7 +271,7 @@ def _records() -> tuple[dict[str, Any], ...]:
 
 @lru_cache(maxsize=1)
 def list_data_questions() -> tuple[dict[str, Any], ...]:
-    """Parent questions from the v2 benchmark for the tree drawer."""
+    """All v2 benchmark questions (parents + nested subquestions) for the tree drawer."""
     from src.decomposition.benchmark_fewshots import benchmark_path
 
     path = benchmark_path()
@@ -279,18 +281,37 @@ def list_data_questions() -> tuple[dict[str, Any], ...]:
     for item in load_benchmark(path):
         if not isinstance(item, dict):
             continue
-        question = str(item.get("Question") or "").strip()
-        if not question:
-            continue
-        rows.append(
-            {
-                "query_id": str(item.get("Question_ID") or ""),
-                "question": question,
-                "concept": str(item.get("Concept") or "").strip(),
-                "source": path.name,
-                "parent": bool(item.get("Subquestions") or item.get("Subquestion_IDs")),
-            }
-        )
+        parent_id = str(item.get("Question_ID") or "").strip()
+        parent_q = str(item.get("Question") or "").strip()
+        parent_concept = str(item.get("Concept") or "").strip()
+        if parent_q:
+            rows.append(
+                {
+                    "query_id": parent_id,
+                    "question": parent_q,
+                    "concept": parent_concept,
+                    "source": path.name,
+                    "parent": True,
+                    "parent_id": "",
+                }
+            )
+        for child in item.get("Subquestions") or []:
+            if not isinstance(child, dict):
+                continue
+            child_q = str(child.get("Question") or "").strip()
+            if not child_q:
+                continue
+            child_id = str(child.get("Subquestion_ID") or child.get("Question_ID") or "").strip()
+            rows.append(
+                {
+                    "query_id": child_id,
+                    "question": child_q,
+                    "concept": str(child.get("Concept") or parent_concept).strip(),
+                    "source": path.name,
+                    "parent": False,
+                    "parent_id": parent_id,
+                }
+            )
     return tuple(rows)
 
 

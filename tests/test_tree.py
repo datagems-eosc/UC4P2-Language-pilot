@@ -287,8 +287,14 @@ def test_tree_questions_lists_benchmark_rows():
     response = client.get("/tree/questions")
     assert response.status_code == 200
     body = response.json()
-    assert body["count"] >= 1
+    assert body["count"] == 36
     questions = body["questions"]
+    ids = {item["query_id"] for item in questions}
+    assert ids == {str(i) for i in range(36)}
     marriage = next(item for item in questions if item["query_id"] == "9")
+    assert marriage["parent"] is True
     assert "marriage" in marriage["question"].lower()
     assert marriage["concept"]
+    child = next(item for item in questions if item["query_id"] == "1")
+    assert child["parent"] is False
+    assert child["parent_id"] == "0"

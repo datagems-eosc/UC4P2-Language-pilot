@@ -49,7 +49,7 @@ Env: `QUERY_DISAMBIGUATION_URL`, `USE_IN_DATASET_DISCOVERY=1`, `IN_DATASET_DISCO
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge |
 
-Live version: **`0.1.27`**.
+Live version: **`0.1.28`**.
 
 ---
 
@@ -62,7 +62,7 @@ Service info, docs, and HTML tree. No JSON body.
 **Details**
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/`
-- Returns: service name, version (`0.1.27`), docs path, `tree` / `tree_token` / stream, step list
+- Returns: service name, version (`0.1.28`), docs path, `tree` / `tree_token` / stream, step list
 - Script: `scripts/dev/01-language-pilot-root.sh`
 
 **Standard curl**

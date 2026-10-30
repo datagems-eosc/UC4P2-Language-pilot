@@ -76,7 +76,7 @@ app = FastAPI(
         "(Authorization: Bearer <token>), as in dg-app-api. "
         "GET /health is public."
     ),
-    version="0.1.27",
+    version="0.1.28",
     openapi_url="/openapi.json",
     docs_url="/swagger",
     redoc_url="/redoc",
@@ -174,7 +174,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.27",
+        "version": "0.1.28",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -248,7 +248,7 @@ async def tree_token() -> dict[str, Any]:
     tags=["ThematicExploration"],
 )
 async def tree_questions() -> dict[str, Any]:
-    """Public catalog of v2 benchmark parents so the tree UI can pick a question."""
+    """Public catalog of all v2 benchmark questions for the tree UI."""
     questions = list(list_data_questions())
     return {"count": len(questions), "questions": questions}
 

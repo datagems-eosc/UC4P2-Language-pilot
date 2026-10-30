@@ -1,8 +1,8 @@
 # ThematicExploration examples
 
 Demo / tree questions come from this repo’s `data/pilot2_benchmark_english.v2.json`
-(parent `Question_ID` values `0`, `4`, `9`, `15`, `19`, `23`, `27`, `31`). Pass matching
-`query_id` so evaluation scores against that row’s `Ground_Truth`. When
+(all `Question_ID` / `Subquestion_ID` values `0`–`35`, including nested subquestions).
+Pass matching `query_id` so evaluation scores against that row’s `Ground_Truth`. When
 `USE_IN_DATASET_DISCOVERY` is on, remote `/nlgEvaluate` uses IDD’s parent gold under
 `data/nlg/` (not a copy of this full benchmark).
 

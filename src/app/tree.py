@@ -482,8 +482,11 @@ _PAGE = """<!DOCTYPE html>
     .drawer-q:hover, .drawer-q.selected { background: #eff6ff; }
     .drawer-q .qid { display: inline-block; min-width: 1.6em; margin-right: 6px;
       background: var(--accent); color: #fff; border-radius: 4px; font-size: .7rem;
-      padding: 1px 5px; text-align: center; }
+      padding: 1px 5px; text-align: center; vertical-align: top; }
+    .drawer-q.child { padding-left: 18px; }
+    .drawer-q.child .qid { background: #64748b; }
     .drawer-q .qtext { font-size: .9rem; }
+    .drawer-q.child .qtext { font-size: .85rem; color: #334155; }
     .drawer-empty { padding: 12px; color: var(--muted); }
     main { flex: 1; min-width: 0; max-width: 1100px; margin: 0 auto; padding: 18px 16px 64px; }
     @media (max-width: 840px) {
@@ -1234,7 +1237,8 @@ _PAGE = """<!DOCTYPE html>
       }
       root.innerHTML = Object.keys(groups).map(concept => {
         const rows = groups[concept].map(item => {
-          const klass = item.query_id === selected ? "drawer-q selected" : "drawer-q";
+          const base = item.parent ? "drawer-q" : "drawer-q child";
+          const klass = item.query_id === selected ? base + " selected" : base;
           return '<button type="button" class="' + klass + '" data-id="' + escapeHtml(item.query_id) + '">' +
             '<span class="qid">' + escapeHtml(item.query_id || "–") + "</span>" +
             '<span class="qtext">' + escapeHtml(item.question) + "</span></button>";

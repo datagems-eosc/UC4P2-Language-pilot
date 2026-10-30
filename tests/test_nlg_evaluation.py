@@ -27,13 +27,26 @@ def test_unrelated_text_scores_low():
     assert scores["token_f1"] < 0.2
 
 
-def test_demo_catalog_uses_v2_parents():
+def test_demo_catalog_lists_all_v2_questions():
     catalog = list_data_questions()
     assert catalog
     assert all(item["source"] == "pilot2_benchmark_english.v2.json" for item in catalog)
     ids = {item["query_id"] for item in catalog}
-    assert ids == {"0", "4", "9", "15", "19", "23", "27", "31"}
-    assert all(item["parent"] for item in catalog)
+    assert ids == {str(i) for i in range(36)}
+    parents = [item for item in catalog if item["parent"]]
+    children = [item for item in catalog if not item["parent"]]
+    assert {item["query_id"] for item in parents} == {
+        "0",
+        "4",
+        "9",
+        "15",
+        "19",
+        "23",
+        "27",
+        "31",
+    }
+    assert len(children) == 28
+    assert all(item["parent_id"] for item in children)
 
 
 def test_benchmark_ground_truth_lookup_by_question_id():
@@ -55,6 +68,18 @@ def test_nested_subquestion_matches_exact_question_text():
     result = evaluate_against_ground_truth(question, "placeholder")
     assert result["matched"] is True
     assert result["match"] == "question"
+    assert "capital" in result["ground_truth"].lower() or "Saxony" in result["ground_truth"]
+
+
+def test_nested_subquestion_matches_by_subquestion_id():
+    result = evaluate_against_ground_truth(
+        "How is Dresden described?",
+        "placeholder",
+        query_id="1",
+    )
+    assert result["matched"] is True
+    assert result["match"] == "question_id"
+    assert result["question_id"] == "1"
     assert "capital" in result["ground_truth"].lower() or "Saxony" in result["ground_truth"]
 
 
