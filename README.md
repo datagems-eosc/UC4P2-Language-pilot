@@ -1,6 +1,14 @@
 # UC4P2 Language Pilot
 
-Historical comparative QA for the DataGEMS language use case (Thematic Search). The pipeline disambiguates a question, expands knowledge, decomposes it, retrieves passages from [Cross-Dataset Discovery](https://datagems-eosc.github.io/cross-dataset-discovery-docs/latest/api-overview/), and returns a grounded comparison.
+Historical comparative QA for the DataGEMS language use case (Thematic Search). The pilot **orchestrates** the pipeline; portable steps call shared DataGEMS services:
+
+| Step | Service | Path |
+|------|---------|------|
+| Disambiguate | [dg-query-disambiguation](https://github.com/datagems-eosc/dg-query-disambiguation) | `POST /query_disambiguation/language` |
+| Extend / decompose / NLG | [in-dataset-discovery](https://github.com/datagems-eosc/in-dataset-discovery) | `POST /extendKnowledge`, `/decompose`, `/nlgEvaluate` |
+| Retrieve / features | [Cross-Dataset Discovery](https://datagems-eosc.github.io/cross-dataset-discovery-docs/latest/api-overview/) | `POST /search/`, `/corpus-analysis-search/` |
+
+Dev hosts: `https://datagems-dev.scayle.es/{language-pilot,query-disambiguation,in-dataset-discovery,…}`. Full curl catalog: [`API.md`](API.md). Live pilot **`0.1.26`**.
 
 ## HTTP API
 
@@ -43,14 +51,14 @@ Each pipeline node also has its own endpoint. It runs from the start through tha
 | GET | `/ThematicExploration/runs/{job_id}` | Latest snapshot of a streamed run |
 | GET | `/steps` | Catalog of step APIs |
 | POST | `/steps/route` | `route` |
-| POST | `/steps/disambiguate` | `disambiguate` |
-| POST | `/steps/extend-knowledge` | `extend_knowledge` |
-| POST | `/steps/generate-subquestions` | `generate_subquestions` |
-| POST | `/steps/decompose` | `decompose` |
-| POST | `/steps/retrieve` | `retrieve_slices` |
-| POST | `/steps/features` | `compute_features` |
-| POST | `/steps/synthesize` | `synthesize` |
-| POST | `/steps/evaluate` | `evaluate_answer` |
+| POST | `/steps/disambiguate` | `disambiguate` → query-disambiguation |
+| POST | `/steps/extend-knowledge` | `extend_knowledge` → in-dataset-discovery |
+| POST | `/steps/generate-subquestions` | `generate_subquestions` (from IDD extend payload) |
+| POST | `/steps/decompose` | `decompose` → in-dataset-discovery |
+| POST | `/steps/retrieve` | `retrieve_slices` → Cross-Dataset Discovery |
+| POST | `/steps/features` | `compute_features` → Cross-Dataset Discovery |
+| POST | `/steps/synthesize` | `synthesize` (local) |
+| POST | `/steps/evaluate` | `evaluate_answer` → in-dataset-discovery `/nlgEvaluate` |
 | POST | `/steps/export` | `export_benchmark` (same as `/ThematicExploration`) |
 
 ```bash
