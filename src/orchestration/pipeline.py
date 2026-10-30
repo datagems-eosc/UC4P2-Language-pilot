@@ -487,25 +487,30 @@ class HistoricalQAOrchestrator(dspy.Module):
                     answer,
                     query_id=state.query_id,
                 )
-                state.nlg_evaluation = {
-                    "matched": bool(remote.get("matched")),
-                    "question_id": str(remote.get("question_id") or state.query_id or ""),
-                    "concept": str(remote.get("concept") or concept or ""),
-                    "gold_question": str(remote.get("gold_question") or ""),
-                    "gold_source": str(remote.get("gold_source") or ""),
-                    "match": str(remote.get("match") or ""),
-                    "ground_truth": str(remote.get("ground_truth") or ""),
-                    "metrics": dict(remote.get("metrics") or {}),
-                    "llm_judge": {"available": False, "reason": "NLG via in-dataset-discovery"},
-                    "summary": str(remote.get("summary") or ""),
-                    "source": "in-dataset-discovery",
-                }
-                if state.output is not None:
-                    state.output = state.output.model_copy(
-                        update={"nlg_evaluation": state.nlg_evaluation}
-                    )
-                state.status = "ok"
-                return state
+                if remote.get("matched"):
+                    state.nlg_evaluation = {
+                        "matched": True,
+                        "question_id": str(remote.get("question_id") or state.query_id or ""),
+                        "concept": str(remote.get("concept") or concept or ""),
+                        "gold_question": str(remote.get("gold_question") or ""),
+                        "gold_source": str(remote.get("gold_source") or ""),
+                        "match": str(remote.get("match") or ""),
+                        "ground_truth": str(remote.get("ground_truth") or ""),
+                        "metrics": dict(remote.get("metrics") or {}),
+                        "llm_judge": {
+                            "available": False,
+                            "reason": "NLG via in-dataset-discovery",
+                        },
+                        "summary": str(remote.get("summary") or ""),
+                        "source": "in-dataset-discovery",
+                    }
+                    if state.output is not None:
+                        state.output = state.output.model_copy(
+                            update={"nlg_evaluation": state.nlg_evaluation}
+                        )
+                    state.status = "ok"
+                    return state
+                # IDD reachable but no gold row (stale image / child id): use pilot v2 file.
             except InDatasetDiscoveryError:
                 pass
         state.nlg_evaluation = evaluate_against_ground_truth(

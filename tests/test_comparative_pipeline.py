@@ -376,3 +376,32 @@ def test_retrieval_client_posts_search_endpoint(monkeypatch):
     }
     assert captured["auth"] == "Bearer jwt-token"
     assert payload["results"] == []
+
+
+class UnmatchedIddClient:
+    def nlg_evaluate(self, question, answer, *, query_id=None, ground_truth=None):
+        return {
+            "matched": False,
+            "metrics": {},
+            "ground_truth": "",
+            "summary": "No Ground_Truth matched this question or query_id exactly.",
+        }
+
+
+def test_evaluate_falls_back_to_local_gold_when_idd_unmatched():
+    client = ScriptedDisambiguation(
+        HistoricalComparativeConstraints.from_query(MARRIAGE).to_api_dict()
+    )
+    retrieval = ScriptedRetrieval()
+    orch = HistoricalQAOrchestrator(
+        disambiguation_client=client,
+        retriever=CrossDatasetMultiSliceRetriever(client=retrieval),
+        idd_client=UnmatchedIddClient(),
+    )
+    state = orch.run(MARRIAGE, query_id="9")
+    assert state.status == "ok"
+    assert state.nlg_evaluation["matched"] is True
+    assert state.nlg_evaluation["question_id"] == "9"
+    assert state.nlg_evaluation["ground_truth"]
+    assert state.nlg_evaluation["metrics"]
+    assert state.nlg_evaluation.get("source") != "in-dataset-discovery"
