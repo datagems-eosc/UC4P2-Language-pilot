@@ -1023,20 +1023,6 @@ _PAGE = """<!DOCTYPE html>
       try { return JSON.stringify(value, null, 2); } catch (_) { return String(value); }
     }
 
-    function openByDefault(measureId) {
-      const id = String(measureId || "");
-      return (
-        id === "uc4p2.rougeL_f1" ||
-        id === "uc4p2.token_f1" ||
-        id === "uc4p2.bleu" ||
-        id === "uc4p2.meteor" ||
-        id === "uc4p2.exact_match" ||
-        id === "uc4p2.evaluation_time" ||
-        id === "uc4p2.execution_time_total" ||
-        id === "uc4p2.judge_score"
-      );
-    }
-
     function elementsTable(elements) {
       if (!elements || !elements.length) {
         return '<p class="empty">No calculation elements for this observation.</p>';
@@ -1081,14 +1067,13 @@ _PAGE = """<!DOCTYPE html>
         const value = observations.length === 1
           ? primary.value
           : (observations.length ? observations.length + " observations" : "–");
-        const opened = openByDefault(measure.id) ? " open" : "";
         const body = observations.length
           ? observations.map((obs, index) => observationBlock(obs, index, observations.length)).join("")
           : '<p class="empty">No observation for this use-case yet.</p>';
         const desc = measure.description
           ? '<p class="eval-desc">' + escapeHtml(measure.description) + "</p>"
           : "";
-        return '<details class="eval-measure"' + opened + ">" +
+        return '<details class="eval-measure">' +
           "<summary><span class=\\"eval-measure-family\\">" + escapeHtml(measure.family || "") +
           "</span><span class=\\"eval-measure-name\\">" + escapeHtml(measure.label || measure.id) +
           "</span><span class=\\"eval-measure-value\\">" + escapeHtml(value == null ? "–" : value) +
