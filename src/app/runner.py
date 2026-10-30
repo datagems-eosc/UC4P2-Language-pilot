@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 import uuid
 from typing import Any, Iterator
 
@@ -20,6 +21,11 @@ logger = logging.getLogger(__name__)
 def new_run_id() -> str:
     """Unique ID for one pipeline execution event."""
     return uuid.uuid4().hex
+
+
+def utc_now_iso() -> str:
+    """UTC timestamp for execution start/finish (``YYYY-MM-DDTHH:MM:SSZ``)."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 _TASK_NAME = re.compile(r"During task with name '([^']+)'")
 
@@ -315,6 +321,13 @@ def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
 
     run_id = str(result.get("run_id") or "").strip() or new_run_id()
     result["run_id"] = run_id
+    started_at = str(result.get("started_at") or "").strip() or utc_now_iso()
+    finished_at = str(result.get("finished_at") or "").strip()
+    if str(result.get("status") or "") != "running":
+        finished_at = finished_at or utc_now_iso()
+    result["started_at"] = started_at
+    if finished_at:
+        result["finished_at"] = finished_at
     execution = build_execution_identity(
         run_id=run_id,
         query_id=str(result.get("query_id") or ""),
@@ -323,6 +336,8 @@ def _attach_execution_timings(result: dict[str, Any]) -> dict[str, Any]:
         judge_llm_model=str(result.get("judge_llm_model") or ""),
         decompose_mode=str(result.get("decompose_mode") or ""),
         job_id=str(result.get("job_id") or ""),
+        started_at=started_at,
+        finished_at=finished_at,
     )
     result["execution"] = execution
 
@@ -374,6 +389,7 @@ def _payload_from_events(
     judge_llm_model: str = "",
     run_id: str = "",
     job_id: str = "",
+    started_at: str = "",
 ) -> dict[str, Any]:
     merged: dict[str, Any] = {"question": question}
     names: list[str] = []
@@ -388,6 +404,7 @@ def _payload_from_events(
         "query_id": merged.get("query_id") or query_id or "",
         "run_id": run_id or "",
         "job_id": job_id or "",
+        "started_at": started_at or "",
         "status": _overall_status(pipeline, merged),
         "last_step": names[-1] if names else "",
         "result": pipeline[-1] if pipeline else None,
@@ -501,6 +518,7 @@ def iter_compare(
     access_token: str | None = None,
     run_id: str | None = None,
     job_id: str | None = None,
+    started_at: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield a growing ThematicExploration payload after each finished node."""
     from src.llm import default_judge_model, default_pipeline_model, normalize_model_name
@@ -510,6 +528,7 @@ def iter_compare(
     token = access_token if access_token is not None else caller_access_token()
     resolved_run_id = (run_id or "").strip() or new_run_id()
     resolved_job_id = (job_id or "").strip()
+    resolved_started_at = (started_at or "").strip() or utc_now_iso()
     events: list[dict[str, Any]] = []
     try:
         for event in stream_steps(
@@ -540,6 +559,7 @@ def iter_compare(
                 judge_llm_model=resolved_judge,
                 run_id=resolved_run_id,
                 job_id=resolved_job_id,
+                started_at=resolved_started_at,
             )
             if not _is_complete(snapshot.get("pipeline") or [], until):
                 snapshot["status"] = "running"
@@ -564,6 +584,7 @@ def iter_compare(
             judge_llm_model=resolved_judge,
             run_id=resolved_run_id,
             job_id=resolved_job_id,
+            started_at=resolved_started_at,
         )
         yield _attach_failure(result, exc)
         return
@@ -578,6 +599,7 @@ def iter_compare(
             judge_llm_model=resolved_judge,
             run_id=resolved_run_id,
             job_id=resolved_job_id,
+            started_at=resolved_started_at,
         )
 
 
@@ -595,6 +617,7 @@ def run_compare(
     access_token: str | None = None,
     run_id: str | None = None,
     job_id: str | None = None,
+    started_at: str | None = None,
 ) -> dict[str, Any]:
     last: dict[str, Any] = {}
     for payload in iter_compare(
@@ -610,6 +633,7 @@ def run_compare(
         access_token=access_token,
         run_id=run_id,
         job_id=job_id,
+        started_at=started_at,
     ):
         last = payload
     return last

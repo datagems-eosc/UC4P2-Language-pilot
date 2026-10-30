@@ -691,7 +691,7 @@ _PAGE = """<!DOCTYPE html>
   <script>
     const EMBEDDED = __EMBEDDED__;
     let latestPayload = null;
-    const OVERVIEW = ["service","run_id","job_id","execution","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","execution_time_s","evaluation_time_s","step_timings","concept","comparison_type","clarification","constraint_errors","slices"];
+    const OVERVIEW = ["service","run_id","job_id","started_at","finished_at","execution","query_id","question","status","last_step","failed_step","error","memory","decompose_mode","use_extension_questions","llm_model","judge_llm_model","execution_time_s","evaluation_time_s","step_timings","concept","comparison_type","clarification","constraint_errors","slices"];
     const ENDING = ["synthesized_answer","grounded_citations"];
     const CORPUS = {
       "07382b91-5bc5-42f9-8391-33adc2460c19": "EncycNet",
@@ -1140,6 +1140,8 @@ _PAGE = """<!DOCTYPE html>
       const execution = (payload && payload.execution) || nlg.execution || {};
       const meta = [
         ["run_id", run.run_id || execution.run_id || payload.run_id || nlg.run_id || "–"],
+        ["started_at", run.started_at || execution.started_at || payload.started_at || "–"],
+        ["finished_at", run.finished_at || execution.finished_at || payload.finished_at || "–"],
         ["llm_model", run.llm_model || execution.llm_model || payload.llm_model || "–"],
         ["judge_llm_model", run.judge_llm_model || execution.judge_llm_model || payload.judge_llm_model || "–"],
         ["matched", matched ? "yes" : "no"],

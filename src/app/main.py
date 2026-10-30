@@ -30,7 +30,7 @@ from src.app.run_memory import (
     save_run,
     should_store,
 )
-from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare
+from src.app.runner import PIPELINE_STEPS, iter_compare, run_compare, utc_now_iso
 from src.app.schemas import QueryRequest, ThematicExplorationRequest, ThematicExplorationResponse
 from src.app.tree import html_response
 from src.evaluation.catalog import empty_measure_catalog
@@ -181,7 +181,7 @@ app.openapi = custom_openapi
 async def root() -> dict[str, Any]:
     return {
         "service": "UC4P2 Language Pilot",
-        "version": "0.1.35",
+        "version": "0.1.36",
         "docs": "/swagger",
         "thematic_exploration": "POST /ThematicExploration",
         "thematic_exploration_stream": "POST /ThematicExploration/stream",
@@ -448,6 +448,7 @@ def _stream_pipeline(
     *,
     run_id: str | None = None,
     job_id: str | None = None,
+    started_at: str | None = None,
 ):
     cached = _cached_payload(body, until)
     if cached is not None:
@@ -468,6 +469,7 @@ def _stream_pipeline(
         access_token=access_token,
         run_id=run_id,
         job_id=job_id,
+        started_at=started_at,
     ):
         payload = _decorate_payload(payload, body)
         last = payload
@@ -485,12 +487,14 @@ def _start_stream_job(
     job_id = uuid.uuid4().hex
     # Stream jobs use the same ID for job polling and execution tracking.
     run_id = job_id
+    started_at = utc_now_iso()
     updates: queue.Queue = queue.Queue()
     put_job(
         job_id,
         {
             "job_id": job_id,
             "run_id": run_id,
+            "started_at": started_at,
             "status": "running",
             "question": body.query,
             "query_id": body.query_id or "",
@@ -506,10 +510,12 @@ def _start_stream_job(
                 access_token,
                 run_id=run_id,
                 job_id=job_id,
+                started_at=started_at,
             ):
                 payload = dict(payload)
                 payload["job_id"] = job_id
                 payload["run_id"] = payload.get("run_id") or run_id
+                payload["started_at"] = payload.get("started_at") or started_at
                 put_job(job_id, payload)
                 updates.put(payload)
         except Exception as exc:  # noqa: BLE001 - last snapshot must stay pollable
@@ -518,6 +524,8 @@ def _start_stream_job(
             payload = {
                 "job_id": job_id,
                 "run_id": previous.get("run_id") or run_id,
+                "started_at": previous.get("started_at") or started_at,
+                "finished_at": utc_now_iso(),
                 "status": "error",
                 "error": str(exc),
                 "question": body.query,

@@ -25,6 +25,8 @@ def build_execution_identity(
     judge_llm_model: str = "",
     decompose_mode: str = "",
     job_id: str = "",
+    started_at: str = "",
+    finished_at: str = "",
 ) -> dict[str, Any]:
     """Stable identity for one pipeline execution (multi-run tracking)."""
     identity = {
@@ -34,6 +36,8 @@ def build_execution_identity(
         "llm_model": llm_model or "",
         "judge_llm_model": judge_llm_model or "",
         "decompose_mode": decompose_mode or "",
+        "started_at": started_at or "",
+        "finished_at": finished_at or "",
     }
     if job_id:
         identity["job_id"] = job_id
@@ -66,6 +70,8 @@ def stamp_run_identity(
             or run_meta.get("decompose_mode")
             or "",
             "question": execution.get("question") or run_meta.get("question") or "",
+            "started_at": execution.get("started_at") or run_meta.get("started_at") or "",
+            "finished_at": execution.get("finished_at") or run_meta.get("finished_at") or "",
         }
     )
     if execution.get("job_id"):
@@ -88,6 +94,10 @@ def stamp_run_identity(
             dims["query_id"] = dims.get("query_id") or query_id
             dims["llm_model"] = dims.get("llm_model") or llm_model
             dims["judge_llm_model"] = judge_llm_model
+            if execution.get("started_at"):
+                dims["started_at"] = execution["started_at"]
+            if execution.get("finished_at"):
+                dims["finished_at"] = execution["finished_at"]
             stamped["dimensions"] = dims
             base = str(stamped.get("id") or f"obs-{index}")
             # Keep readable ids unique across repeated runs of the same question.

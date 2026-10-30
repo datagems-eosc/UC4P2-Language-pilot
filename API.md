@@ -61,7 +61,7 @@ Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 | `pipeline[]` | Ordered steps with `outcome`, `summary`, and `output` (decomposed questions, passages, etc.) |
 | `memory` | `{ hit, key, stored_at, path }` — `hit: true` when served from run memory |
 | `failed_step` / `error` | Set when a step times out or fails; earlier `pipeline[]` results are kept |
-| `run_id`, `execution` | Unique execution event id + `{run_id, query_id, llm_model, judge_llm_model, …}` for multi-run tracking of the same question |
+| `run_id`, `started_at`, `finished_at`, `execution` | Unique execution event id + UTC timestamps + `{run_id, query_id, llm_model, judge_llm_model, started_at, finished_at, …}` for multi-run tracking of the same question |
 | `synthesized_answer`, `grounded_citations`, `nlg_evaluation` | Answer, citations, NLG + LLM-as-judge; includes StudentQuiz-shaped `evaluation_report` with per-metric `calculation.elements` (observations also carry `run_id` / LLM dimensions) |
 
 Live version: **`0.1.31`**.

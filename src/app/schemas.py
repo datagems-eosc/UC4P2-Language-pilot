@@ -137,8 +137,16 @@ class ThematicExplorationResponse(BaseModel):
         default_factory=dict,
         description=(
             "Execution identity: run_id, query_id, llm_model, judge_llm_model, "
-            "decompose_mode (and job_id when streamed)."
+            "started_at, finished_at, decompose_mode (and job_id when streamed)."
         ),
+    )
+    started_at: str = Field(
+        default="",
+        description="UTC start time of this execution (YYYY-MM-DDTHH:MM:SSZ).",
+    )
+    finished_at: Optional[str] = Field(
+        default=None,
+        description="UTC finish time of this execution (YYYY-MM-DDTHH:MM:SSZ).",
     )
     status: str = Field(
         description="ok, running (SSE only), clarification, partial, timeout, or error."

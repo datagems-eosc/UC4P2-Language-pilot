@@ -171,6 +171,8 @@ def test_pipeline_trace_keeps_step_durations_and_run_identity():
             "query_id": "1",
             "question": "How is Dresden described?",
             "run_id": "feedface00cafe",
+            "started_at": "2026-10-30T12:00:00Z",
+            "status": "ok",
             "llm_model": "qwen3",
             "judge_llm_model": "glm-5.3-flash",
             "pipeline": trace,
@@ -180,9 +182,14 @@ def test_pipeline_trace_keeps_step_durations_and_run_identity():
     assert payload["execution_time_s"] == 0.52
     assert payload["evaluation_time_s"] == 0.5
     assert payload["run_id"] == "feedface00cafe"
+    assert payload["started_at"] == "2026-10-30T12:00:00Z"
+    assert payload["finished_at"]
     assert payload["execution"]["llm_model"] == "qwen3"
     assert payload["execution"]["judge_llm_model"] == "glm-5.3-flash"
+    assert payload["execution"]["started_at"] == "2026-10-30T12:00:00Z"
+    assert payload["execution"]["finished_at"]
     report = payload["nlg_evaluation"]["evaluation_report"]
     assert report["execution"]["run_id"] == "feedface00cafe"
+    assert report["execution"]["started_at"] == "2026-10-30T12:00:00Z"
     assert any(m["id"] == "uc4p2.execution_time" for m in report["measures"])
     assert payload["nlg_evaluation"]["run_id"] == "feedface00cafe"
