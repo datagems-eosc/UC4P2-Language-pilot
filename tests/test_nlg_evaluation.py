@@ -1,4 +1,8 @@
-from src.evaluation.nlg import evaluate_against_ground_truth, nlg_metrics
+from src.evaluation.nlg import (
+    evaluate_against_ground_truth,
+    list_data_questions,
+    nlg_metrics,
+)
 
 
 def test_identical_strings_score_high():
@@ -23,14 +27,35 @@ def test_unrelated_text_scores_low():
     assert scores["token_f1"] < 0.2
 
 
-def test_benchmark_ground_truth_lookup_by_question():
-    question = "How is Dresden defined?"
-    gold = "A larger city in Germany, capital of Saxony."
-    result = evaluate_against_ground_truth(question, gold, query_id="1")
+def test_demo_catalog_uses_v2_parents():
+    catalog = list_data_questions()
+    assert catalog
+    assert all(item["source"] == "pilot2_benchmark_english.v2.json" for item in catalog)
+    ids = {item["query_id"] for item in catalog}
+    assert ids == {"0", "4", "9", "15", "19", "23", "27", "31"}
+    assert all(item["parent"] for item in catalog)
+
+
+def test_benchmark_ground_truth_lookup_by_question_id():
+    result = evaluate_against_ground_truth(
+        "How do historical descriptions of the Dresden's cultural nicknames "
+        "and the reasons given for them vary across time?",
+        "placeholder",
+        query_id="0",
+    )
     assert result["matched"] is True
     assert result["match"] == "question_id"
-    assert result["metrics"]["exact_match"] == 1.0
-    assert "llm_judge" in result
+    assert result["question_id"] == "0"
+    assert result["gold_source"] == "pilot2_benchmark_english.v2.json"
+    assert "Athens" in result["ground_truth"] or "Florence" in result["ground_truth"]
+
+
+def test_nested_subquestion_matches_exact_question_text():
+    question = "How is Dresden described?"
+    result = evaluate_against_ground_truth(question, "placeholder")
+    assert result["matched"] is True
+    assert result["match"] == "question"
+    assert "capital" in result["ground_truth"].lower() or "Saxony" in result["ground_truth"]
 
 
 def test_marriage_walkthrough_uses_exact_question_id():
@@ -41,9 +66,9 @@ def test_marriage_walkthrough_uses_exact_question_id():
     )
     assert result["matched"] is True
     assert result["question_id"] == "9"
-    assert result["gold_source"] == "pilot2_benchmark_english.v1.json"
+    assert result["gold_source"] == "pilot2_benchmark_english.v2.json"
     assert result["match"] == "question_id"
-    assert "valid marriage" in result["ground_truth"].lower() or "marriage" in result["ground_truth"].lower()
+    assert "marriage" in result["ground_truth"].lower()
 
 
 def test_paraphrase_without_exact_id_does_not_match_neighbor_gold():
@@ -55,13 +80,6 @@ def test_paraphrase_without_exact_id_does_not_match_neighbor_gold():
     )
     assert result["matched"] is False
     assert result["metrics"] == {}
-
-
-def test_defined_marriage_uses_exact_question_text():
-    result = evaluate_against_ground_truth("How is marriage defined?", "placeholder")
-    assert result["matched"] is True
-    assert result["question_id"] == "10"
-    assert result["match"] == "question"
 
 
 def test_missing_ground_truth_is_reported():

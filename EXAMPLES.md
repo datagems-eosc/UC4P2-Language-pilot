@@ -1,6 +1,8 @@
 # ThematicExploration examples
 
-Questions 2–5 come from `data/pilot2_benchmark_english.v1.json`.
+Demo / tree questions and NLG gold come from `data/pilot2_benchmark_english.v2.json`
+(parent `Question_ID` values `0`, `4`, `9`, `15`, `19`, `23`, `27`, `31`). Pass matching
+`query_id` so evaluation scores against that row’s `Ground_Truth`.
 
 ---
 
