@@ -8,7 +8,7 @@ Historical comparative QA for the DataGEMS language use case (Thematic Search). 
 | Extend / decompose / NLG | [in-dataset-discovery](https://github.com/datagems-eosc/in-dataset-discovery) | `POST /extendKnowledge`, `/decompose`, `/nlgEvaluate` |
 | Retrieve / features | [Cross-Dataset Discovery](https://datagems-eosc.github.io/cross-dataset-discovery-docs/latest/api-overview/) | `POST /search/`, `/corpus-analysis-search/` |
 
-Dev hosts: `https://datagems-dev.scayle.es/{language-pilot,query-disambiguation,in-dataset-discovery,…}`. Full curl catalog: [`API.md`](API.md). Live pilot **`0.1.26`**.
+Dev hosts: `https://datagems-dev.scayle.es/{language-pilot,query-disambiguation,in-dataset-discovery,…}`. Full curl catalog: [`API.md`](API.md). Live pilot **`0.1.27`**.
 
 ## HTTP API
 
