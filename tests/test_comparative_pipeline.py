@@ -75,12 +75,12 @@ def test_single_period_climate_gate_keeps_one_slice():
     assert len(gate.slices) == 1
 
 
-def test_remote_two_slice_rewrite_does_not_force_present_on_single_period():
+def test_resolve_trusts_remote_descriptive_payload():
     client = ScriptedDisambiguation(
         {
             "proceed": True,
-            "comparison_type": "temporal",
-            "target_concepts": ["Berlin"],
+            "comparison_type": "descriptive",
+            "target_concepts": ["climate of Berlin"],
             "slices": [
                 {
                     "slice_id": "slice_1",
@@ -89,19 +89,13 @@ def test_remote_two_slice_rewrite_does_not_force_present_on_single_period():
                     "end_year": 1900,
                     "language": "English",
                 },
-                {
-                    "slice_id": "slice_2",
-                    "label": "present",
-                    "start_year": 2026,
-                    "end_year": 2026,
-                    "language": "English",
-                },
             ],
         }
     )
     pipeline = HistoricalQAOrchestrator(disambiguation_client=client)
     state = pipeline.resolve(BERLIN_CLIMATE)
     assert state.status == "disambiguated"
+    assert state.disambiguation_source == "query-disambiguation-api"
     assert state.intent is not None
     assert state.intent.dimension == "descriptive"
     assert [item.label for item in state.intent.slices] == ["19th century"]
@@ -148,7 +142,7 @@ def test_missing_periods_use_indexed_corpus_eras():
     assert gate.slices[1].label == "present"
 
 
-def test_remote_reject_without_years_falls_back_to_corpus_periods():
+def test_remote_reject_surfaces_clarification_without_local_override():
     client = ScriptedDisambiguation(
         {
             "proceed": False,
@@ -168,10 +162,10 @@ def test_remote_reject_without_years_falls_back_to_corpus_periods():
     )
     pipeline = HistoricalQAOrchestrator(disambiguation_client=client)
     state = pipeline.resolve(query)
-    assert state.status == "disambiguated"
-    assert state.disambiguation_source == "local-fallback"
-    assert state.intent is not None
-    assert [item.label for item in state.intent.slices] == ["19th century", "present"]
+    assert state.status == "clarification"
+    assert state.disambiguation_source == "query-disambiguation-api"
+    assert state.intent is None
+    assert "indexed archives" in (state.clarification or "")
 
 
 def test_local_gate_flags_pre_1800_archives():
