@@ -36,7 +36,7 @@ curl -s -X POST "http://localhost:8080/ThematicExploration" \
   -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
 ```
 
-`POST /compare` is an alias of the same operation.
+`POST /compare` is a **deprecated** alias of `/ThematicExploration` — do not use it.
 
 `POST /ThematicExploration/stream` is the same run as SSE: `event: step` after each finished node (`status=running`), then `event: done` with the final document. The `/tree` page uses this so the pipeline appears while it is still running.
 

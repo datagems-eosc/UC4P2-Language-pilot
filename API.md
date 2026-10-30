@@ -1,20 +1,32 @@
 # API calls on datagems-dev
 
 Host is always `https://datagems-dev.scayle.es`. Matching scripts: `scripts/dev/`.
+Step → service diagram: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 **Access token.** Protected POSTs require a DataGEMS AAI JWT, same as [dg-app-api](https://github.com/datagems-eosc/dg-app-api). Each standard curl below fetches the token inline with `jq`. Scope is `openid datagems offline_access` (not `cross-dataset-discovery-api`). Health and catalog GETs stay public.
 
-**Architecture (after refactor).** The language pilot orchestrates; portable pieces live in shared services:
+**Current upstream calls (pilot → shared services).** Only these remote paths are on the live language path:
 
 | Pilot step | Upstream API |
 |------------|--------------|
 | `disambiguate` | `POST /query-disambiguation/query_disambiguation/language` (section F) |
-| `extend_knowledge` / `generate_subquestions` / `decompose` / `evaluate_answer` | `POST /in-dataset-discovery/{extendKnowledge,decompose,nlgEvaluate}` (section G) |
-| `retrieve_slices` / `compute_features` | Cross-Dataset Discovery `POST /search/` and `POST /corpus-analysis-search/` (section E) |
+| `extend_knowledge` | `POST /in-dataset-discovery/extendKnowledge` (section G) |
+| `decompose` | `POST /in-dataset-discovery/decompose` (section G) |
+| `evaluate_answer` | `POST /in-dataset-discovery/nlgEvaluate` (section G) |
+| `retrieve_slices` | Cross-Dataset Discovery `POST /search/` (section E) |
+| `compute_features` | Cross-Dataset Discovery `POST /corpus-analysis-search/` (section E) |
 
-Env: `QUERY_DISAMBIGUATION_URL`, `USE_IN_DATASET_DISCOVERY=1`, `IN_DATASET_DISCOVERY_URL`. On QD/IDD outage the pilot keeps a local fallback.
+`route`, `generate_subquestions`, `synthesize`, and `export_benchmark` stay local in the pilot. Env: `QUERY_DISAMBIGUATION_URL`, `USE_IN_DATASET_DISCOVERY=1`, `IN_DATASET_DISCOVERY_URL`, `CROSS_DATASET_DISCOVERY_URL`. On QD/IDD outage the pilot keeps a local fallback.
 
-**Example question:** `How did a marriage look like in the 1800s compared to now?`
+**Not used by the pilot (do not call these for UC4P2):**
+
+| Call | Why |
+|------|-----|
+| `POST /language-pilot/compare` | Deprecated alias of `/ThematicExploration` (still mounted, do not use) |
+| `POST /query-disambiguation/query_disambiguation` (and `/openai`, `/scayle`, `/query_disambiguation4ap`) | General / AP QD APIs — pilot uses **`/query_disambiguation/language` only** |
+| IDD `/explore`, `/text2sql`, `/text2geo`, `/linguisticFeatures`, … | Other IDD products — pilot uses **`/extendKnowledge`**, **`/decompose`**, **`/nlgEvaluate` only** |
+
+**Example question (v2 parent `Question_ID` `9`):** `How does the definition of a valid marriage shift over time in the Western hemisphere?`
 
 **Language corpora**
 
@@ -148,7 +160,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/steps
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree`
 - Returns: HTML page to open a JSON file or run a question
 - Auth: none for the page. **Run** calls `GET /tree/token` first (demo Keycloak user), then streams the pipeline. No Bearer field; a new token is minted on every click.
-- UI: left **Questions** drawer lists `data/*.json` benchmark rows (id, concept, text). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
+- UI: left **Questions** drawer lists every row from `data/pilot2_benchmark_english.v2.json` (`Question_ID` / `Subquestion_ID` `0`–`35`; nested children indented). Click one to fill the question field and `query_id`. Check **KE questions** to retrieve each knowledge-extension question as its own search (off = one search per slice). Banner shows “Getting access token…” then “Running pipeline…”; `[ref_N]` jumps to the matching card. `grounded_citations` is only the passages used in the answer (`ref_1`…); other hits stay in the retrieve step.
 - Prefer a browser: https://datagems-dev.scayle.es/language-pilot/tree
 - Script: `scripts/dev/07-language-pilot-tree.sh`
 
@@ -179,7 +191,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/tree/token
 
 - Method / URL: `GET https://datagems-dev.scayle.es/language-pilot/tree/questions`
 - Auth: none
-- Returns: `{ count, questions: [{ query_id, question, concept, source, parent }] }` from `data/*.json`
+- Returns: `{ count, questions: [{ query_id, question, concept, source, parent, parent_id }] }` — all **36** v2 rows (`0`–`35`); `parent: false` + `parent_id` for nested subquestions
 
 **Standard curl**
 
@@ -217,7 +229,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 Force a fresh run (consistency check):
@@ -232,7 +244,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot", "refresh": true}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot", "refresh": true}'
 ```
 
 Stop after retrieve:
@@ -247,7 +259,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplorati
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "until": "retrieve_slices"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "until": "retrieve_slices"}'
 ```
 
 ### B1b. ThematicExploration stream (SSE)
@@ -275,7 +287,7 @@ curl -sS -N -X POST https://datagems-dev.scayle.es/language-pilot/ThematicExplor
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### B1c. ThematicExploration run snapshot
@@ -299,30 +311,7 @@ curl -sS https://datagems-dev.scayle.es/language-pilot/ThematicExploration/runs/
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')"
 ```
 
-### B2. Compare (deprecated alias)
-
-**Details**
-
-- Method / URL: `POST https://datagems-dev.scayle.es/language-pilot/compare`
-- Same body and response as ThematicExploration
-- Script: `scripts/dev/09-compare-alias.sh`
-
-**Standard curl**
-
-```bash
-curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/compare \
-  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
-        --header 'Content-Type: application/x-www-form-urlencoded' \
-        --data-urlencode 'grant_type=password' \
-        --data-urlencode 'client_id=swagger-client' \
-        --data-urlencode 'username=dg-user-1' \
-        --data-urlencode 'password=dg-user-1' \
-        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-alias", "k": 5, "decompose_mode": "few-shot"}'
-```
-
-### B3. HTML tree from a saved JSON
+### B2. HTML tree from a saved JSON
 
 **Details**
 
@@ -356,7 +345,7 @@ Each POST **restarts from the start** and stops at that node. The stopped node i
 Shared body:
 
 ```json
-{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}
+{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}
 ```
 
 ### C1. Route
@@ -380,7 +369,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/route \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C2. Disambiguate
@@ -405,7 +394,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/disambiguat
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C3. Extend knowledge
@@ -430,7 +419,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/extend-know
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C3b. Generate sub-questions from facets and lemmas
@@ -455,7 +444,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/generate-su
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C4. Decompose
@@ -480,7 +469,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/decompose \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C5. Retrieve
@@ -506,7 +495,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/retrieve \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C6. Features
@@ -531,7 +520,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/features \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C7. Synthesize
@@ -556,7 +545,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C7b. Evaluate against ground truth
@@ -567,7 +556,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/synthesize 
 - Stops after: `evaluate_answer`
 - Upstream: in-dataset-discovery `POST /nlgEvaluate` when `USE_IN_DATASET_DISCOVERY=1` (section G). Gold match is **exact** `Question_ID` or question text only (no fuzzy overlap).
 - Look at: `nlg_evaluation.metrics` (BLEU, ROUGE, token F1, METEOR) and `nlg_evaluation.llm_judge` (separate LLM, not the synthesizer)
-- The marriage walkthrough matches Question_ID `9`. Judge stays on Scayle but uses another model (`JUDGE_LLM_MODEL`, default `glm-5.3-flash` vs pipeline `qwen3`)
+- Gold match for this walkthrough: `query_id` **`9`** (v2 parent). Judge stays on Scayle but uses another model (`JUDGE_LLM_MODEL`, default `glm-5.3-flash` vs pipeline `qwen3`)
 - Script: `scripts/dev/17b-steps-evaluate.sh`
 
 **Standard curl**
@@ -582,7 +571,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/evaluate \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ### C8. Export
@@ -606,14 +595,14 @@ curl -sS -X POST https://datagems-dev.scayle.es/language-pilot/steps/export \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?", "query_id": "curl-steps", "k": 5, "decompose_mode": "few-shot"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "query_id": "9", "k": 5, "decompose_mode": "few-shot"}'
 ```
 
 ---
 
 ## D. Keycloak (access token)
 
-The nested `$(curl … | jq -r '.access_token')` in categories B, C, E, and F is this call. Language-pilot also forwards that JWT to Cross-Dataset Discovery.
+The nested `$(curl … | jq -r '.access_token')` in categories B, C, E, F, and G is this call. Language-pilot also forwards that JWT to Cross-Dataset Discovery, query-disambiguation, and in-dataset-discovery.
 
 ### D1. Password grant
 
@@ -780,9 +769,11 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/corpus-a
 
 ---
 
-## F. Query-disambiguation
+## F. Query-disambiguation (language only)
 
 Used by language-pilot `disambiguate`. Live image **`v0.1.14`** (language gate parity: descriptive, default temporal pair, `corpus_id`, rich concepts). On the cluster the pod calls the in-namespace service; from a laptop use the public ingress. If unreachable, the pilot falls back to local slice parsing.
+
+**UC4P2 uses only** `POST /query_disambiguation/language`. Do not use `/query_disambiguation`, `/query_disambiguation/openai`, `/query_disambiguation/scayle`, or `/query_disambiguation4ap` from the language pilot path.
 
 ### F1. Language disambiguation
 
@@ -790,7 +781,7 @@ Used by language-pilot `disambiguate`. Live image **`v0.1.14`** (language gate p
 
 - Method / URL: `POST https://datagems-dev.scayle.es/query-disambiguation/query_disambiguation/language`
 - Auth: `Authorization: Bearer …`
-- Body: `{ "query": "…" }`
+- Body: `{ "query": "…" }` (optional `use_llm`, `llm_model`)
 - Returns: `proceed`, `comparison_type`, `target_concepts`, `slices[]` (`label`, years, `language`, `corpus_id`), optional `clarification` / `constraint_errors`
 - Script: `scripts/dev/23-query-disambiguation-language.sh`
 - Health: `GET https://datagems-dev.scayle.es/query-disambiguation/health`
@@ -807,7 +798,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disam
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"query": "How did a marriage look like in the 1800s compared to now?"}'
+  -d '{"query": "How does the definition of a valid marriage shift over time in the Western hemisphere?"}'
 ```
 
 Descriptive (single period):
@@ -827,17 +818,19 @@ curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disam
 
 ---
 
-## G. In-dataset-discovery (question tools)
+## G. In-dataset-discovery (question tools used by UC4P2)
 
-Used by language-pilot `extend_knowledge`, `decompose`, and `evaluate_answer` when `USE_IN_DATASET_DISCOVERY=1`. Live image **`v1.7.1`**. Tools live under `src/agents/tools/` in [in-dataset-discovery](https://github.com/datagems-eosc/in-dataset-discovery); router: `src/app/routers/language.py`.
+Used by language-pilot `extend_knowledge`, `decompose`, and `evaluate_answer` when `USE_IN_DATASET_DISCOVERY=1`. Tools live under `src/agents/tools/` in [in-dataset-discovery](https://github.com/datagems-eosc/in-dataset-discovery); router: `src/app/routers/language.py`.
+
+**UC4P2 uses only** the three routes below. Ignore other IDD paths (`/explore`, `/text2sql`, `/text2geo`, `/linguisticFeatures`, …) for this pilot.
 
 | Method / path | Pilot step | Body |
 |---------------|------------|------|
-| `POST /decompose` | `decompose` | `question`, optional `concept`, `slices` |
 | `POST /extendKnowledge` | `extend_knowledge` | `question`, optional `concept`, `slices` |
+| `POST /decompose` | `decompose` | `question`, optional `concept`, `slices` |
 | `POST /nlgEvaluate` | `evaluate_answer` | `question`, `answer`, optional `query_id`, `ground_truth` |
 
-Base: `https://datagems-dev.scayle.es/in-dataset-discovery`. Health: `GET …/health`. Auth: Bearer (same Keycloak token as the pilot).
+Parent gold for remote NLG: IDD `data/nlg/pilot2_nlg_gold.v2.json` (not the full pilot benchmark). Base: `https://datagems-dev.scayle.es/in-dataset-discovery`. Health: `GET …/health`. Auth: Bearer (same Keycloak token as the pilot).
 
 ### G1. Decompose
 
@@ -851,7 +844,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/decompose \
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"question": "How did a marriage look like in the 1800s compared to now?"}'
+  -d '{"question": "How does the definition of a valid marriage shift over time in the Western hemisphere?"}'
 ```
 
 ### G2. Extend knowledge
@@ -866,7 +859,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/extendKnowl
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"question": "How did a marriage look like in the 1800s compared to now?"}'
+  -d '{"question": "How does the definition of a valid marriage shift over time in the Western hemisphere?"}'
 ```
 
 ### G3. NLG evaluate
@@ -881,45 +874,8 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate
         --data-urlencode 'password=dg-user-1' \
         --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
   -H "Content-Type: application/json" \
-  -d '{"question": "How did a marriage look like in the 1800s compared to now?", "answer": "…", "query_id": "9"}'
+  -d '{"question": "How does the definition of a valid marriage shift over time in the Western hemisphere?", "answer": "…", "query_id": "9"}'
 ```
 
+Parent gold rows in IDD are under `data/nlg/pilot2_nlg_gold.v2.json` (`0`, `4`, `9`, `15`, `19`, `23`, `27`, `31`). Nested subquestion ids live only in the language-pilot benchmark file.
 ---
-
-## H. Britannica vs Wikipedia (same search, two corpora)
-
-Same `POST /search/`, token, `k`, and `hybrid`. Only `query` and `dataset_ids` change. Language-pilot retrieve uses this pair: slice_1 → Knowledge Project, slice_2 → Wikipedia (often empty).
-
-### H1. 19th C. Knowledge Project (Britannica)
-
-Dataset `d84d1a2e-127d-4393-91d0-afb7e4fd9c68`. Usually returns hits.
-
-```bash
-curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
-        --header 'Content-Type: application/x-www-form-urlencoded' \
-        --data-urlencode 'grant_type=password' \
-        --data-urlencode 'client_id=swagger-client' \
-        --data-urlencode 'username=dg-user-1' \
-        --data-urlencode 'password=dg-user-1' \
-        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is the definition of a marriage in the 1800s? wedding nuptials matrimony", "k": 5, "search_mode": "hybrid", "dataset_ids": ["d84d1a2e-127d-4393-91d0-afb7e4fd9c68"]}'
-```
-
-### H2. Wikipedia (present, often empty)
-
-Dataset `1f6fba0c-9aea-4345-b5a3-457c924f9e0c`. Often `results: []`.
-
-```bash
-curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/search/ \
-  -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
-        --header 'Content-Type: application/x-www-form-urlencoded' \
-        --data-urlencode 'grant_type=password' \
-        --data-urlencode 'client_id=swagger-client' \
-        --data-urlencode 'username=dg-user-1' \
-        --data-urlencode 'password=dg-user-1' \
-        --data-urlencode 'scope=openid datagems offline_access' | jq -r '.access_token')" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is the definition of a marriage in the present? wedding marriage union", "k": 5, "search_mode": "hybrid", "dataset_ids": ["1f6fba0c-9aea-4345-b5a3-457c924f9e0c"]}'
-```
