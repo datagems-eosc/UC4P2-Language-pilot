@@ -487,8 +487,8 @@ class HistoricalQAOrchestrator(dspy.Module):
         if self.idd_client is not None:
             try:
                 remote = self.idd_client.nlg_evaluate(
-                    state.question,
-                    answer,
+                    question=state.question,
+                    hypothesis=answer,
                     query_id=state.query_id,
                 )
                 if remote.get("matched"):

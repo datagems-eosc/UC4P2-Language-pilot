@@ -115,17 +115,26 @@ class InDatasetDiscoveryClient:
 
     def nlg_evaluate(
         self,
-        question: str,
-        answer: str,
+        question: str | None = None,
+        answer: str | None = None,
         *,
+        hypothesis: str | None = None,
+        reference: str | None = None,
         query_id: str | None = None,
         ground_truth: str | None = None,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"question": question, "answer": answer}
+        """Score hypothesis vs reference. ``answer``/``ground_truth`` are legacy aliases."""
+        hyp = (hypothesis or answer or "").strip()
+        ref = (reference or ground_truth or "").strip()
+        payload: dict[str, Any] = {}
+        if hyp:
+            payload["hypothesis"] = hyp
+        if ref:
+            payload["reference"] = ref
+        if question:
+            payload["question"] = question
         if query_id:
             payload["query_id"] = query_id
-        if ground_truth:
-            payload["ground_truth"] = ground_truth
         return _post_json(
             f"{self.base_url}/nlgEvaluate", payload, self.token, self.timeout
         )

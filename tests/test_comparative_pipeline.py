@@ -386,12 +386,26 @@ class UnmatchedIddClient:
     def decompose(self, question, *, concept=None, slices=None):
         raise InDatasetDiscoveryError("decompose not used in this test")
 
-    def nlg_evaluate(self, question, answer, *, query_id=None, ground_truth=None):
+    def nlg_evaluate(
+        self,
+        question=None,
+        answer=None,
+        *,
+        hypothesis=None,
+        reference=None,
+        query_id=None,
+        ground_truth=None,
+    ):
         return {
             "matched": False,
             "metrics": {},
+            "hypothesis": hypothesis or answer or "",
+            "reference": "",
             "ground_truth": "",
-            "summary": "No Ground_Truth matched this question or query_id exactly.",
+            "summary": (
+                "No reference provided and no Ground_Truth matched this "
+                "question or query_id exactly."
+            ),
         }
 
 
