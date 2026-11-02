@@ -37,6 +37,7 @@ SSE stream curls stay without `| jq` (they are not a single JSON object).
 | Evaluation | StudentQuiz-shaped `evaluation_report` with formula + `calculation.elements` per use-case |
 | Metrics | BLEU, ROUGE, token F1, METEOR, LLM-as-judge; per-step / total / eval timings |
 | Multi-run | `run_id`, `started_at`, `finished_at`, `execution` (models + ids) |
+| IDD `nlgEvaluate` | Preferred body is `hypothesis` + `reference` (no `query_id` required). Legacy `answer` / `ground_truth` still work; `query_id` / `question` only for optional gold-file lookup |
 
 ---
 
@@ -123,7 +124,7 @@ Several steps call a shared service under the hood:
 | `…/steps/decompose` | **In-dataset-discovery** `POST …/decompose` |
 | `…/steps/retrieve` | **Cross-Dataset Discovery** `POST …/search/` |
 | `…/steps/features` | **Cross-Dataset Discovery** `POST …/corpus-analysis-search/` |
-| `…/steps/evaluate` | **In-dataset-discovery** `POST …/nlgEvaluate` (or local gold) |
+| `…/steps/evaluate` | **In-dataset-discovery** `POST …/nlgEvaluate` with `hypothesis` (+ optional `reference` / gold `query_id`), or local gold |
 | `…/steps/route`, `generate-subquestions`, `synthesize`, `export` | local in the pilot |
 
 To call the IDD decompose tool **directly**, use section C (`/in-dataset-discovery/decompose`), not `/language-pilot/steps/decompose`.
@@ -302,6 +303,19 @@ curl -sS -X POST https://datagems-dev.scayle.es/query-disambiguation/query_disam
 Service: **In-dataset-discovery** · base `https://datagems-dev.scayle.es/in-dataset-discovery`  
 Used by pilot steps `extend_knowledge`, `decompose`, `evaluate_answer`. UC4P2 uses **these three routes only**.
 
+### `POST /nlgEvaluate` contract
+
+| Field | Role |
+|-------|------|
+| `hypothesis` | Candidate / system text to score (**preferred**) |
+| `reference` | Gold / reference text (**preferred**). When set, `query_id` is not needed |
+| `answer` | Alias for `hypothesis` (legacy) |
+| `ground_truth` | Alias for `reference` (legacy) |
+| `query_id` | Optional digit `Question_ID` for gold under IDD `data/nlg/` when no `reference` |
+| `question` | Optional exact question text for the same gold-file lookup |
+
+Response echoes `hypothesis` and `reference` (and still includes `ground_truth` as an alias of the gold used).
+
 ```bash
 # Health
 curl -sS https://datagems-dev.scayle.es/in-dataset-discovery/health | jq
@@ -336,7 +350,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/decompose \
 ```
 
 ```bash
-# NLG evaluate
+# NLG evaluate — preferred: hypothesis + reference (no query_id)
 curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate \
   -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
         --header 'Content-Type: application/x-www-form-urlencoded' \
@@ -350,7 +364,7 @@ curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate
 ```
 
 ```bash
-# NLG evaluate — optional gold-file lookup by query_id (when no reference)
+# NLG evaluate — optional gold-file lookup by query_id (only when reference is omitted)
 curl -sS -X POST https://datagems-dev.scayle.es/in-dataset-discovery/nlgEvaluate \
   -H "Authorization: Bearer $(curl -sS --location 'https://datagems-dev.scayle.es/oauth/realms/dev/protocol/openid-connect/token' \
         --header 'Content-Type: application/x-www-form-urlencoded' \
@@ -413,6 +427,6 @@ curl -sS -X POST https://datagems-dev.scayle.es/cross-dataset-discovery/corpus-a
 | `POST /query-disambiguation/query_disambiguation/language` | **Query disambiguation** |
 | `POST /in-dataset-discovery/extendKnowledge` | **In-dataset-discovery** |
 | `POST /in-dataset-discovery/decompose` | **In-dataset-discovery** |
-| `POST /in-dataset-discovery/nlgEvaluate` | **In-dataset-discovery** |
+| `POST /in-dataset-discovery/nlgEvaluate` (`hypothesis` + `reference`; optional `query_id`) | **In-dataset-discovery** |
 | `POST /cross-dataset-discovery/search/` | **Cross-Dataset Discovery** |
 | `POST /cross-dataset-discovery/corpus-analysis-search/` | **Cross-Dataset Discovery** |
